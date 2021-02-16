@@ -3,11 +3,16 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
-from rest_framework import permissions, routers
+from rest_framework import permissions
+from rest_framework.routers import SimpleRouter
 
-from multinet.api.views.workspace import WorkspaceViewSet
+from multinet.api.views import (
+    WorkspaceViewSet,
+    users_me_view,
+    users_search_view,
+)
 
-router = routers.SimpleRouter()
+router = SimpleRouter()
 router.register(r'workspaces', WorkspaceViewSet)
 
 # OpenAPI generation
@@ -21,8 +26,10 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('admin/', admin.site.urls),
-    path('api/v1/s3-upload/', include('s3_file_field.urls')),
-    path('api/v1/', include(router.urls)),
+    path('api/s3-upload/', include('s3_file_field.urls')),
+    path('api/', include(router.urls)),
+    path('api/users/me', users_me_view),
+    path('api/users/search', users_search_view),
     path('api/docs/redoc/', schema_view.with_ui('redoc'), name='docs-redoc'),
     path('swagger/', schema_view.with_ui('swagger'), name='docs-swagger'),
 ]
