@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from guardian.shortcuts import assign_perm
 from guardian.utils import get_40x_or_None
 from rest_framework import status
-# from rest_framework.decorators import action
+
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -43,7 +43,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             workspace.save()
 
         assign_perm('owner', request.user, workspace)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
     # @permission_required_or_403('owner', (Workspace, 'dandiset__pk'))
     def destroy(self, request, pk):
@@ -57,15 +57,3 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         workspace.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-    # @action(detail=True, methods=['get'])
-    # def download(self, request, pk=None):
-    #     image = get_object_or_404(Image, pk=pk)
-    #     return HttpResponseRedirect(image.blob.url)
-
-    # @action(detail=True, methods=['post'])
-    # def compute(self, request, pk=None):
-    #     # Ensure that the image exists, so a non-existent pk isn't dispatched
-    #     image = get_object_or_404(Image, pk=pk)
-    #     image_compute_checksum.delay(image.pk)
-    #     return Response('', status=status.HTTP_202_ACCEPTED)

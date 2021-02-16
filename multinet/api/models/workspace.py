@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from django.conf import settings
 from django.db.models import CharField
 from django_extensions.db.models import TimeStampedModel
 from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
+from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted
 
-from arango import ArangoClient
 from uuid import uuid4
 
 
@@ -60,21 +59,11 @@ class Workspace(TimeStampedModel):
             remove_perm('owner', owner, self)
 
     def save(self, *args, **kwargs):
-        client = ArangoClient(hosts=settings.MULTINET_ARANGO_URL)
-        sysdb = client.db('_system', username='root', password=settings.MULTINET_ARANGO_PASSWORD)
-
-        if not sysdb.has_database(self.arango_db_name):
-            sysdb.create_database(self.arango_db_name)
-
+        ensure_db_created(self.arango_db_name)
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        client = ArangoClient(hosts=settings.MULTINET_ARANGO_URL)
-        sysdb = client.db('_system', username='root', password=settings.MULTINET_ARANGO_PASSWORD)
-
-        if sysdb.has_database(self.arango_db_name):
-            sysdb.delete_database(self.arango_db_name)
-
+        ensure_db_deleted(self.arango_db_name)
         super().delete(*args, **kwargs)
 
     def __str__(self) -> str:
