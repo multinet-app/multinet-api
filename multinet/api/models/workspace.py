@@ -16,7 +16,7 @@ def create_default_arango_db_name():
 class Workspace(TimeStampedModel):
     name = CharField(max_length=300, unique=True)
 
-    # Max length of 33, since uuid hexes are 32, + 2 chars on the front
+    # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
 
     class Meta:

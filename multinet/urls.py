@@ -4,16 +4,24 @@ from django.urls import include, path
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
-from rest_framework.routers import SimpleRouter
+from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
     WorkspaceViewSet,
+    TableViewSet,
     users_me_view,
     users_search_view,
 )
 
-router = SimpleRouter()
-router.register(r'workspaces', WorkspaceViewSet)
+router = ExtendedSimpleRouter()
+(
+    router.register(r'workspaces', WorkspaceViewSet).register(
+        'tables',
+        TableViewSet,
+        basename='table',
+        parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+    )
+)
 
 # OpenAPI generation
 schema_view = get_schema_view(

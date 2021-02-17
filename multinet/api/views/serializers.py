@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from multinet.api.models import (
     Workspace,
+    Table,
 )
 
 
@@ -18,6 +19,8 @@ class UserDetailSerializer(serializers.Serializer):
     admin = serializers.BooleanField()
 
 
+# TODO: Add WorkspaceCreateSerializer that this inherits from,
+# and specify arnago_db_name on the extended serializer
 class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
@@ -28,3 +31,19 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             'modified',
         ]
         read_only_fields = ['created']
+
+
+class TableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Table
+        fields = [
+            'id',
+            'name',
+            'edge',
+            'created',
+            'modified',
+            'workspace',
+        ]
+        read_only_fields = ['created']
+
+    workspace = WorkspaceSerializer()
