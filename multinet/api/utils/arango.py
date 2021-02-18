@@ -1,7 +1,8 @@
-from arango.database import StandardDatabase
-from arango import ArangoClient
-from django.conf import settings
 from functools import lru_cache
+
+from arango import ArangoClient
+from arango.database import StandardDatabase
+from django.conf import settings
 
 
 @lru_cache()

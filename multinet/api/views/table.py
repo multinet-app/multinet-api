@@ -4,7 +4,6 @@ from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import status
-
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -13,8 +12,8 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from multinet.api.models import Table, Workspace
 from multinet.api.views.serializers import (
     TableCreateSerializer,
-    TableSerializer,
     TableReturnSerializer,
+    TableSerializer,
 )
 
 

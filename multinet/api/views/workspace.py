@@ -5,14 +5,13 @@ from drf_yasg.utils import swagger_auto_schema
 from guardian.shortcuts import assign_perm
 from guardian.utils import get_40x_or_None
 from rest_framework import status
-
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace
-from multinet.api.views.serializers import WorkspaceSerializer, WorkspaceCreateSerializer
+from multinet.api.views.serializers import WorkspaceCreateSerializer, WorkspaceSerializer
 
 
 class WorkspaceViewSet(ReadOnlyModelViewSet):

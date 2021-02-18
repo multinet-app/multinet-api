@@ -6,12 +6,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
-from multinet.api.views import (
-    WorkspaceViewSet,
-    TableViewSet,
-    users_me_view,
-    users_search_view,
-)
+from multinet.api.views import TableViewSet, WorkspaceViewSet, users_me_view, users_search_view
 
 router = ExtendedSimpleRouter()
 (

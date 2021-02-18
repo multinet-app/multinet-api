@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
+
 from multinet.api.utils.arango import get_or_create_db
-from uuid import uuid4
 
 from .workspace import Workspace
 

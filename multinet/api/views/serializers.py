@@ -1,10 +1,7 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import (
-    Workspace,
-    Table,
-)
+from multinet.api.models import Table, Workspace
 
 
 # The default ModelSerializer for User fails if the user already exists
