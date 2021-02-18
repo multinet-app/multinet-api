@@ -21,7 +21,7 @@ class UserDetailSerializer(serializers.Serializer):
 
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
 # and specify arnago_db_name on the extended serializer
-class WorkspaceSerializer(serializers.ModelSerializer):
+class WorkspaceCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = [
@@ -29,6 +29,15 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             'name',
             'created',
             'modified',
+        ]
+        read_only_fields = ['created']
+
+
+class WorkspaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Workspace
+        fields = WorkspaceCreateSerializer.Meta.fields + [
+            'arango_db_name',
         ]
         read_only_fields = ['created']
 

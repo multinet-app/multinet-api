@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace
-from multinet.api.views.serializers import WorkspaceSerializer
+from multinet.api.views.serializers import WorkspaceSerializer, WorkspaceCreateSerializer
 
 
 class WorkspaceViewSet(ReadOnlyModelViewSet):
@@ -28,11 +28,11 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     pagination_class = PageNumberPagination
 
     @swagger_auto_schema(
-        request_body=WorkspaceSerializer(),
+        request_body=WorkspaceCreateSerializer(),
         responses={200: WorkspaceSerializer()},
     )
     def create(self, request):
-        serializer = WorkspaceSerializer(data=request.data)
+        serializer = WorkspaceCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         workspace, created = Workspace.objects.get_or_create(
