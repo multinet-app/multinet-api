@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from django.db.models import CharField
 from django_extensions.db.models import TimeStampedModel
 from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
-from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted
 
-from uuid import uuid4
+from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted
 
 
 def create_default_arango_db_name():
@@ -16,7 +17,7 @@ def create_default_arango_db_name():
 class Workspace(TimeStampedModel):
     name = CharField(max_length=300, unique=True)
 
-    # Max length of 33, since uuid hexes are 32, + 2 chars on the front
+    # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
 
     class Meta:
