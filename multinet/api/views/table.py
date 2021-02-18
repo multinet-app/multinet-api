@@ -11,7 +11,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Table, Workspace
-from multinet.api.views.serializers import TableSerializer
+from multinet.api.views.serializers import (
+    TableCreateSerializer,
+    TableSerializer,
+    TableReturnSerializer,
+)
 
 
 class TableViewSet(ReadOnlyModelViewSet):
@@ -19,7 +23,7 @@ class TableViewSet(ReadOnlyModelViewSet):
     lookup_field = 'name'
 
     permission_classes = [IsAuthenticatedOrReadOnly]
-    serializer_class = TableSerializer
+    serializer_class = TableReturnSerializer
 
     filter_backends = [filters.DjangoFilterBackend]
     filterset_fields = ['name']
@@ -27,8 +31,8 @@ class TableViewSet(ReadOnlyModelViewSet):
     pagination_class = PageNumberPagination
 
     @swagger_auto_schema(
-        request_body=TableSerializer(),
-        responses={200: TableSerializer()},
+        request_body=TableCreateSerializer(),
+        responses={200: TableReturnSerializer()},
     )
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -39,7 +43,12 @@ class TableViewSet(ReadOnlyModelViewSet):
         if response:
             return response
 
-        serializer = TableSerializer(data=request.data)
+        serializer = TableSerializer(
+            data={
+                **request.data,
+                'workspace': workspace.pk,
+            }
+        )
         serializer.is_valid(raise_exception=True)
 
         table, created = Table.objects.get_or_create(
@@ -51,7 +60,7 @@ class TableViewSet(ReadOnlyModelViewSet):
         if created:
             table.save()
 
-        return Response(TableSerializer(table).data, status=status.HTTP_200_OK)
+        return Response(TableReturnSerializer(table).data, status=status.HTTP_200_OK)
 
     # @permission_required_or_403('owner', (Workspace, 'dandiset__pk'))
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):

@@ -33,17 +33,30 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         read_only_fields = ['created']
 
 
-class TableSerializer(serializers.ModelSerializer):
+# The required fields for table creation
+class TableCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Table
         fields = [
-            'id',
             'name',
             'edge',
+        ]
+        read_only_fields = ['created']
+
+
+# Used for full Table serialization / validation
+class TableSerializer(TableCreateSerializer):
+    class Meta:
+        model = Table
+        fields = TableCreateSerializer.Meta.fields + [
+            'id',
             'created',
             'modified',
             'workspace',
         ]
         read_only_fields = ['created']
 
+
+# Used for serializing Tables as responses
+class TableReturnSerializer(TableSerializer):
     workspace = WorkspaceSerializer()
