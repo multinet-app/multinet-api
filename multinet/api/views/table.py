@@ -1,10 +1,10 @@
-# from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import status
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -14,6 +14,12 @@ from multinet.api.views.serializers import (
     TableCreateSerializer,
     TableReturnSerializer,
     TableSerializer,
+)
+
+from .common import MultinetPagination
+
+OPENAPI_ROWS_SCHEMA = openapi.Schema(
+    type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
 )
 
 
@@ -27,7 +33,7 @@ class TableViewSet(ReadOnlyModelViewSet):
     filter_backends = [filters.DjangoFilterBackend]
     filterset_fields = ['name']
 
-    pagination_class = PageNumberPagination
+    pagination_class = MultinetPagination
 
     @swagger_auto_schema(
         request_body=TableCreateSerializer(),
@@ -81,3 +87,72 @@ class TableViewSet(ReadOnlyModelViewSet):
 
         table.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('page', 'query', type='integer'),
+            openapi.Parameter('page_size', 'query', type='integer'),
+        ],
+        responses={200: OPENAPI_ROWS_SCHEMA},
+    )
+    @action(detail=True, url_path='rows')
+    def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        # NOTE
+        # Below is done to emulate pagination, since arango cursors aren't querysets
+        # If there is a way to do with firsthand with Django Pagination, this should be replaced
+
+        try:
+            page = int(request.GET.get('page'))
+        except (TypeError, ValueError):
+            page = 1
+
+        try:
+            page_size = int(request.GET.get('page_size')) or 1
+        except (TypeError, ValueError):
+            page_size = self.pagination_class.page_size
+
+        rows, count = table.get_rows(page=page, page_size=page_size)
+        base_url = request.build_absolute_uri().split('?')[0]
+
+        next_url = None
+        if count > page * page_size:
+            next_url = f'{base_url}?page={page+1}'
+
+        prev_url = None
+        if page > 1:
+            prev_url = f'{base_url}?page={page-1}'
+
+        return Response(
+            {
+                'count': count,
+                'next': next_url,
+                'previous': prev_url,
+                'results': rows,
+            }
+        )
+
+    @swagger_auto_schema(
+        request_body=OPENAPI_ROWS_SCHEMA,
+        responses={200: OPENAPI_ROWS_SCHEMA},
+    )
+    @get_rows.mapping.put
+    def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        return Response(table.put_rows(request.data))
+
+    @swagger_auto_schema(
+        request_body=OPENAPI_ROWS_SCHEMA,
+        responses={200: OPENAPI_ROWS_SCHEMA},
+    )
+    @get_rows.mapping.delete
+    def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        table.delete_rows(request.data)
+        return Response(None, status=status.HTTP_200_OK)
