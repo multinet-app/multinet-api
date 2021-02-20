@@ -4,6 +4,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -21,6 +22,51 @@ from .common import MultinetPagination
 OPENAPI_ROWS_SCHEMA = openapi.Schema(
     type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
 )
+
+
+class RowViewSet(viewsets.ViewSet):
+    pagination_class = MultinetPagination
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('page', 'query', type='integer'),
+            openapi.Parameter('page_size', 'query', type='integer'),
+        ],
+        responses={200: OPENAPI_ROWS_SCHEMA},
+    )
+    def list(self, request, parent_lookup_workspace__name: str, parent_lookup_table__name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=parent_lookup_table__name)
+
+        try:
+            page = int(request.GET.get('page'))
+        except (TypeError, ValueError):
+            page = 1
+
+        try:
+            page_size = int(request.GET.get('page_size')) or 1
+        except (TypeError, ValueError):
+            page_size = self.pagination_class.page_size
+
+        rows, count = table.get_rows(page=page, page_size=page_size)
+        base_url = request.build_absolute_uri().split('?')[0]
+
+        next_url = None
+        if count > page * page_size:
+            next_url = f'{base_url}?page={page+1}'
+
+        prev_url = None
+        if page > 1:
+            prev_url = f'{base_url}?page={page-1}'
+
+        return Response(
+            {
+                'count': count,
+                'next': next_url,
+                'previous': prev_url,
+                'results': rows,
+            }
+        )
 
 
 class TableViewSet(ReadOnlyModelViewSet):
