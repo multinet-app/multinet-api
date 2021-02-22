@@ -45,8 +45,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
     # @permission_required_or_403('owner', (Workspace, 'dandiset__pk'))
-    def destroy(self, request, pk):
-        workspace: Workspace = get_object_or_404(Workspace, pk=pk)
+    def destroy(self, request, name):
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
 
         # TODO @permission_required doesn't work on methods
         # https://github.com/django-guardian/django-guardian/issues/723

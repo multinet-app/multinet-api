@@ -12,20 +12,10 @@ from multinet.api.utils.arango import get_or_create_db
 from .workspace import Workspace
 
 
-def create_default_arango_coll_name():
-    # Arango db names must start with a letter
-    return f'w-{uuid4().hex}'
-
-
 class Table(TimeStampedModel):
     name = models.CharField(max_length=300)
     edge = models.BooleanField(default=False)
     workspace = models.ForeignKey(Workspace, related_name='tables', on_delete=models.CASCADE)
-
-    # Max length of 34, since uuid hexes are 32, + 2 chars on the front
-    arango_coll_name = models.CharField(
-        max_length=34, unique=True, default=create_default_arango_coll_name
-    )
 
     class Meta:
         unique_together = ('workspace', 'name')
