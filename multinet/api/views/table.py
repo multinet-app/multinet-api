@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg import openapi
@@ -7,6 +9,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.utils.urls import remove_query_param, replace_query_param
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Table, Workspace
@@ -100,8 +103,7 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        # NOTE
-        # Below is done to emulate pagination, since arango cursors aren't querysets
+        # NOTE: Below is done to emulate pagination, since arango cursors aren't querysets
         # If there is a way to do with firsthand with Django Pagination, this should be replaced
 
         try:
@@ -115,23 +117,26 @@ class TableViewSet(ReadOnlyModelViewSet):
             page_size = self.pagination_class.page_size
 
         rows, count = table.get_rows(page=page, page_size=page_size)
-        base_url = request.build_absolute_uri().split('?')[0]
 
-        next_url = None
-        if count > page * page_size:
-            next_url = f'{base_url}?page={page+1}'
-
+        url = request.build_absolute_uri()
+        next_url = replace_query_param(url, 'page', page + 1) if count > page * page_size else None
         prev_url = None
+
         if page > 1:
-            prev_url = f'{base_url}?page={page-1}'
+            if page == 2:
+                prev_url = remove_query_param(url, 'page')
+            else:
+                prev_url = replace_query_param(url, 'page', page - 1)
 
         return Response(
-            {
-                'count': count,
-                'next': next_url,
-                'previous': prev_url,
-                'results': rows,
-            }
+            OrderedDict(
+                [
+                    ('count', count),
+                    ('next', next_url),
+                    ('previous', prev_url),
+                    ('results', rows),
+                ]
+            )
         )
 
     @swagger_auto_schema(
