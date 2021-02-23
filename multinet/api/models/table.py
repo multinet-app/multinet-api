@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from typing import Dict, Generator, List, Optional, Tuple
-from uuid import uuid4
 
 from arango.cursor import Cursor
 from django.db import models
+from django.db.models.signals import pre_save, pre_delete
+from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
 
 from multinet.api.utils.arango import get_or_create_db
@@ -19,24 +20,6 @@ class Table(TimeStampedModel):
 
     class Meta:
         unique_together = ('workspace', 'name')
-
-    def save(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = get_or_create_db(workspace.arango_db_name)
-        if not db.has_collection(self.name):
-            db.create_collection(self.name)
-
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = get_or_create_db(workspace.arango_db_name)
-        if db.has_collection(self.name):
-            db.delete_collection(self.name)
-
-        super().delete(*args, **kwargs)
 
     def get_rows(
         self, page: Optional[int] = None, page_size: Optional[int] = None
@@ -66,3 +49,17 @@ class Table(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+@receiver(pre_save, sender=Table)
+def ensure_arangodb_collection_exists(sender, instance: Table, *args, **kwargs):
+    db = get_or_create_db(instance.workspace.arango_db_name)
+    if not db.has_collection(instance.name):
+        db.create_collection(instance.name)
+
+
+@receiver(pre_delete, sender=Table)
+def ensure_arangodb_collection_deleted(sender, instance: Table, *args, **kwargs):
+    db = get_or_create_db(instance.workspace.arango_db_name)
+    if db.has_collection(instance.name):
+        db.delete_collection(instance.name)

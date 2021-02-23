@@ -3,6 +3,8 @@ from __future__ import annotations
 from uuid import uuid4
 
 from django.db.models import CharField
+from django.db.models.signals import pre_save, pre_delete
+from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
 from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
 
@@ -59,13 +61,15 @@ class Workspace(TimeStampedModel):
         if owner in owners:
             remove_perm('owner', owner, self)
 
-    def save(self, *args, **kwargs):
-        ensure_db_created(self.arango_db_name)
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        ensure_db_deleted(self.arango_db_name)
-        super().delete(*args, **kwargs)
-
     def __str__(self) -> str:
         return self.name
+
+
+@receiver(pre_save, sender=Workspace)
+def ensure_arangodb_collection_exists(sender, instance: Workspace, *args, **kwargs):
+    ensure_db_created(instance.arango_db_name)
+
+
+@receiver(pre_delete, sender=Workspace)
+def ensure_arangodb_collection_deleted(sender, instance: Workspace, *args, **kwargs):
+    ensure_db_deleted(instance.arango_db_name)
