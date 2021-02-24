@@ -19,11 +19,7 @@ from multinet.api.views.serializers import (
     TableSerializer,
 )
 
-from .common import MultinetPagination
-
-OPENAPI_ROWS_SCHEMA = openapi.Schema(
-    type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
-)
+from .common import MultinetPagination, OPENAPI_ROWS_SCHEMA
 
 
 class TableViewSet(ReadOnlyModelViewSet):

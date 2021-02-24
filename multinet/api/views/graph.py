@@ -5,7 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import status
 
-# from rest_framework.decorators import action
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -17,10 +17,19 @@ from multinet.api.views.serializers import (
     GraphSerializer,
 )
 
-from .common import MultinetPagination
+from multinet.api.utils.arango import get_or_create_db
 
-OPENAPI_ROWS_SCHEMA = openapi.Schema(
-    type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
+from .common import MultinetPagination, OPENAPI_ROWS_SCHEMA
+
+
+EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'edge_table': openapi.Schema(type=openapi.TYPE_STRING),
+        'node_tables': openapi.Schema(
+            type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)
+        ),
+    },
 )
 
 
@@ -87,3 +96,32 @@ class GraphViewSet(ReadOnlyModelViewSet):
 
         graph.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        request_body=EDGE_DEFINITION_CREATE_SCHEMA,
+        responses={200: OPENAPI_ROWS_SCHEMA},
+    )
+    @action(detail=True, methods=['POST'], url_path='edge_definition')
+    def add_edge_definition(self, request, parent_lookup_workspace__name: str, name: str):
+        print(request.data)
+        return Response(None, status=status.HTTP_200_OK)
+
+    # # Add a table to this graph
+    # def add_tables(self, request, parent_lookup_workspace__name: str, name: str):
+    #     pass
+
+    # # Remove a table from this graph
+    # def remove_table(self, request, parent_lookup_workspace__name: str, name: str):
+    #     pass
+
+    # # List tables in this graph
+    # def tables(self, request, parent_lookup_workspace__name: str, name: str):
+    #     pass
+
+    # # List graph nodes
+    # def nodes(self, request, parent_lookup_workspace__name: str, name: str):
+    #     pass
+
+    # # List the graph edges
+    # def edges(self, request, parent_lookup_workspace__name: str, name: str):
+    #     pass
