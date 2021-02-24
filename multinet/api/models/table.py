@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Dict, Generator, List, Optional, Tuple
-from uuid import uuid4
 
 from arango.cursor import Cursor
 from django.db import models
@@ -9,6 +8,7 @@ from django_extensions.db.models import TimeStampedModel
 
 from multinet.api.utils.arango import get_or_create_db
 
+from .graph import Graph
 from .workspace import Workspace
 
 
@@ -16,6 +16,7 @@ class Table(TimeStampedModel):
     name = models.CharField(max_length=300)
     edge = models.BooleanField(default=False)
     workspace = models.ForeignKey(Workspace, related_name='tables', on_delete=models.CASCADE)
+    graphs = models.ManyToManyField(Graph)
 
     class Meta:
         unique_together = ('workspace', 'name')

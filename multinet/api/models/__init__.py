@@ -1,4 +1,5 @@
+from .graph import Graph
 from .table import Table
 from .workspace import Workspace
 
-__all__ = ['Workspace', 'Table']
+__all__ = ['Graph', 'Table', 'Workspace']

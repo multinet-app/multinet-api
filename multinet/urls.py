@@ -6,16 +6,27 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
-from multinet.api.views import TableViewSet, WorkspaceViewSet, users_me_view, users_search_view
+from multinet.api.views import (
+    GraphViewSet,
+    TableViewSet,
+    WorkspaceViewSet,
+    users_me_view,
+    users_search_view,
+)
 
 router = ExtendedSimpleRouter()
-(
-    router.register(r'workspaces', WorkspaceViewSet).register(
-        'tables',
-        TableViewSet,
-        basename='table',
-        parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
-    )
+workspaces_routes = router.register(r'workspaces', WorkspaceViewSet)
+workspaces_routes.register(
+    'tables',
+    TableViewSet,
+    basename='table',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
+workspaces_routes.register(
+    'graphs',
+    GraphViewSet,
+    basename='graph',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
 # OpenAPI generation
