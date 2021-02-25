@@ -71,7 +71,9 @@ class TableReturnSerializer(TableSerializer):
 class GraphCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Graph
-        fields = ['name']
+        fields = ['name', 'edge_table']
+
+    edge_table = serializers.CharField()
 
 
 class GraphSerializer(serializers.ModelSerializer):
@@ -83,6 +85,6 @@ class GraphSerializer(serializers.ModelSerializer):
 class GraphReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = Graph
-        fields = '__all__'
+        fields = ['id', 'name', 'created', 'modified', 'workspace']
 
     workspace = WorkspaceSerializer()

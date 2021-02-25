@@ -39,15 +39,22 @@ class Table(TimeStampedModel):
 
         super().delete(*args, **kwargs)
 
+    def count(self) -> int:
+        workspace: Workspace = self.workspace
+        coll = get_or_create_db(workspace.arango_db_name).collection(self.name)
+        return coll.count()
+
     def get_rows(
         self, page: Optional[int] = None, page_size: Optional[int] = None
     ) -> Tuple[Cursor, int]:
         """Return a tuple containing the Cursor and the total doc count."""
         workspace: Workspace = self.workspace
 
-        skip = (page - 1) * page_size
-        coll = get_or_create_db(workspace.arango_db_name).collection(self.name)
+        skip = None
+        if page and page_size:
+            skip = (page - 1) * page_size
 
+        coll = get_or_create_db(workspace.arango_db_name).collection(self.name)
         return (coll.find({}, skip, page_size), coll.count())
 
     def put_rows(self, rows: List[Dict]) -> Generator[Dict, None, None]:
