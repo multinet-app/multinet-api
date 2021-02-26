@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from uuid import uuid4
-from arango.database import StandardDatabase
 
+from arango.database import StandardDatabase
 from django.db.models import CharField
 from django_extensions.db.models import TimeStampedModel
 from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm

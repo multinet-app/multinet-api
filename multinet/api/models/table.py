@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Dict, List, Set, Optional, Tuple, Union
-from arango.collection import StandardCollection
-from arango.exceptions import DocumentInsertError
+from typing import Dict, List, Optional, Set, Tuple, Union
 
+from arango.collection import StandardCollection
 from arango.cursor import Cursor
+from arango.exceptions import DocumentInsertError
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 

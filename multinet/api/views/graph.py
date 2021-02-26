@@ -1,11 +1,11 @@
 from typing import List, Optional
+
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import serializers, status
-
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -18,7 +18,6 @@ from multinet.api.views.serializers import (
 )
 
 from .common import MultinetPagination
-
 
 EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
     type=openapi.TYPE_OBJECT,

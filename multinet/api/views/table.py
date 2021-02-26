@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     TableSerializer,
 )
 
-from .common import MultinetPagination, OPENAPI_ROWS_SCHEMA
+from .common import OPENAPI_ROWS_SCHEMA, MultinetPagination
 
 
 class RowInsertResponseSerializer(serializers.Serializer):
