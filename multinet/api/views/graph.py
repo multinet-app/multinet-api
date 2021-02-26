@@ -1,11 +1,11 @@
+from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
-from rest_framework import status
+from rest_framework import serializers, status
 
-from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -17,9 +17,7 @@ from multinet.api.views.serializers import (
     GraphSerializer,
 )
 
-from multinet.api.utils.arango import get_or_create_db
-
-from .common import MultinetPagination, OPENAPI_ROWS_SCHEMA
+from .common import MultinetPagination
 
 
 EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
@@ -31,6 +29,46 @@ EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
         ),
     },
 )
+
+
+class GraphCreationErrorSerializer(serializers.Serializer):
+    missing_node_tables = serializers.ListField(child=serializers.CharField())
+    missing_table_keys = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField())
+    )
+
+
+def validate_edge_table(
+    workspace: Workspace, edge_table: Table, node_tables: List[str]
+) -> Optional[Response]:
+    """If there is a validation error, this method returns the error response."""
+    missing_node_tables = []
+    missing_table_keys = {}
+    for table, keys in node_tables.items():
+        query = Table.objects.filter(workspace=workspace, name=table)
+        if query.count() == 0:
+            missing_node_tables.append(table)
+            continue
+
+        nt: Table = query[0]
+        for key in keys:
+            row = nt.get_row({'_key': key})
+            if row.count() == 0:
+                if missing_table_keys.get(table):
+                    missing_table_keys[table].add(key)
+                else:
+                    missing_table_keys[table] = {key}
+
+    if missing_node_tables or missing_table_keys:
+        serialized_resp = GraphCreationErrorSerializer(
+            data={
+                'missing_node_tables': missing_node_tables,
+                'missing_table_keys': missing_table_keys,
+            }
+        )
+
+        serialized_resp.is_valid(raise_exception=True)
+        return Response(serialized_resp.data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GraphViewSet(ReadOnlyModelViewSet):
@@ -70,20 +108,22 @@ class GraphViewSet(ReadOnlyModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
 
-        # Create graph in arango before creating the Graph object here
-        # TODO: Below call doesn't exist yet, it would analyze all rows and return the associations
-        # node_tables = edge_table.find_node_tables()
+        node_tables = edge_table.find_referenced_node_tables()
+        validation_resp = validate_edge_table(workspace, edge_table, node_tables)
+        if validation_resp:
+            return validation_resp
 
-        # get_or_create_db(workspace.name).create_graph(
-        #     serializer.validated_data['name'],
-        #     edge_definitions=[
-        #         {
-        #             'edge_collection': edge_table.name,
-        #             'from_vertex_collections': node_tables,
-        #             'to_vertex_collections': node_tables,
-        #         }
-        #     ],
-        # )
+        # Create graph in arango before creating the Graph object here
+        workspace.get_arango_db().create_graph(
+            serializer.validated_data['name'],
+            edge_definitions=[
+                {
+                    'edge_collection': edge_table.name,
+                    'from_vertex_collections': list(node_tables.keys()),
+                    'to_vertex_collections': list(node_tables.keys()),
+                }
+            ],
+        )
 
         table, created = Graph.objects.get_or_create(
             name=serializer.validated_data['name'],
@@ -115,59 +155,3 @@ class GraphViewSet(ReadOnlyModelViewSet):
 
         graph.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-    # @swagger_auto_schema(
-    #     request_body=EDGE_DEFINITION_CREATE_SCHEMA,
-    #     responses={200: OPENAPI_ROWS_SCHEMA},
-    # )
-    # @action(detail=True, methods=['POST'], url_path='edge_definition')
-    # def add_edge_definition(self, request, parent_lookup_workspace__name: str, name: str):
-    #     workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-    #     graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
-
-    #     edge_table = get_object_or_404(
-    #         Table, workspace=workspace, name=request.data.get('edge_table')
-    #     )
-
-    #     node_tables = []
-    #     for node_table in request.data.get('node_tables', []):
-    #         node_tables.append(get_object_or_404(Table, workspace=workspace, name=node_table))
-
-    #     print(edge_table, node_tables)
-
-    #     edge_collection = edge_table.name
-    #     from_vertex_collections = to_vertex_collections = [table.name for table in node_tables]
-    #     arango_graph = get_or_create_db(workspace.name).graph(graph.name)
-
-    #     print(get_or_create_db(workspace.name).has_graph(graph.name))
-    #     print(get_or_create_db(workspace.name).graphs())
-    #     if arango_graph.has_edge_collection(edge_table.name):
-    #         arango_graph.replace_edge_definition(
-    #             edge_collection, from_vertex_collections, to_vertex_collections
-    #         )
-    #     else:
-    #         arango_graph.create_edge_definition(
-    #             edge_collection, from_vertex_collections, to_vertex_collections
-    #         )
-
-    #     return Response(arango_graph.edge_definitions(), status=status.HTTP_200_OK)
-
-    # # Add a table to this graph
-    # def add_tables(self, request, parent_lookup_workspace__name: str, name: str):
-    #     pass
-
-    # # Remove a table from this graph
-    # def remove_table(self, request, parent_lookup_workspace__name: str, name: str):
-    #     pass
-
-    # # List tables in this graph
-    # def tables(self, request, parent_lookup_workspace__name: str, name: str):
-    #     pass
-
-    # # List graph nodes
-    # def nodes(self, request, parent_lookup_workspace__name: str, name: str):
-    #     pass
-
-    # # List the graph edges
-    # def edges(self, request, parent_lookup_workspace__name: str, name: str):
-    #     pass

@@ -80,5 +80,32 @@ class Table(TimeStampedModel):
         self.get_arango_collection().delete_many(rows)
         return True
 
+    def find_referenced_node_tables(self) -> Dict[str, Set[str]]:
+        referenced: Dict[str] = {}
+        if not self.edge:
+            return referenced
+
+        rows, _ = self.get_rows()
+        for row in rows:
+            _from, _to = row.get('_from'), row.get('_to')
+
+            for end in (_from, _to):
+                if end is None:
+                    # Not currently handled
+                    continue
+
+                table, key = end.split('/')
+                if not table:
+                    # Not currently handled
+                    continue
+
+                if referenced.get(table) is None:
+                    referenced[table] = set()
+
+                if key:
+                    referenced[table].add(key)
+
+        return referenced
+
     def __str__(self) -> str:
         return self.name
