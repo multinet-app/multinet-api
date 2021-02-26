@@ -24,7 +24,7 @@ class Table(TimeStampedModel):
 
         db = workspace.get_arango_db()
         if not db.has_collection(self.name):
-            db.create_collection(self.name)
+            db.create_collection(self.name, edge=self.edge)
 
         super().save(*args, **kwargs)
 
