@@ -5,7 +5,7 @@ from django_filters import rest_framework as filters
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -20,6 +20,11 @@ from multinet.api.views.serializers import (
 )
 
 from .common import MultinetPagination, OPENAPI_ROWS_SCHEMA
+
+
+class RowInsertResponseSerializer(serializers.Serializer):
+    inserted = serializers.ListField(child=serializers.JSONField())
+    errors = serializers.ListField(child=serializers.JSONField())
 
 
 class TableViewSet(ReadOnlyModelViewSet):
@@ -144,7 +149,11 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        return Response(table.put_rows(request.data))
+        inserted, errors = table.put_rows(request.data)
+        serializer = RowInsertResponseSerializer(data={'inserted': inserted, 'errors': errors})
+        serializer.is_valid(raise_exception=True)
+
+        return Response(serializer.data)
 
     @swagger_auto_schema(
         request_body=OPENAPI_ROWS_SCHEMA,

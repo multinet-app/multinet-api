@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Dict, List, Set, Optional, Tuple, Union
+from arango.collection import StandardCollection
+from arango.exceptions import DocumentInsertError
 
 from arango.cursor import Cursor
 from django.db import models
@@ -58,12 +60,20 @@ class Table(TimeStampedModel):
         coll = self.get_arango_collection()
         return (coll.find({}, skip, page_size), coll.count())
 
-    def put_rows(self, rows: List[Dict]) -> Generator[Dict, None, None]:
+    def put_rows(self, rows: List[Dict]) -> Tuple[List[Dict], List[Dict[str, Union[int, str]]]]:
         """Insert/update rows in the underlying arangodb collection."""
         res = self.get_arango_collection().insert_many(rows, overwrite=True, return_new=True)
 
-        res = db.collection(self.name).insert_many(rows, overwrite=True, return_new=True)
-        return (doc['new'] for doc in res)
+        results = []
+        errors: List[Dict[str, Union[int, str]]] = []
+
+        for i, doc in enumerate(res):
+            if isinstance(doc, DocumentInsertError):
+                errors.append({'index': i, 'message': doc.error_message})
+            else:
+                results.append(doc['new'])
+
+        return (results, errors)
 
     def delete_rows(self, rows: List[Dict]) -> Cursor:
         """Delete rows in the underlying arangodb collection."""
