@@ -6,8 +6,6 @@ from arango.cursor import Cursor
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
-from multinet.api.utils.arango import get_or_create_db
-
 from .graph import Graph
 from .workspace import Workspace
 
@@ -24,7 +22,7 @@ class Table(TimeStampedModel):
     def save(self, *args, **kwargs):
         workspace: Workspace = self.workspace
 
-        db = get_or_create_db(workspace.arango_db_name)
+        db = workspace.get_arango_db()
         if not db.has_collection(self.name):
             db.create_collection(self.name)
 
@@ -33,43 +31,43 @@ class Table(TimeStampedModel):
     def delete(self, *args, **kwargs):
         workspace: Workspace = self.workspace
 
-        db = get_or_create_db(workspace.arango_db_name)
+        db = workspace.get_arango_db()
         if db.has_collection(self.name):
             db.delete_collection(self.name)
 
         super().delete(*args, **kwargs)
 
     def count(self) -> int:
+        return self.get_arango_collection().count()
+
+    def get_arango_collection(self) -> StandardCollection:
         workspace: Workspace = self.workspace
-        coll = get_or_create_db(workspace.arango_db_name).collection(self.name)
-        return coll.count()
+        return workspace.get_arango_db().collection(self.name)
+
+    def get_row(self, query: Optional[Dict] = None) -> Cursor:
+        return self.get_arango_collection().find(query or {}, skip=None, limit=1)
 
     def get_rows(
         self, page: Optional[int] = None, page_size: Optional[int] = None
     ) -> Tuple[Cursor, int]:
         """Return a tuple containing the Cursor and the total doc count."""
-        workspace: Workspace = self.workspace
-
         skip = None
         if page and page_size:
             skip = (page - 1) * page_size
 
-        coll = get_or_create_db(workspace.arango_db_name).collection(self.name)
+        coll = self.get_arango_collection()
         return (coll.find({}, skip, page_size), coll.count())
 
     def put_rows(self, rows: List[Dict]) -> Generator[Dict, None, None]:
         """Insert/update rows in the underlying arangodb collection."""
-        workspace: Workspace = self.workspace
-        db = get_or_create_db(workspace.arango_db_name)
+        res = self.get_arango_collection().insert_many(rows, overwrite=True, return_new=True)
 
         res = db.collection(self.name).insert_many(rows, overwrite=True, return_new=True)
         return (doc['new'] for doc in res)
 
     def delete_rows(self, rows: List[Dict]) -> Cursor:
         """Delete rows in the underlying arangodb collection."""
-        workspace: Workspace = self.workspace
-        get_or_create_db(workspace.arango_db_name).collection(self.name).delete_many(rows)
-
+        self.get_arango_collection().delete_many(rows)
         return True
 
     def __str__(self) -> str:

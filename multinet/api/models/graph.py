@@ -3,8 +3,6 @@ from __future__ import annotations
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
-from multinet.api.utils.arango import get_or_create_db
-
 from .workspace import Workspace
 
 
@@ -18,7 +16,7 @@ class Graph(TimeStampedModel):
     def save(self, *args, **kwargs):
         workspace: Workspace = self.workspace
 
-        db = get_or_create_db(workspace.arango_db_name)
+        db = workspace.get_arango_db()
         if not db.has_graph(self.name):
             db.create_graph(self.name)
 
@@ -27,7 +25,7 @@ class Graph(TimeStampedModel):
     def delete(self, *args, **kwargs):
         workspace: Workspace = self.workspace
 
-        db = get_or_create_db(workspace.arango_db_name)
+        db = workspace.get_arango_db()
         if db.has_graph(self.name):
             db.delete_graph(self.name)
 
