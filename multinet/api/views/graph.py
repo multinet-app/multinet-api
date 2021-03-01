@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
@@ -6,8 +7,10 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import serializers, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.utils.urls import remove_query_param, replace_query_param
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Graph, Table, Workspace
@@ -17,7 +20,11 @@ from multinet.api.views.serializers import (
     GraphSerializer,
 )
 
-from .common import MultinetPagination
+from .common import (
+    PAGINATED_RESULTS_SCHEMA,
+    PAGINATION_QUERY_PARAMS,
+    MultinetPagination,
+)
 
 EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -124,15 +131,24 @@ class GraphViewSet(ReadOnlyModelViewSet):
             ],
         )
 
-        table, created = Graph.objects.get_or_create(
+        graph, created = Graph.objects.get_or_create(
             name=serializer.validated_data['name'],
             workspace=workspace,
         )
 
         if created:
-            table.save()
+            graph.save()
 
-        return Response(GraphReturnSerializer(table).data, status=status.HTTP_200_OK)
+        # loaded_node_tables = Table.objects.all().filter(
+        #     workspace=workspace, name__in=list(node_tables.keys())
+        # )
+
+        # # Add graph relation to all tables used
+        # edge_table.graphs.add(graph)
+        # for table in loaded_node_tables:
+        #     table.graphs.add(graph)
+
+        return Response(GraphReturnSerializer(graph).data, status=status.HTTP_200_OK)
 
     # @permission_required_or_403('owner', (Workspace, 'dandiset__pk'))
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
@@ -154,3 +170,46 @@ class GraphViewSet(ReadOnlyModelViewSet):
 
         graph.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(
+        manual_parameters=PAGINATION_QUERY_PARAMS,
+        responses={200: PAGINATED_RESULTS_SCHEMA},
+    )
+    @action(detail=True, url_path='nodes')
+    def nodes(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
+
+        try:
+            page = int(request.GET.get('page'))
+        except (TypeError, ValueError):
+            page = 1
+
+        try:
+            page_size = int(request.GET.get('page_size')) or 1
+        except (TypeError, ValueError):
+            page_size = self.pagination_class.page_size
+
+        count = graph.node_count()
+        nodes = list(graph.nodes(page, page_size))
+
+        url = request.build_absolute_uri()
+        next_url = replace_query_param(url, 'page', page + 1) if count > page * page_size else None
+        prev_url = None
+
+        if page > 1:
+            if page == 2:
+                prev_url = remove_query_param(url, 'page')
+            else:
+                prev_url = replace_query_param(url, 'page', page - 1)
+
+        return Response(
+            OrderedDict(
+                [
+                    ('count', count),
+                    ('next', next_url),
+                    ('previous', prev_url),
+                    ('results', nodes),
+                ]
+            )
+        )
