@@ -22,6 +22,7 @@ from .common import (
     ARRAY_OF_OBJECTS_SCHEMA,
     PAGINATED_RESULTS_SCHEMA,
     PAGINATION_QUERY_PARAMS,
+    CustomPagination,
     MultinetPagination,
 )
 
@@ -105,42 +106,11 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        # NOTE: Below is done to emulate pagination, since arango cursors aren't querysets
-        # If there is a way to do with firsthand with Django Pagination, this should be replaced
-
-        try:
-            page = int(request.GET.get('page'))
-        except (TypeError, ValueError):
-            page = 1
-
-        try:
-            page_size = int(request.GET.get('page_size')) or 1
-        except (TypeError, ValueError):
-            page_size = self.pagination_class.page_size
-
-        rows = table.get_rows(page=page, page_size=page_size)
+        pagination = CustomPagination(request, self.pagination_class)
+        rows = table.get_rows(page=pagination.page, page_size=pagination.page_size)
         count = table.count()
 
-        url = request.build_absolute_uri()
-        next_url = replace_query_param(url, 'page', page + 1) if count > page * page_size else None
-        prev_url = None
-
-        if page > 1:
-            if page == 2:
-                prev_url = remove_query_param(url, 'page')
-            else:
-                prev_url = replace_query_param(url, 'page', page - 1)
-
-        return Response(
-            OrderedDict(
-                [
-                    ('count', count),
-                    ('next', next_url),
-                    ('previous', prev_url),
-                    ('results', rows),
-                ]
-            )
-        )
+        return pagination.create_paginated_response(rows, count)
 
     @swagger_auto_schema(
         request_body=ARRAY_OF_OBJECTS_SCHEMA,

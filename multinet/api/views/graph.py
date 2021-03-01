@@ -10,7 +10,6 @@ from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_framework.utils.urls import remove_query_param, replace_query_param
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Graph, Table, Workspace
@@ -23,6 +22,7 @@ from multinet.api.views.serializers import (
 from .common import (
     PAGINATED_RESULTS_SCHEMA,
     PAGINATION_QUERY_PARAMS,
+    CustomPagination,
     MultinetPagination,
 )
 
@@ -180,36 +180,8 @@ class GraphViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
 
-        try:
-            page = int(request.GET.get('page'))
-        except (TypeError, ValueError):
-            page = 1
-
-        try:
-            page_size = int(request.GET.get('page_size')) or 1
-        except (TypeError, ValueError):
-            page_size = self.pagination_class.page_size
-
+        pagination = CustomPagination(request, self.pagination_class)
+        nodes = graph.nodes(pagination.page, pagination.page_size)
         count = graph.node_count()
-        nodes = list(graph.nodes(page, page_size))
 
-        url = request.build_absolute_uri()
-        next_url = replace_query_param(url, 'page', page + 1) if count > page * page_size else None
-        prev_url = None
-
-        if page > 1:
-            if page == 2:
-                prev_url = remove_query_param(url, 'page')
-            else:
-                prev_url = replace_query_param(url, 'page', page - 1)
-
-        return Response(
-            OrderedDict(
-                [
-                    ('count', count),
-                    ('next', next_url),
-                    ('previous', prev_url),
-                    ('results', nodes),
-                ]
-            )
-        )
+        return pagination.create_paginated_response(nodes, count)
