@@ -2,7 +2,6 @@ from collections import OrderedDict
 
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
 from rest_framework import serializers, status
@@ -19,7 +18,12 @@ from multinet.api.views.serializers import (
     TableSerializer,
 )
 
-from .common import OPENAPI_ROWS_SCHEMA, MultinetPagination
+from .common import (
+    ARRAY_OF_OBJECTS_SCHEMA,
+    PAGINATED_RESULTS_SCHEMA,
+    PAGINATION_QUERY_PARAMS,
+    MultinetPagination,
+)
 
 
 class RowInsertResponseSerializer(serializers.Serializer):
@@ -93,11 +97,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('page', 'query', type='integer'),
-            openapi.Parameter('page_size', 'query', type='integer'),
-        ],
-        responses={200: OPENAPI_ROWS_SCHEMA},
+        manual_parameters=PAGINATION_QUERY_PARAMS,
+        responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
     def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
@@ -117,7 +118,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         except (TypeError, ValueError):
             page_size = self.pagination_class.page_size
 
-        rows, count = table.get_rows(page=page, page_size=page_size)
+        rows = table.get_rows(page=page, page_size=page_size)
+        count = table.count()
 
         url = request.build_absolute_uri()
         next_url = replace_query_param(url, 'page', page + 1) if count > page * page_size else None
@@ -141,8 +143,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         )
 
     @swagger_auto_schema(
-        request_body=OPENAPI_ROWS_SCHEMA,
-        responses={200: OPENAPI_ROWS_SCHEMA},
+        request_body=ARRAY_OF_OBJECTS_SCHEMA,
+        responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @get_rows.mapping.put
     def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
@@ -156,8 +158,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     @swagger_auto_schema(
-        request_body=OPENAPI_ROWS_SCHEMA,
-        responses={200: OPENAPI_ROWS_SCHEMA},
+        request_body=ARRAY_OF_OBJECTS_SCHEMA,
+        responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @get_rows.mapping.delete
     def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):

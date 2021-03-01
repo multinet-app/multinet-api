@@ -47,16 +47,14 @@ class Table(TimeStampedModel):
     def get_row(self, query: Optional[Dict] = None) -> Cursor:
         return self.get_arango_collection().find(query or {}, skip=None, limit=1)
 
-    def get_rows(
-        self, page: Optional[int] = None, page_size: Optional[int] = None
-    ) -> Tuple[Cursor, int]:
+    def get_rows(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
         """Return a tuple containing the Cursor and the total doc count."""
         skip = None
         if page and page_size:
             skip = (page - 1) * page_size
 
         coll = self.get_arango_collection()
-        return (coll.find({}, skip, page_size), coll.count())
+        return coll.find({}, skip, page_size)
 
     def put_rows(self, rows: List[Dict]) -> Tuple[List[Dict], List[Dict[str, Union[int, str]]]]:
         """Insert/update rows in the underlying arangodb collection."""
@@ -83,7 +81,7 @@ class Table(TimeStampedModel):
         if not self.edge:
             return referenced
 
-        rows, _ = self.get_rows()
+        rows = self.get_rows()
         for row in rows:
             _from, _to = row.get('_from'), row.get('_to')
 
