@@ -1,8 +1,6 @@
-from collections import OrderedDict
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
-from django_filters import rest_framework as filters
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.utils import get_40x_or_None
@@ -11,10 +9,12 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework_extensions.mixins import DetailSerializerMixin, NestedViewSetMixin
 
 from multinet.api.models import Graph, Table, Workspace
 from multinet.api.views.serializers import (
     GraphCreateSerializer,
+    GraphReturnDetailSerializer,
     GraphReturnSerializer,
     GraphSerializer,
 )
@@ -77,15 +77,13 @@ def validate_edge_table(
         return Response(serialized_resp.data, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GraphViewSet(ReadOnlyModelViewSet):
+class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
     queryset = Graph.objects.all().select_related('workspace')
     lookup_field = 'name'
 
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = GraphReturnSerializer
-
-    filter_backends = [filters.DjangoFilterBackend]
-    filterset_fields = ['name']
+    serializer_detail_class = GraphReturnDetailSerializer
 
     pagination_class = MultinetPagination
 
@@ -139,16 +137,7 @@ class GraphViewSet(ReadOnlyModelViewSet):
         if created:
             graph.save()
 
-        # loaded_node_tables = Table.objects.all().filter(
-        #     workspace=workspace, name__in=list(node_tables.keys())
-        # )
-
-        # # Add graph relation to all tables used
-        # edge_table.graphs.add(graph)
-        # for table in loaded_node_tables:
-        #     table.graphs.add(graph)
-
-        return Response(GraphReturnSerializer(graph).data, status=status.HTTP_200_OK)
+        return Response(GraphReturnDetailSerializer(graph).data, status=status.HTTP_200_OK)
 
     # @permission_required_or_403('owner', (Workspace, 'dandiset__pk'))
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
@@ -182,6 +171,19 @@ class GraphViewSet(ReadOnlyModelViewSet):
 
         pagination = CustomPagination(request, self.pagination_class)
         nodes = graph.nodes(pagination.page, pagination.page_size)
-        count = graph.node_count()
 
-        return pagination.create_paginated_response(nodes, count)
+        return pagination.create_paginated_response(nodes, graph.node_count)
+
+    @swagger_auto_schema(
+        manual_parameters=PAGINATION_QUERY_PARAMS,
+        responses={200: PAGINATED_RESULTS_SCHEMA},
+    )
+    @action(detail=True, url_path='edges')
+    def edges(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
+
+        pagination = CustomPagination(request, self.pagination_class)
+        edges = graph.edges(pagination.page, pagination.page_size)
+
+        return pagination.create_paginated_response(edges, graph.edge_count)

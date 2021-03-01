@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
@@ -8,7 +6,6 @@ from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_framework.utils.urls import remove_query_param, replace_query_param
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Table, Workspace

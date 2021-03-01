@@ -85,6 +85,20 @@ class GraphSerializer(serializers.ModelSerializer):
 class GraphReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = Graph
-        fields = ['id', 'name', 'created', 'modified', 'workspace']
+        fields = ['id', 'name', 'created', 'modified']
+
+
+class GraphReturnDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Graph
+        fields = [
+            'id',
+            'name',
+            'node_count',
+            'edge_count',
+            'created',
+            'modified',
+            'workspace',
+        ]
 
     workspace = WorkspaceSerializer()
