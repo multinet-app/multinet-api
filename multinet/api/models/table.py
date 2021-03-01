@@ -8,7 +8,6 @@ from arango.exceptions import DocumentInsertError
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
-from .graph import Graph
 from .workspace import Workspace
 
 
@@ -16,7 +15,6 @@ class Table(TimeStampedModel):
     name = models.CharField(max_length=300)
     edge = models.BooleanField(default=False)
     workspace = models.ForeignKey(Workspace, related_name='tables', on_delete=models.CASCADE)
-    graphs = models.ManyToManyField(Graph)
 
     class Meta:
         unique_together = ('workspace', 'name')
