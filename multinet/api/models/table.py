@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Dict, Generator, List, Optional, Tuple
-from uuid import uuid4
 
 from arango.cursor import Cursor
 from django.db import models
