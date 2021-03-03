@@ -28,6 +28,7 @@ class MultinetMixin(ConfigMixin):
         configuration.INSTALLED_APPS += [
             's3_file_field',
             'guardian',
+            'allauth.socialaccount.providers.google',
         ]
 
         configuration.AUTHENTICATION_BACKENDS += ['guardian.backends.ObjectPermissionBackend']
