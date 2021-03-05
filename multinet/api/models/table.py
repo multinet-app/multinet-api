@@ -77,6 +77,15 @@ class Table(TimeStampedModel):
         return True
 
     def find_referenced_node_tables(self) -> Dict[str, Set[str]]:
+        """
+        Return a dict which represents the node tables referenced by an edge table.
+
+        Each key in this dict is the name of a node table referenced by this edge table.
+        Each value is a set of the keys, within the respective node table, that are
+        referenced by this edge table.
+
+        If this function is called on a node table, it returns an empty dict.
+        """
         referenced: Dict[str] = {}
         if not self.edge:
             return referenced
