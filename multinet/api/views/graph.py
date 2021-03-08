@@ -113,6 +113,11 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         serializer.is_valid(raise_exception=True)
 
         node_tables = edge_table.find_referenced_node_tables()
+        if not node_tables:
+            return Response(
+                'Cannot create graph with empty edge table', status=status.HTTP_400_BAD_REQUEST
+            )
+
         validation_resp = validate_edge_table(workspace, edge_table, node_tables)
         if validation_resp:
             return validation_resp
