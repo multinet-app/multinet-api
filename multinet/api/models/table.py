@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from arango.collection import StandardCollection
 from arango.cursor import Cursor
-from arango.exceptions import DocumentInsertError
+from arango.exceptions import DocumentInsertError, DocumentDeleteError
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
@@ -72,10 +72,20 @@ class Table(TimeStampedModel):
 
         return (results, errors)
 
-    def delete_rows(self, rows: List[Dict]) -> Cursor:
+    def delete_rows(self, rows: List[Dict]) -> Tuple[List[Dict], List[Dict[str, Union[int, str]]]]:
         """Delete rows in the underlying arangodb collection."""
-        self.get_arango_collection().delete_many(rows)
-        return True
+        res = self.get_arango_collection().delete_many(rows, return_old=True)
+
+        results = []
+        errors: List[Dict[str, Union[int, str]]] = []
+
+        for i, doc in enumerate(res):
+            if isinstance(doc, DocumentDeleteError):
+                errors.append({'index': i, 'message': doc.error_message})
+            else:
+                results.append(doc['old'])
+
+        return (results, errors)
 
     def find_referenced_node_tables(self) -> Dict[str, Set[str]]:
         """

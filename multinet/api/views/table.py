@@ -29,6 +29,11 @@ class RowInsertResponseSerializer(serializers.Serializer):
     errors = serializers.ListField(child=serializers.JSONField())
 
 
+class RowDeleteResponseSerializer(serializers.Serializer):
+    deleted = serializers.ListField(child=serializers.JSONField())
+    errors = serializers.ListField(child=serializers.JSONField())
+
+
 class TableViewSet(ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
@@ -112,7 +117,7 @@ class TableViewSet(ReadOnlyModelViewSet):
 
     @swagger_auto_schema(
         request_body=ARRAY_OF_OBJECTS_SCHEMA,
-        responses={200: PAGINATED_RESULTS_SCHEMA},
+        responses={200: RowInsertResponseSerializer()},
     )
     @get_rows.mapping.put
     def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
@@ -123,16 +128,19 @@ class TableViewSet(ReadOnlyModelViewSet):
         serializer = RowInsertResponseSerializer(data={'inserted': inserted, 'errors': errors})
         serializer.is_valid(raise_exception=True)
 
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         request_body=ARRAY_OF_OBJECTS_SCHEMA,
-        responses={200: PAGINATED_RESULTS_SCHEMA},
+        responses={200: RowDeleteResponseSerializer()},
     )
     @get_rows.mapping.delete
     def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        table.delete_rows(request.data)
-        return Response(None, status=status.HTTP_200_OK)
+        deleted, errors = table.delete_rows(request.data)
+        serializer = RowDeleteResponseSerializer(data={'deleted': deleted, 'errors': errors})
+        serializer.is_valid(raise_exception=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
