@@ -1,13 +1,10 @@
-from collections import OrderedDict
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List
 
 from arango.collection import StandardCollection
 from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from drf_yasg import openapi
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from rest_framework.response import Response
-from rest_framework.utils.urls import remove_query_param, replace_query_param
 
 from multinet.api.utils.arango import paginate_aql_query
 
@@ -38,53 +35,6 @@ PAGINATED_RESULTS_SCHEMA = openapi.Schema(
         'results': ARRAY_OF_OBJECTS_SCHEMA,
     },
 )
-
-
-class CustomPagination:
-    def __init__(self, request, pagination_class) -> None:
-        self.request = request
-        self.pagination_class = pagination_class
-
-        self.page, self.page_size = self._get_request_pagination_params()
-
-    def _get_request_pagination_params(self) -> Tuple[int, int]:
-        try:
-            page = int(self.request.GET.get('page'))
-        except (TypeError, ValueError):
-            page = 1
-
-        try:
-            page_size = int(self.request.GET.get('page_size')) or 1
-        except (TypeError, ValueError):
-            page_size = self.pagination_class.page_size
-
-        return (page, page_size)
-
-    def create_paginated_response(self, results: Iterable, count: int) -> Response:
-        url = self.request.build_absolute_uri()
-        next_url = (
-            replace_query_param(url, 'page', self.page + 1)
-            if count > self.page * self.page_size
-            else None
-        )
-        prev_url = None
-
-        if self.page > 1:
-            if self.page == 2:
-                prev_url = remove_query_param(url, 'page')
-            else:
-                prev_url = replace_query_param(url, 'page', self.page - 1)
-
-        return Response(
-            OrderedDict(
-                [
-                    ('count', count),
-                    ('next', next_url),
-                    ('previous', prev_url),
-                    ('results', results),
-                ]
-            )
-        )
 
 
 class ArangoPagination(LimitOffsetPagination):
