@@ -106,7 +106,7 @@ class Table(TimeStampedModel):
 
         return RowDeletionResponse(deleted=deleted, errors=errors)
 
-    def find_referenced_node_tables(self) -> Dict[str, Set[str]]:
+    def find_referenced_node_tables(self) -> Optional[Dict[str, Set[str]]]:
         """
         Return a dict which represents the node tables referenced by an edge table.
 
@@ -116,13 +116,14 @@ class Table(TimeStampedModel):
 
         If this function is called on a node table, it returns an empty dict.
         """
-        referenced: Dict[str] = {}
         if not self.edge:
-            return referenced
+            return None
 
+        referenced: Dict[str] = {}
         rows = self.get_rows()
         for row in rows:
-            _from, _to = row.get('_from'), row.get('_to')
+            _from = row.get('_from')
+            _to = row.get('_to')
 
             for end in (_from, _to):
                 if end is None:
