@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Table, Workspace
+from multinet.api.utils.arango import get_aql_query_from_collections
 from multinet.api.views.serializers import (
     TableCreateSerializer,
     TableReturnSerializer,
@@ -111,8 +112,9 @@ class TableViewSet(ReadOnlyModelViewSet):
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
         pagination = ArangoPagination()
-        paginated_query = pagination.paginate_queryset_from_collection(
-            request, table.get_arango_collection()
+        row_query = get_aql_query_from_collections([table.get_arango_collection().name])
+        paginated_query = pagination.paginate_queryset(
+            request, row_query, workspace.get_arango_db()
         )
 
         return pagination.get_paginated_response(paginated_query)

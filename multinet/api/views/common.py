@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-from arango.collection import StandardCollection
 from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from drf_yasg import openapi
@@ -51,16 +50,6 @@ class ArangoPagination(LimitOffsetPagination):
     def _set_post_query_params(self):
         if self.count > self.limit and self.template is not None:
             self.display_page_controls = True
-
-    def paginate_queryset_from_collection(
-        self, request, collection: StandardCollection
-    ) -> List[Dict]:
-        self._set_pre_query_params(request)
-        cur: Cursor = collection.find({}, skip=self.offset, limit=self.limit)
-        self.count = collection.count()
-
-        self._set_post_query_params()
-        return list(cur)
 
     def paginate_queryset(self, request, query: str, db: StandardDatabase) -> List[Dict]:
         self._set_pre_query_params(request)

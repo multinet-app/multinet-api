@@ -2,7 +2,6 @@ from functools import lru_cache
 from typing import List
 
 from arango import ArangoClient
-from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from django.conf import settings
 
@@ -47,7 +46,7 @@ def paginate_aql_query(query: str, limit: int = 0, offset: int = 0) -> str:
     return new_query
 
 
-def get_aql_query_from_collections(collections: List[str]) -> Cursor:
+def get_aql_query_from_collections(collections: List[str]) -> str:
     """Generate an AQL query string from a list of collections."""
     collections_str = f'UNION({", ".join(collections)})' if len(collections) > 1 else collections[0]
     return f'FOR doc in {collections_str} RETURN doc'
