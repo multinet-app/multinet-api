@@ -1,3 +1,5 @@
+from dataclasses import asdict
+
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
@@ -124,8 +126,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        inserted, errors = table.put_rows(request.data)
-        serializer = RowInsertResponseSerializer(data={'inserted': inserted, 'errors': errors})
+        insert_res = table.put_rows(request.data)
+        serializer = RowInsertResponseSerializer(data=asdict(insert_res))
         serializer.is_valid(raise_exception=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -139,8 +141,8 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        deleted, errors = table.delete_rows(request.data)
-        serializer = RowDeleteResponseSerializer(data={'deleted': deleted, 'errors': errors})
+        delete_res = table.delete_rows(request.data)
+        serializer = RowDeleteResponseSerializer(data=asdict(delete_res))
         serializer.is_valid(raise_exception=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)

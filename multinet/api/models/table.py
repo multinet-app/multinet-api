@@ -1,14 +1,33 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set
 
 from arango.collection import StandardCollection
 from arango.cursor import Cursor
-from arango.exceptions import DocumentInsertError, DocumentDeleteError
+from arango.exceptions import DocumentDeleteError, DocumentInsertError
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
 from .workspace import Workspace
+
+
+@dataclass
+class RowModifyError:
+    index: int
+    message: str
+
+
+@dataclass
+class RowInsertionResponse:
+    inserted: List[Dict]
+    errors: List[RowModifyError]
+
+
+@dataclass
+class RowDeletionResponse:
+    deleted: List[Dict]
+    errors: List[RowModifyError]
 
 
 class Table(TimeStampedModel):
@@ -57,35 +76,35 @@ class Table(TimeStampedModel):
         coll = self.get_arango_collection()
         return coll.find({}, skip, page_size)
 
-    def put_rows(self, rows: List[Dict]) -> Tuple[List[Dict], List[Dict[str, Union[int, str]]]]:
+    def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
         res = self.get_arango_collection().insert_many(rows, overwrite=True, return_new=True)
 
-        results = []
-        errors: List[Dict[str, Union[int, str]]] = []
+        inserted = []
+        errors = []
 
         for i, doc in enumerate(res):
             if isinstance(doc, DocumentInsertError):
-                errors.append({'index': i, 'message': doc.error_message})
+                errors.append(RowModifyError(index=i, message=doc.error_message))
             else:
-                results.append(doc['new'])
+                inserted.append(doc['new'])
 
-        return (results, errors)
+        return RowInsertionResponse(inserted=inserted, errors=errors)
 
-    def delete_rows(self, rows: List[Dict]) -> Tuple[List[Dict], List[Dict[str, Union[int, str]]]]:
+    def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
         res = self.get_arango_collection().delete_many(rows, return_old=True)
 
-        results = []
-        errors: List[Dict[str, Union[int, str]]] = []
+        deleted = []
+        errors = []
 
         for i, doc in enumerate(res):
             if isinstance(doc, DocumentDeleteError):
-                errors.append({'index': i, 'message': doc.error_message})
+                errors.append(RowModifyError(index=i, message=doc.error_message))
             else:
-                results.append(doc['old'])
+                deleted.append(doc['old'])
 
-        return (results, errors)
+        return RowDeletionResponse(deleted=deleted, errors=errors)
 
     def find_referenced_node_tables(self) -> Dict[str, Set[str]]:
         """
