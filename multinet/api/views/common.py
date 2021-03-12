@@ -1,12 +1,11 @@
 from typing import Dict, List
 
 from arango.cursor import Cursor
-from arango.database import StandardDatabase
 from drf_yasg import openapi
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.request import Request
 
-from multinet.api.utils.arango import paginate_aql_query
+from multinet.api.utils.arango import ArangoQuery
 
 
 class MultinetPagination(PageNumberPagination):
@@ -52,12 +51,14 @@ class ArangoPagination(LimitOffsetPagination):
         if self.count > self.limit and self.template is not None:
             self.display_page_controls = True
 
-    def paginate_queryset(self, query: str, request: Request, db: StandardDatabase) -> List[Dict]:
+    def paginate_queryset(self, query: ArangoQuery, request: Request) -> List[Dict]:
         self._set_pre_query_params(request)
 
-        paginated_query_str = paginate_aql_query(query, self.limit, self.offset)
-        cur: Cursor = db.aql.execute(paginated_query_str, full_count=True)
-        self.count = cur.statistics()['fullCount']
+        paginated_query = query.paginate(self.limit, self.offset)
+        cur: Cursor = query.db.aql.execute(
+            query=paginated_query.query_str, bind_vars=paginated_query.bind_vars, full_count=True
+        )
 
+        self.count = cur.statistics()['fullCount']
         self._set_post_query_params()
         return list(cur)

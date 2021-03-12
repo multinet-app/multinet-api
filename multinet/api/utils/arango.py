@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from functools import lru_cache
-from typing import List
+from typing import Dict, List, Optional
 
 from arango import ArangoClient
 from arango.database import StandardDatabase
@@ -37,16 +39,37 @@ def get_or_create_db(name: str) -> StandardDatabase:
     return db(name)
 
 
-def paginate_aql_query(query: str, limit: int = 0, offset: int = 0) -> str:
-    """Apply an offset and limit to an AQL query string."""
-    if not limit and not offset:
-        return query
+class ArangoQuery:
+    """A class to represent an AQL query."""
 
-    new_query = f'FOR doc IN ({query}) LIMIT {offset}, {limit} RETURN doc'
-    return new_query
+    def __init__(
+        self,
+        db: StandardDatabase,
+        query_str: Optional[str] = None,
+        bind_vars: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self.db = db
+        self.query_str = query_str
+        self.bind_vars = bind_vars
 
+    @classmethod
+    def from_collections(cls, db: StandardDatabase, collections: List[str]) -> ArangoQuery:
+        """Generate an AQL query string from a list of collections."""
+        coll_vars = []
+        bind_vars = {}
+        for i, coll in enumerate(collections):
+            key = f'@coll{i}'
+            coll_vars.append(f'@{key}')
+            bind_vars[key] = coll
 
-def get_aql_query_from_collections(collections: List[str]) -> str:
-    """Generate an AQL query string from a list of collections."""
-    collections_str = f'UNION({", ".join(collections)})' if len(collections) > 1 else collections[0]
-    return f'FOR doc in {collections_str} RETURN doc'
+        collections_str = f'UNION({", ".join(coll_vars)})' if len(coll_vars) > 1 else coll_vars[0]
+        query_str = f'FOR doc in {collections_str} RETURN doc'
+
+        return ArangoQuery(db, query_str=query_str, bind_vars=bind_vars)
+
+    def paginate(self, limit: int = 0, offset: int = 0) -> ArangoQuery:
+        if not limit and not offset:
+            return ArangoQuery(self.db, query_str=self.query_str, bind_vars=self.bind_vars)
+
+        new_query_str = f'FOR doc IN ({self.query_str}) LIMIT {offset}, {limit} RETURN doc'
+        return ArangoQuery(self.db, query_str=new_query_str, bind_vars=self.bind_vars)

@@ -12,7 +12,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin, NestedViewSetMixin
 
 from multinet.api.models import Graph, Table, Workspace
-from multinet.api.utils.arango import get_aql_query_from_collections
+from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     GraphCreateSerializer,
     GraphReturnDetailSerializer,
@@ -175,13 +175,10 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
 
-        colls = graph.node_tables()
-        query_str = get_aql_query_from_collections(colls)
-
         pagination = ArangoPagination()
-        paginated_query = pagination.paginate_queryset(
-            query_str, request, workspace.get_arango_db()
-        )
+        query = ArangoQuery.from_collections(workspace.get_arango_db(), graph.node_tables())
+        paginated_query = pagination.paginate_queryset(query, request)
+
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
@@ -193,11 +190,8 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
 
-        colls = graph.edge_tables()
-        query_str = get_aql_query_from_collections(colls)
-
         pagination = ArangoPagination()
-        paginated_query = pagination.paginate_queryset(
-            query_str, request, workspace.get_arango_db()
-        )
+        query = ArangoQuery.from_collections(workspace.get_arango_db(), graph.edge_tables())
+        paginated_query = pagination.paginate_queryset(query, request)
+
         return pagination.get_paginated_response(paginated_query)
