@@ -42,7 +42,7 @@ class Graph(TimeStampedModel):
     def _chained_collections_find(
         self, collections: List[str], page: Optional[int] = None, page_size: Optional[int] = None
     ) -> Iterable:
-        """Chains document retreival across several collections, with pagination."""
+        """Chains document retrieval across several collections, with pagination."""
         db: StandardDatabase = self.workspace.get_arango_db()
 
         skip = 0
