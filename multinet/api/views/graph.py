@@ -12,6 +12,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin, NestedViewSetMixin
 
 from multinet.api.models import Graph, Table, Workspace
+from multinet.api.utils.arango import get_aql_query_from_collections
 from multinet.api.views.serializers import (
     GraphCreateSerializer,
     GraphReturnDetailSerializer,
@@ -20,9 +21,9 @@ from multinet.api.views.serializers import (
 )
 
 from .common import (
+    LIMIT_OFFSET_QUERY_PARAMS,
     PAGINATED_RESULTS_SCHEMA,
-    PAGINATION_QUERY_PARAMS,
-    CustomPagination,
+    ArangoPagination,
     MultinetPagination,
 )
 
@@ -166,7 +167,7 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=PAGINATION_QUERY_PARAMS,
+        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='nodes')
@@ -174,13 +175,17 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
 
-        pagination = CustomPagination(request, self.pagination_class)
-        nodes = graph.nodes(pagination.page, pagination.page_size)
+        colls = graph.node_tables()
+        query_str = get_aql_query_from_collections(colls)
 
-        return pagination.create_paginated_response(nodes, graph.node_count)
+        pagination = ArangoPagination()
+        paginated_query = pagination.paginate_queryset(
+            request, query_str, workspace.get_arango_db()
+        )
+        return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
-        manual_parameters=PAGINATION_QUERY_PARAMS,
+        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='edges')
@@ -188,7 +193,11 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
 
-        pagination = CustomPagination(request, self.pagination_class)
-        edges = graph.edges(pagination.page, pagination.page_size)
+        colls = graph.edge_tables()
+        query_str = get_aql_query_from_collections(colls)
 
-        return pagination.create_paginated_response(edges, graph.edge_count)
+        pagination = ArangoPagination()
+        paginated_query = pagination.paginate_queryset(
+            request, query_str, workspace.get_arango_db()
+        )
+        return pagination.get_paginated_response(paginated_query)

@@ -1,6 +1,8 @@
 from functools import lru_cache
+from typing import List
 
 from arango import ArangoClient
+from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from django.conf import settings
 
@@ -34,3 +36,18 @@ def ensure_db_deleted(name: str) -> None:
 def get_or_create_db(name: str) -> StandardDatabase:
     ensure_db_created(name)
     return db(name)
+
+
+def paginate_aql_query(query: str, limit: int = 0, offset: int = 0) -> str:
+    """Apply an offset and limit to an AQL query string."""
+    if not limit and not offset:
+        return query
+
+    new_query = f'FOR doc IN ({query}) LIMIT {offset}, {limit} RETURN doc'
+    return new_query
+
+
+def get_aql_query_from_collections(collections: List[str]) -> Cursor:
+    """Generate an AQL query string from a list of collections."""
+    collections_str = f'UNION({", ".join(collections)})' if len(collections) > 1 else collections[0]
+    return f'FOR doc in {collections_str} RETURN doc'

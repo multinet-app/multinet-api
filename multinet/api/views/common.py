@@ -1,10 +1,14 @@
 from collections import OrderedDict
 from typing import Iterable, Tuple
 
+from arango.cursor import Cursor
+from arango.database import StandardDatabase
 from drf_yasg import openapi
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.utils.urls import remove_query_param, replace_query_param
+
+from multinet.api.utils.arango import paginate_aql_query
 
 
 class MultinetPagination(PageNumberPagination):
@@ -20,6 +24,11 @@ ARRAY_OF_OBJECTS_SCHEMA = openapi.Schema(
 PAGINATION_QUERY_PARAMS = [
     openapi.Parameter('page', 'query', type='integer'),
     openapi.Parameter('page_size', 'query', type='integer'),
+]
+
+LIMIT_OFFSET_QUERY_PARAMS = [
+    openapi.Parameter('limit', 'query', type='integer'),
+    openapi.Parameter('offset', 'query', type='integer'),
 ]
 
 PAGINATED_RESULTS_SCHEMA = openapi.Schema(
@@ -79,3 +88,24 @@ class CustomPagination:
                 ]
             )
         )
+
+
+class ArangoPagination(LimitOffsetPagination):
+    """Override the LimitOffsetPagination class to allow for use with arango cursors."""
+
+    def paginate_queryset(self, request, query: str, db: StandardDatabase):
+        self.limit = self.get_limit(request)
+        if self.limit is None:
+            return None
+
+        self.offset = self.get_offset(request)
+        self.request = request
+
+        paginated_query_str = paginate_aql_query(query, self.limit, self.offset)
+        cur: Cursor = db.aql.execute(paginated_query_str, full_count=True)
+        self.count = cur.statistics()['fullCount']
+
+        if self.count > self.limit and self.template is not None:
+            self.display_page_controls = True
+
+        return list(cur)

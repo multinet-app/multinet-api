@@ -65,15 +65,21 @@ class Graph(TimeStampedModel):
 
         return itertools.chain(*cursors)
 
+    def node_tables(self) -> List[str]:
+        return self.get_arango_graph().vertex_collections()
+
     def nodes(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Iterable:
         return self._chained_collections_find(
             self.get_arango_graph().vertex_collections(), page, page_size
         )
 
-    def edges(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
-        edge_collections = [
+    def edge_tables(self) -> List[str]:
+        return [
             edge_def['edge_collection'] for edge_def in self.get_arango_graph().edge_definitions()
         ]
+
+    def edges(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
+        edge_collections = self.edge_tables()
         return self._chained_collections_find(edge_collections, page, page_size)
 
     def save(self, *args, **kwargs):
