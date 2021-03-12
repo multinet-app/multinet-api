@@ -45,10 +45,11 @@ class Table(TimeStampedModel):
         return workspace.get_arango_db().collection(self.name)
 
     def get_row(self, query: Optional[Dict] = None) -> Cursor:
+        """Return a specific document."""
         return self.get_arango_collection().find(query or {}, skip=None, limit=1)
 
     def get_rows(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
-        """Return a tuple containing the Cursor and the total doc count."""
+        """Return all documents from the arango collection for this table.."""
         skip = None
         if page and page_size:
             skip = (page - 1) * page_size
