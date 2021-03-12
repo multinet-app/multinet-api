@@ -4,6 +4,7 @@ from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from drf_yasg import openapi
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.request import Request
 
 from multinet.api.utils.arango import paginate_aql_query
 
@@ -51,7 +52,7 @@ class ArangoPagination(LimitOffsetPagination):
         if self.count > self.limit and self.template is not None:
             self.display_page_controls = True
 
-    def paginate_queryset(self, request, query: str, db: StandardDatabase) -> List[Dict]:
+    def paginate_queryset(self, query: str, request: Request, db: StandardDatabase) -> List[Dict]:
         self._set_pre_query_params(request)
 
         paginated_query_str = paginate_aql_query(query, self.limit, self.offset)

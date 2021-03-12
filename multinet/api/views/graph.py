@@ -180,7 +180,7 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
 
         pagination = ArangoPagination()
         paginated_query = pagination.paginate_queryset(
-            request, query_str, workspace.get_arango_db()
+            query_str, request, workspace.get_arango_db()
         )
         return pagination.get_paginated_response(paginated_query)
 
@@ -198,6 +198,6 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
 
         pagination = ArangoPagination()
         paginated_query = pagination.paginate_queryset(
-            request, query_str, workspace.get_arango_db()
+            query_str, request, workspace.get_arango_db()
         )
         return pagination.get_paginated_response(paginated_query)

@@ -114,7 +114,7 @@ class TableViewSet(ReadOnlyModelViewSet):
         pagination = ArangoPagination()
         row_query = get_aql_query_from_collections([table.get_arango_collection().name])
         paginated_query = pagination.paginate_queryset(
-            request, row_query, workspace.get_arango_db()
+            row_query, request, workspace.get_arango_db()
         )
 
         return pagination.get_paginated_response(paginated_query)
