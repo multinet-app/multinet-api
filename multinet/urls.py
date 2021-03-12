@@ -7,7 +7,7 @@ from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
-    GraphViewSet,
+    NetworkViewSet,
     TableViewSet,
     WorkspaceViewSet,
     users_me_view,
@@ -23,9 +23,9 @@ workspaces_routes.register(
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 workspaces_routes.register(
-    'graphs',
-    GraphViewSet,
-    basename='graph',
+    'networks',
+    NetworkViewSet,
+    basename='network',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 

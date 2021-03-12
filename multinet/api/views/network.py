@@ -11,13 +11,13 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin, NestedViewSetMixin
 
-from multinet.api.models import Graph, Table, Workspace
+from multinet.api.models import Network, Table, Workspace
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
-    GraphCreateSerializer,
-    GraphReturnDetailSerializer,
-    GraphReturnSerializer,
-    GraphSerializer,
+    NetworkCreateSerializer,
+    NetworkReturnDetailSerializer,
+    NetworkReturnSerializer,
+    NetworkSerializer,
 )
 
 from .common import (
@@ -38,7 +38,7 @@ EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
 )
 
 
-class GraphCreationErrorSerializer(serializers.Serializer):
+class NetworkCreationErrorSerializer(serializers.Serializer):
     missing_node_tables = serializers.ListField(child=serializers.CharField())
     missing_table_keys = serializers.DictField(
         child=serializers.ListField(child=serializers.CharField())
@@ -67,7 +67,7 @@ def validate_edge_table(
                     missing_table_keys[table] = {key}
 
     if missing_node_tables or missing_table_keys:
-        serialized_resp = GraphCreationErrorSerializer(
+        serialized_resp = NetworkCreationErrorSerializer(
             data={
                 'missing_node_tables': missing_node_tables,
                 'missing_table_keys': missing_table_keys,
@@ -78,19 +78,19 @@ def validate_edge_table(
         return Response(serialized_resp.data, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
-    queryset = Graph.objects.all().select_related('workspace')
+class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
+    queryset = Network.objects.all().select_related('workspace')
     lookup_field = 'name'
 
     permission_classes = [IsAuthenticatedOrReadOnly]
-    serializer_class = GraphReturnSerializer
-    serializer_detail_class = GraphReturnDetailSerializer
+    serializer_class = NetworkReturnSerializer
+    serializer_detail_class = NetworkReturnDetailSerializer
 
     pagination_class = MultinetPagination
 
     @swagger_auto_schema(
-        request_body=GraphCreateSerializer(),
-        responses={200: GraphReturnSerializer()},
+        request_body=NetworkCreateSerializer(),
+        responses={200: NetworkReturnSerializer()},
     )
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -103,7 +103,7 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
             Table, workspace=workspace, name=request.data.get('edge_table')
         )
 
-        serializer = GraphSerializer(
+        serializer = NetworkSerializer(
             data={
                 'name': request.data.get('name'),
                 'workspace': workspace.pk,
@@ -114,14 +114,14 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         node_tables = edge_table.find_referenced_node_tables()
         if not node_tables:
             return Response(
-                'Cannot create graph with empty edge table', status=status.HTTP_400_BAD_REQUEST
+                'Cannot create network with empty edge table', status=status.HTTP_400_BAD_REQUEST
             )
 
         validation_resp = validate_edge_table(workspace, edge_table, node_tables)
         if validation_resp:
             return validation_resp
 
-        # Create graph in arango before creating the Graph object here
+        # Create graph in arango before creating the Network object here
         workspace.get_arango_db().create_graph(
             serializer.validated_data['name'],
             edge_definitions=[
@@ -133,15 +133,15 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
             ],
         )
 
-        graph, created = Graph.objects.get_or_create(
+        network, created = Network.objects.get_or_create(
             name=serializer.validated_data['name'],
             workspace=workspace,
         )
 
         if created:
-            graph.save()
+            network.save()
 
-        return Response(GraphReturnDetailSerializer(graph).data, status=status.HTTP_200_OK)
+        return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -150,13 +150,13 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
         if response:
             return response
 
-        graph: Graph = get_object_or_404(Graph, name=name)
+        network: Network = get_object_or_404(Network, name=name)
 
-        response = get_40x_or_None(request, ['owner'], graph, return_403=True)
+        response = get_40x_or_None(request, ['owner'], network, return_403=True)
         if response:
             return response
 
-        graph.delete()
+        network.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -166,10 +166,10 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
     @action(detail=True, url_path='nodes')
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-        graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
         pagination = ArangoPagination()
-        query = ArangoQuery.from_collections(workspace.get_arango_db(), graph.node_tables())
+        query = ArangoQuery.from_collections(workspace.get_arango_db(), network.node_tables())
         paginated_query = pagination.paginate_queryset(query, request)
 
         return pagination.get_paginated_response(paginated_query)
@@ -181,10 +181,10 @@ class GraphViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewS
     @action(detail=True, url_path='edges')
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-        graph: Graph = get_object_or_404(Graph, workspace=workspace, name=name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
         pagination = ArangoPagination()
-        query = ArangoQuery.from_collections(workspace.get_arango_db(), graph.edge_tables())
+        query = ArangoQuery.from_collections(workspace.get_arango_db(), network.edge_tables())
         paginated_query = pagination.paginate_queryset(query, request)
 
         return pagination.get_paginated_response(paginated_query)

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import List
 
-from arango.graph import Graph as ArangoGraph
+from arango.graph import Graph
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
 from .workspace import Workspace
 
 
-class Graph(TimeStampedModel):
+class Network(TimeStampedModel):
     name = models.CharField(max_length=300)
-    workspace = models.ForeignKey(Workspace, related_name='graphs', on_delete=models.CASCADE)
+    workspace = models.ForeignKey(Workspace, related_name='networks', on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('workspace', 'name')
@@ -31,7 +31,7 @@ class Graph(TimeStampedModel):
             for edge_def in self.get_arango_graph().edge_definitions()
         )
 
-    def get_arango_graph(self) -> ArangoGraph:
+    def get_arango_graph(self) -> Graph:
         workspace: Workspace = self.workspace
         return workspace.get_arango_db().graph(self.name)
 

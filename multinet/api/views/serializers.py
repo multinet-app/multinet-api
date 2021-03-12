@@ -1,7 +1,7 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import Graph, Table, Workspace
+from multinet.api.models import Network, Table, Workspace
 
 
 # The default ModelSerializer for User fails if the user already exists
@@ -68,29 +68,29 @@ class TableReturnSerializer(TableSerializer):
     workspace = WorkspaceSerializer()
 
 
-class GraphCreateSerializer(serializers.ModelSerializer):
+class NetworkCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Graph
+        model = Network
         fields = ['name', 'edge_table']
 
     edge_table = serializers.CharField()
 
 
-class GraphSerializer(serializers.ModelSerializer):
+class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Graph
+        model = Network
         fields = '__all__'
 
 
-class GraphReturnSerializer(serializers.ModelSerializer):
+class NetworkReturnSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Graph
+        model = Network
         fields = ['id', 'name', 'created', 'modified']
 
 
-class GraphReturnDetailSerializer(serializers.ModelSerializer):
+class NetworkReturnDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Graph
+        model = Network
         fields = [
             'id',
             'name',
