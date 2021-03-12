@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import itertools
-from typing import Iterable, List, Optional
+from typing import List
 
-from arango.collection import StandardCollection
-from arango.cursor import Cursor
-from arango.database import StandardDatabase
 from arango.graph import Graph as ArangoGraph
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
@@ -39,48 +35,13 @@ class Graph(TimeStampedModel):
         workspace: Workspace = self.workspace
         return workspace.get_arango_db().graph(self.name)
 
-    def _chained_collections_find(
-        self, collections: List[str], page: Optional[int] = None, page_size: Optional[int] = None
-    ) -> Iterable:
-        """Chains document retrieval across several collections, with pagination."""
-        db: StandardDatabase = self.workspace.get_arango_db()
-
-        skip = 0
-        if page and page_size:
-            skip = (page - 1) * page_size
-
-        cursors: List[Cursor] = []
-        remaining = page_size
-
-        for coll_name in collections:
-            if remaining == 0:
-                break
-
-            coll: StandardCollection = db.collection(coll_name)
-            cursor: Cursor = coll.find({}, skip=skip, limit=remaining)
-            cursors.append(cursor)
-
-            skip -= min(skip, coll.count())
-            remaining -= cursor.count()
-
-        return itertools.chain(*cursors)
-
     def node_tables(self) -> List[str]:
         return self.get_arango_graph().vertex_collections()
-
-    def nodes(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Iterable:
-        return self._chained_collections_find(
-            self.get_arango_graph().vertex_collections(), page, page_size
-        )
 
     def edge_tables(self) -> List[str]:
         return [
             edge_def['edge_collection'] for edge_def in self.get_arango_graph().edge_definitions()
         ]
-
-    def edges(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
-        edge_collections = self.edge_tables()
-        return self._chained_collections_find(edge_collections, page, page_size)
 
     def save(self, *args, **kwargs):
         workspace: Workspace = self.workspace
