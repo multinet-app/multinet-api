@@ -97,14 +97,15 @@ class Table(TimeStampedModel):
 
             for end in (_from, _to):
                 if end is None:
-                    # Not currently handled
+                    # Ignore missing reference
                     continue
 
-                table, key = end.split('/')
-                if not table:
-                    # Not currently handled
+                end_split = end.split('/')
+                if len(end_split) != 2:
+                    # Ignore malformed reference
                     continue
 
+                table, key = end_split
                 if referenced.get(table) is None:
                     referenced[table] = set()
 
