@@ -1,6 +1,7 @@
 from collections import OrderedDict
-from typing import Iterable, Tuple
+from typing import Dict, Iterable, List, Tuple
 
+from arango.collection import StandardCollection
 from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from drf_yasg import openapi
@@ -21,10 +22,6 @@ ARRAY_OF_OBJECTS_SCHEMA = openapi.Schema(
     type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)
 )
 
-PAGINATION_QUERY_PARAMS = [
-    openapi.Parameter('page', 'query', type='integer'),
-    openapi.Parameter('page_size', 'query', type='integer'),
-]
 
 LIMIT_OFFSET_QUERY_PARAMS = [
     openapi.Parameter('limit', 'query', type='integer'),
@@ -93,7 +90,7 @@ class CustomPagination:
 class ArangoPagination(LimitOffsetPagination):
     """Override the LimitOffsetPagination class to allow for use with arango cursors."""
 
-    def paginate_queryset(self, request, query: str, db: StandardDatabase):
+    def _set_pre_query_params(self, request):
         self.limit = self.get_limit(request)
         if self.limit is None:
             return None
@@ -101,11 +98,26 @@ class ArangoPagination(LimitOffsetPagination):
         self.offset = self.get_offset(request)
         self.request = request
 
+    def _set_post_query_params(self):
+        if self.count > self.limit and self.template is not None:
+            self.display_page_controls = True
+
+    def paginate_queryset_from_collection(
+        self, request, collection: StandardCollection
+    ) -> List[Dict]:
+        self._set_pre_query_params(request)
+        cur: Cursor = collection.find({}, skip=self.offset, limit=self.limit)
+        self.count = collection.count()
+
+        self._set_post_query_params()
+        return list(cur)
+
+    def paginate_queryset(self, request, query: str, db: StandardDatabase) -> List[Dict]:
+        self._set_pre_query_params(request)
+
         paginated_query_str = paginate_aql_query(query, self.limit, self.offset)
         cur: Cursor = db.aql.execute(paginated_query_str, full_count=True)
         self.count = cur.statistics()['fullCount']
 
-        if self.count > self.limit and self.template is not None:
-            self.display_page_controls = True
-
+        self._set_post_query_params()
         return list(cur)

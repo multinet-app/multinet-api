@@ -17,9 +17,9 @@ from multinet.api.views.serializers import (
 
 from .common import (
     ARRAY_OF_OBJECTS_SCHEMA,
+    LIMIT_OFFSET_QUERY_PARAMS,
     PAGINATED_RESULTS_SCHEMA,
-    PAGINATION_QUERY_PARAMS,
-    CustomPagination,
+    ArangoPagination,
     MultinetPagination,
 )
 
@@ -95,7 +95,7 @@ class TableViewSet(ReadOnlyModelViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=PAGINATION_QUERY_PARAMS,
+        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
@@ -103,11 +103,12 @@ class TableViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        pagination = CustomPagination(request, self.pagination_class)
-        rows = table.get_rows(page=pagination.page, page_size=pagination.page_size)
-        count = table.count()
+        pagination = ArangoPagination()
+        paginated_query = pagination.paginate_queryset_from_collection(
+            request, table.get_arango_collection()
+        )
 
-        return pagination.create_paginated_response(rows, count)
+        return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
         request_body=ARRAY_OF_OBJECTS_SCHEMA,
