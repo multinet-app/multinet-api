@@ -52,8 +52,8 @@ class ArangoQuery:
         self.query_str = query_str
         self.bind_vars = bind_vars
 
-    @classmethod
-    def from_collections(cls, db: StandardDatabase, collections: List[str]) -> ArangoQuery:
+    @staticmethod
+    def from_collections(db: StandardDatabase, collections: List[str]) -> ArangoQuery:
         """Generate an AQL query string from a list of collections."""
         coll_vars = []
         bind_vars = {}
