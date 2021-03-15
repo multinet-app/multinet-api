@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from arango.database import StandardDatabase
 from django.db.models import CharField
 from django_extensions.db.models import TimeStampedModel
 from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
 
-from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted
+from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
 
 
 def create_default_arango_db_name():
@@ -66,6 +67,9 @@ class Workspace(TimeStampedModel):
     def delete(self, *args, **kwargs):
         ensure_db_deleted(self.arango_db_name)
         super().delete(*args, **kwargs)
+
+    def get_arango_db(self) -> StandardDatabase:
+        return get_or_create_db(self.arango_db_name)
 
     def __str__(self) -> str:
         return self.name
