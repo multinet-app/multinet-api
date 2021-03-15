@@ -29,7 +29,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('admin/', admin.site.urls),
-    path('api/s3-upload/', include('s3_file_field.urls')),
+    path('api/upload/', include('s3_file_field.urls')),
     path('api/', include(router.urls)),
     path('api/users/me', users_me_view),
     path('api/users/search', users_search_view),
