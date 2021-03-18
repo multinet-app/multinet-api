@@ -29,7 +29,7 @@ jobs:
             DJANGO_MINIO_STORAGE_ENDPOINT: localhost:9000
             DJANGO_MINIO_STORAGE_ACCESS_KEY: minioAccessKey
             DJANGO_MINIO_STORAGE_SECRET_KEY: minioSecretKey
-            DJANGO_MULTINET_ARANGO_URL: http://arangodb:8529
+            DJANGO_MULTINET_ARANGO_URL: http://localhost:8529
             DJANGO_MULTINET_ARANGO_PASSWORD: letmein
 workflows:
   version: 2
