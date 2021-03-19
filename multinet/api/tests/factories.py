@@ -30,9 +30,23 @@ class NetworkFactory(factory.django.DjangoModelFactory):
     workspace = factory.SubFactory(WorkspaceFactory)
 
 
-class TableFactory(factory.django.DjangoModelFactory):
+class EdgeTableFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Table
 
     name = factory.fuzzy.FuzzyText()
     workspace = factory.SubFactory(WorkspaceFactory)
+    edge = True
+
+
+class NodeTableFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Table
+
+    name = factory.fuzzy.FuzzyText()
+    workspace = factory.SubFactory(WorkspaceFactory)
+
+
+# Default table to node table
+class TableFactory(NodeTableFactory):
+    pass

@@ -87,12 +87,8 @@ class TableViewSet(ReadOnlyModelViewSet):
             return response
 
         table: Table = get_object_or_404(Table, name=name)
-
-        response = get_40x_or_None(request, ['owner'], table, return_403=True)
-        if response:
-            return response
-
         table.delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
