@@ -1,7 +1,10 @@
+from django.contrib.auth.models import User
+from guardian.shortcuts import assign_perm
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
+from multinet.api.models.workspace import Workspace
 from multinet.api.utils.arango import arango_system_db
 
 from .factories import NetworkFactory, TableFactory, UserFactory, WorkspaceFactory
@@ -13,10 +16,18 @@ def api_client() -> APIClient:
 
 
 @pytest.fixture
-def authenticated_api_client(user) -> APIClient:
+def authenticated_api_client(user: User) -> APIClient:
     client = APIClient()
     client.force_authenticate(user=user)
     return client
+
+
+@pytest.fixture
+def owned_workspace(user: User, workspace: Workspace) -> Workspace:
+    """Return a workspace with the `user` fixture as an owner."""
+    assign_perm('owner', user, workspace)
+
+    return workspace
 
 
 def pytest_configure():
