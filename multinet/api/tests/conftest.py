@@ -1,10 +1,13 @@
+import itertools
+
 from django.contrib.auth.models import User
+from faker import Faker
 from guardian.shortcuts import assign_perm
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
-from multinet.api.models.workspace import Workspace
+from multinet.api.models import Network, Table, Workspace
 from multinet.api.utils.arango import arango_system_db
 
 from .factories import NetworkFactory, TableFactory, UserFactory, WorkspaceFactory
@@ -28,6 +31,64 @@ def owned_workspace(user: User, workspace: Workspace) -> Workspace:
     assign_perm('owner', user, workspace)
 
     return workspace
+
+
+@pytest.fixture
+def populated_node_table(owned_workspace: Workspace) -> Table:
+    nodes = [{'foo': 'bar'}, {'foo2': 'bar2'}, {'foo3': 'bar3'}]
+    table, created = Table.objects.get_or_create(
+        name=Faker().pystr(), edge=False, workspace=owned_workspace
+    )
+
+    if created:
+        table.save()
+
+    table.put_rows(nodes)
+    return table
+
+
+@pytest.fixture
+def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table) -> Table:
+    table, created = Table.objects.get_or_create(
+        name=Faker().pystr(), edge=True, workspace=owned_workspace
+    )
+
+    if created:
+        table.save()
+
+    nodes = list(populated_node_table.get_rows())
+    edges = [{'_from': a['_id'], '_to': b['_id']} for a, b in itertools.combinations(nodes, 2)]
+    table.put_rows(edges)
+
+    return table
+
+
+@pytest.fixture
+def populated_network(owned_workspace: Workspace, populated_edge_table: Table) -> Network:
+    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+    network_name = Faker().pystr()
+
+    # Create graph in arango before creating the Network object here
+    owned_workspace.get_arango_db().create_graph(
+        network_name,
+        edge_definitions=[
+            {
+                'edge_collection': populated_edge_table.name,
+                'from_vertex_collections': node_tables,
+                'to_vertex_collections': node_tables,
+            }
+        ],
+    )
+
+    network, created = Network.objects.get_or_create(
+        name=network_name,
+        workspace=owned_workspace,
+    )
+
+    if created:
+        network.save()
+
+    return network
 
 
 def pytest_configure():
