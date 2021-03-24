@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from multinet.api.models import Table, Workspace
 from multinet.api.utils.arango import ArangoQuery
@@ -37,7 +38,7 @@ class RowDeleteResponseSerializer(serializers.Serializer):
     errors = serializers.ListField(child=serializers.JSONField())
 
 
-class TableViewSet(ReadOnlyModelViewSet):
+class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
 
