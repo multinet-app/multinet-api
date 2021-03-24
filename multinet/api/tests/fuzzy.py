@@ -27,7 +27,7 @@ UUID_RE = Re(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 ARANGO_COLL = Re(r'[A-Za-z][-\w]{1,255}')
 ARANGO_DOC_KEY = Re(r'[-\w:\.@()+,=;$!*\'%]{1,254}')
 ARANGO_DOC_ID = Re(str(ARANGO_COLL) + r'\/' + str(ARANGO_DOC_KEY))
-ARANGO_DOC_REV = Re(r'[-\w]+')
+ARANGO_DOC_REV = Re(r'[-_\w]+')
 
 
 def dict_to_fuzzy_arango_doc(d: Dict):
@@ -35,5 +35,12 @@ def dict_to_fuzzy_arango_doc(d: Dict):
         **d,
         '_id': ARANGO_DOC_ID,
         '_key': ARANGO_DOC_KEY,
+        '_rev': ARANGO_DOC_REV,
+    }
+
+
+def arango_doc_to_fuzzy_rev(d: Dict):
+    return {
+        **d,
         '_rev': ARANGO_DOC_REV,
     }
