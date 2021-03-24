@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 from arango.cursor import Cursor
 from arango.graph import Graph
@@ -59,6 +59,39 @@ class Network(TimeStampedModel):
         return [
             edge_def['edge_collection'] for edge_def in self.get_arango_graph().edge_definitions()
         ]
+
+    @classmethod
+    def get_or_create_with_edge_definition(
+        cls, name: str, workspace: Workspace, edge_table: str, node_tables: List[str]
+    ) -> Tuple[Network, bool]:
+        """
+        Create a network with an edge definition, using the provided arguments.
+
+        If the network already exists, it is returned with no modification.
+        """
+        try:
+            return (cls.objects.get(name=name, workspace=workspace), False)
+        except cls.DoesNotExist:
+            pass
+
+        # Create graph in arango before creating the Network object here
+        workspace.get_arango_db().create_graph(
+            name,
+            edge_definitions=[
+                {
+                    'edge_collection': edge_table,
+                    'from_vertex_collections': node_tables,
+                    'to_vertex_collections': node_tables,
+                }
+            ],
+        )
+
+        network, created = Network.objects.get_or_create(
+            name=name,
+            workspace=workspace,
+        )
+
+        return (network, True)
 
     def save(self, *args, **kwargs):
         workspace: Workspace = self.workspace
