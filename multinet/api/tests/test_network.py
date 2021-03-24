@@ -5,7 +5,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Workspace
-from multinet.api.tests.factories import NetworkFactory
+from multinet.api.tests.factories import NetworkFactory, WorkspaceFactory
 from multinet.api.tests.utils import assert_limit_offset_results
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
@@ -104,6 +104,40 @@ def test_network_rest_delete(populated_network: Network, authenticated_api_clien
     # Assert relevant objects are deleted
     assert Network.objects.filter(name=workspace.name).first() is None
     assert not workspace.get_arango_db().has_graph(populated_network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_delete_unauthorized(populated_network: Network, api_client: APIClient):
+    workspace: Workspace = populated_network.workspace
+
+    r = api_client.delete(f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/')
+
+    assert r.status_code == 401
+
+    # Assert relevant objects are not deleted
+    assert Network.objects.filter(name=populated_network.name).first() is not None
+    assert workspace.get_arango_db().has_graph(populated_network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_delete_forbidden(
+    workspace_factory: WorkspaceFactory,
+    network_factory: NetworkFactory,
+    authenticated_api_client: APIClient,
+):
+
+    # Create workspace this way, so the authenticated user isn't an owner
+    workspace: Workspace = workspace_factory()
+    network: Table = network_factory(workspace=workspace)
+    r = authenticated_api_client.delete(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
+    )
+
+    assert r.status_code == 403
+
+    # Assert relevant objects are not deleted
+    assert Network.objects.filter(name=network.name).first() is not None
+    assert workspace.get_arango_db().has_graph(network.name)
 
 
 @pytest.mark.django_db

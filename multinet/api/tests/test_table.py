@@ -5,7 +5,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Table, Workspace
-from multinet.api.tests.factories import TableFactory
+from multinet.api.tests.factories import TableFactory, WorkspaceFactory
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, arango_doc_to_fuzzy_rev, dict_to_fuzzy_arango_doc
 from .utils import assert_limit_offset_results, generate_arango_documents
@@ -92,6 +92,38 @@ def test_table_rest_delete(
     # Assert relevant objects are deleted
     assert Table.objects.filter(name=owned_workspace.name).first() is None
     assert not owned_workspace.get_arango_db().has_collection(table.name)
+
+
+@pytest.mark.django_db
+def test_table_rest_delete_unauthorized(
+    table_factory: TableFactory, owned_workspace: Workspace, api_client: APIClient
+):
+    table: Table = table_factory(workspace=owned_workspace)
+    r = api_client.delete(f'/api/workspaces/{owned_workspace.name}/tables/{table.name}/')
+
+    assert r.status_code == 401
+
+    # Assert relevant objects are not deleted
+    assert Table.objects.filter(name=table.name).first() is not None
+    assert owned_workspace.get_arango_db().has_collection(table.name)
+
+
+@pytest.mark.django_db
+def test_table_rest_delete_forbidden(
+    workspace_factory: WorkspaceFactory,
+    table_factory: TableFactory,
+    authenticated_api_client: APIClient,
+):
+    # Create workspace this way, so the authenticated user isn't an owner
+    workspace: Workspace = workspace_factory()
+    table: Table = table_factory(workspace=workspace)
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
+
+    assert r.status_code == 403
+
+    # Assert relevant objects are not deleted
+    assert Table.objects.filter(name=table.name).first() is not None
+    assert workspace.get_arango_db().has_collection(table.name)
 
 
 @pytest.mark.django_db

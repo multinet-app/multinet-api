@@ -70,3 +70,29 @@ def test_workspace_rest_delete(owned_workspace: Workspace, authenticated_api_cli
     # Assert relevant objects are deleted
     assert Workspace.objects.filter(name=owned_workspace.name).first() is None
     assert not arango_system_db().has_database(owned_workspace.arango_db_name)
+
+
+@pytest.mark.django_db
+def test_workspace_rest_delete_unauthorized(owned_workspace: Workspace, api_client: APIClient):
+    r = api_client.delete(f'/api/workspaces/{owned_workspace.name}/')
+
+    assert r.status_code == 401
+
+    # Assert relevant objects are not deleted
+    assert Workspace.objects.filter(name=owned_workspace.name).first() is not None
+    assert arango_system_db().has_database(owned_workspace.arango_db_name)
+
+
+@pytest.mark.django_db
+def test_workspace_rest_delete_forbidden(
+    workspace_factory: WorkspaceFactory, authenticated_api_client: APIClient
+):
+    # Create workspace this way, so the authenticated user isn't an owner
+    workspace: Workspace = workspace_factory()
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
+
+    assert r.status_code == 403
+
+    # Assert relevant objects are not deleted
+    assert Workspace.objects.filter(name=workspace.name).first() is not None
+    assert arango_system_db().has_database(workspace.arango_db_name)
