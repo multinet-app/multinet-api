@@ -1,3 +1,5 @@
+from typing import List
+
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
@@ -7,6 +9,26 @@ from multinet.api.tests.factories import TableFactory
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, arango_doc_to_fuzzy_rev, dict_to_fuzzy_arango_doc
 from .utils import assert_limit_offset_results, generate_arango_documents
+
+
+@pytest.mark.django_db
+def test_table_rest_list(
+    table_factory: TableFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    fake = Faker()
+    table_names: List[str] = [
+        table_factory(name=fake.pystr(), workspace=owned_workspace).name for _ in range(3)
+    ]
+
+    r = authenticated_api_client.get(f'/api/workspaces/{owned_workspace.name}/tables/')
+    r_json = r.json()
+
+    # Test that we get the expected results from both django and arango
+    arango_db = owned_workspace.get_arango_db()
+    assert r_json['count'] == len(table_names)
+    for table in r_json['results']:
+        assert table['name'] in table_names
+        assert arango_db.has_collection(table['name'])
 
 
 @pytest.mark.django_db

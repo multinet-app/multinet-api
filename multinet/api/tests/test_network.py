@@ -1,10 +1,34 @@
+from typing import List
+
+from faker import Faker
 import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Workspace
+from multinet.api.tests.factories import NetworkFactory
 from multinet.api.tests.utils import assert_limit_offset_results
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
+
+
+@pytest.mark.django_db
+def test_network_rest_list(
+    network_factory: NetworkFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    fake = Faker()
+    network_names: List[str] = [
+        network_factory(name=fake.pystr(), workspace=owned_workspace).name for _ in range(3)
+    ]
+
+    r = authenticated_api_client.get(f'/api/workspaces/{owned_workspace.name}/networks/')
+    r_json = r.json()
+
+    # Test that we get the expected results from both django and arango
+    arango_db = owned_workspace.get_arango_db()
+    assert r_json['count'] == len(network_names)
+    for network in r_json['results']:
+        assert network['name'] in network_names
+        assert arango_db.has_graph(network['name'])
 
 
 @pytest.mark.django_db

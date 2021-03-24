@@ -1,8 +1,11 @@
+from typing import List
+
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Workspace
+from multinet.api.tests.factories import WorkspaceFactory
 from multinet.api.utils.arango import arango_system_db
 
 from .fuzzy import TIMESTAMP_RE
@@ -11,6 +14,25 @@ from .fuzzy import TIMESTAMP_RE
 @pytest.mark.django_db
 def test_workspace_arango_sync(workspace: Workspace):
     assert arango_system_db().has_database(workspace.arango_db_name)
+
+
+@pytest.mark.django_db
+def test_workspace_rest_list(
+    workspace_factory: WorkspaceFactory,
+    authenticated_api_client: APIClient,
+):
+    fake = Faker()
+    workspace_names: List[str] = [workspace_factory(name=fake.pystr()).name for _ in range(3)]
+
+    r = authenticated_api_client.get('/api/workspaces/')
+    r_json = r.json()
+
+    # Test that we get the expected results from both django and arango
+    sysdb = arango_system_db()
+    assert r_json['count'] == len(workspace_names)
+    for workspace in r_json['results']:
+        assert workspace['name'] in workspace_names
+        assert sysdb.has_database(workspace['arango_db_name'])
 
 
 @pytest.mark.django_db
