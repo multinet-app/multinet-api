@@ -6,6 +6,7 @@ from multinet.api.models import Table, Workspace
 from multinet.api.tests.factories import TableFactory
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, dict_to_fuzzy_arango_doc
+from .utils import assert_limit_offset_results, generate_arango_documents
 
 
 @pytest.mark.django_db
@@ -73,25 +74,14 @@ def test_table_rest_delete(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_rows(
-    table_factory: TableFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
 ):
-    table: Table = table_factory(workspace=owned_workspace)
-
-    table_rows = [{'foo': 'bar'}, {'foo2': 'bar2'}]
-    inserted_table_rows = list(map(dict_to_fuzzy_arango_doc, table_rows))
-
-    table.put_rows(table_rows)
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/tables/{table.name}/rows/'
+    table_rows = list(populated_node_table.get_rows())
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        table_rows,
     )
-
-    assert r.status_code == 200
-    assert r.json() == {
-        'count': 2,
-        'next': None,
-        'previous': None,
-        'results': inserted_table_rows,
-    }
 
 
 @pytest.mark.django_db
@@ -100,20 +90,7 @@ def test_table_rest_upsert_rows(
 ):
     table: Table = table_factory(workspace=owned_workspace)
 
-    # Test that rows are empty beforehand
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/tables/{table.name}/rows/'
-    )
-
-    assert r.status_code == 200
-    assert r.json() == {
-        'count': 0,
-        'next': None,
-        'previous': None,
-        'results': [],
-    }
-
-    table_rows = [{'foo': 'bar'}, {'foo2': 'bar2'}]
+    table_rows = generate_arango_documents(5)
     inserted_table_rows = list(map(dict_to_fuzzy_arango_doc, table_rows))
 
     # Test that rows are populated after
@@ -132,28 +109,24 @@ def test_table_rest_upsert_rows(
 
 @pytest.mark.django_db
 def test_table_rest_delete_rows(
-    table_factory: TableFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
 ):
-    table: Table = table_factory(workspace=owned_workspace)
-    table_rows = [{'foo': 'bar'}, {'foo2': 'bar2'}]
 
-    table.put_rows(table_rows)
-    inserted_table_rows = list(table.get_rows())
-
+    table_rows = list(populated_node_table.get_rows())
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{owned_workspace.name}/tables/{table.name}/rows/',
-        inserted_table_rows,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        table_rows,
         format='json',
     )
 
     assert r.status_code == 200
     assert r.json() == {
-        'deleted': inserted_table_rows,
+        'deleted': table_rows,
         'errors': [],
     }
 
     r = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/tables/{table.name}/rows/'
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/'
     )
 
     assert r.status_code == 200

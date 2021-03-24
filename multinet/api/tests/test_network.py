@@ -2,6 +2,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Workspace
+from multinet.api.tests.utils import assert_limit_offset_results
 
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
 
@@ -86,16 +87,13 @@ def test_network_rest_retrieve_nodes(
     populated_network: Network, authenticated_api_client: APIClient
 ):
     workspace: Workspace = populated_network.workspace
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/nodes/'
-    )
+    nodes = list(populated_network.nodes())
 
-    assert r.json() == {
-        'count': populated_network.node_count,
-        'next': None,
-        'previous': None,
-        'results': list(populated_network.nodes()),
-    }
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/nodes/',
+        nodes,
+    )
 
 
 @pytest.mark.django_db
@@ -103,13 +101,10 @@ def test_network_rest_retrieve_edges(
     populated_network: Network, authenticated_api_client: APIClient
 ):
     workspace: Workspace = populated_network.workspace
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/edges/'
-    )
+    edges = list(populated_network.edges())
 
-    assert r.json() == {
-        'count': populated_network.edge_count,
-        'next': None,
-        'previous': None,
-        'results': list(populated_network.edges()),
-    }
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/edges/',
+        edges,
+    )

@@ -8,6 +8,7 @@ from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Workspace
+from multinet.api.tests.utils import generate_arango_documents
 from multinet.api.utils.arango import arango_system_db
 
 from .factories import NetworkFactory, TableFactory, UserFactory, WorkspaceFactory
@@ -35,7 +36,7 @@ def owned_workspace(user: User, workspace: Workspace) -> Workspace:
 
 @pytest.fixture
 def populated_node_table(owned_workspace: Workspace) -> Table:
-    nodes = [{'foo': 'bar'}, {'foo2': 'bar2'}, {'foo3': 'bar3'}]
+    nodes = generate_arango_documents(5)
     table, created = Table.objects.get_or_create(
         name=Faker().pystr(), edge=False, workspace=owned_workspace
     )
