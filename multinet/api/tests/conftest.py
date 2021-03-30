@@ -36,26 +36,17 @@ def owned_workspace(user: User, workspace: Workspace) -> Workspace:
 
 @pytest.fixture
 def populated_node_table(owned_workspace: Workspace) -> Table:
+    table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=owned_workspace)
+
     nodes = generate_arango_documents(5)
-    table, created = Table.objects.get_or_create(
-        name=Faker().pystr(), edge=False, workspace=owned_workspace
-    )
-
-    if created:
-        table.save()
-
     table.put_rows(nodes)
+
     return table
 
 
 @pytest.fixture
 def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table) -> Table:
-    table, created = Table.objects.get_or_create(
-        name=Faker().pystr(), edge=True, workspace=owned_workspace
-    )
-
-    if created:
-        table.save()
+    table: Table = Table.objects.create(name=Faker().pystr(), edge=True, workspace=owned_workspace)
 
     nodes = list(populated_node_table.get_rows())
     edges = [{'_from': a['_id'], '_to': b['_id']} for a, b in itertools.combinations(nodes, 2)]
@@ -81,14 +72,7 @@ def populated_network(owned_workspace: Workspace, populated_edge_table: Table) -
         ],
     )
 
-    network, created = Network.objects.get_or_create(
-        name=network_name,
-        workspace=owned_workspace,
-    )
-
-    if created:
-        network.save()
-
+    network: Network = Network.objects.create(name=network_name, workspace=owned_workspace)
     return network
 
 
