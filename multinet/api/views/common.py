@@ -55,9 +55,7 @@ class ArangoPagination(LimitOffsetPagination):
         self._set_pre_query_params(request)
 
         paginated_query = query.paginate(self.limit, self.offset)
-        cur: Cursor = query.db.aql.execute(
-            query=paginated_query.query_str, bind_vars=paginated_query.bind_vars, full_count=True
-        )
+        cur: Cursor = paginated_query.execute(full_count=True)
 
         self.count = cur.statistics()['fullCount']
         self._set_post_query_params()

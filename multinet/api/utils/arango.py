@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Dict, List, Optional
 
 from arango import ArangoClient
+from arango.cursor import Cursor
 from arango.database import StandardDatabase
 from django.conf import settings
 
@@ -73,3 +74,11 @@ class ArangoQuery:
 
         new_query_str = f'FOR doc IN ({self.query_str}) LIMIT {offset}, {limit} RETURN doc'
         return ArangoQuery(self.db, query_str=new_query_str, bind_vars=self.bind_vars)
+
+    def execute(self, **kwargs) -> Cursor:
+        """
+        Execute an AQL query with the instantiated query_str and bind_vars.
+
+        Accepts the same keyword arguments as `arango.database.StandardDatabase.aql.execute`.
+        """
+        return self.db.aql.execute(query=self.query_str, bind_vars=self.bind_vars, **kwargs)
