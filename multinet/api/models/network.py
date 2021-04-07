@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Type
 
 from arango.cursor import Cursor
 from arango.graph import Graph
 from django.db import models
+from django.db.models.signals import post_delete, pre_save
+from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
 
 from multinet.api.utils.arango import ArangoQuery
@@ -60,23 +62,24 @@ class Network(TimeStampedModel):
             edge_def['edge_collection'] for edge_def in self.get_arango_graph().edge_definitions()
         ]
 
-    def save(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = workspace.get_arango_db()
-        if not db.has_graph(self.name):
-            db.create_graph(self.name)
-
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = workspace.get_arango_db()
-        if db.has_graph(self.name):
-            db.delete_graph(self.name)
-
-        super().delete(*args, **kwargs)
-
     def __str__(self) -> str:
         return self.name
+
+
+# Handle arango sync
+@receiver(pre_save, sender=Network)
+def arango_graph_save(sender: Type[Network], instance: Network, **kwargs):
+    workspace: Workspace = instance.workspace
+
+    db = workspace.get_arango_db()
+    if not db.has_graph(instance.name):
+        db.create_graph(instance.name)
+
+
+@receiver(post_delete, sender=Network)
+def arango_graph_delete(sender: Type[Network], instance: Network, **kwargs):
+    workspace: Workspace = instance.workspace
+
+    db = workspace.get_arango_db()
+    if db.has_graph(instance.name):
+        db.delete_graph(instance.name)
