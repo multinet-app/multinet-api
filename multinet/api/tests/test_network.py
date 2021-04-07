@@ -102,7 +102,7 @@ def test_network_rest_delete(populated_network: Network, authenticated_api_clien
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
-    assert Network.objects.filter(name=workspace.name).first() is None
+    assert not Network.objects.filter(name=workspace.name).exists()
     assert not workspace.get_arango_db().has_graph(populated_network.name)
 
 
@@ -115,7 +115,7 @@ def test_network_rest_delete_unauthorized(populated_network: Network, api_client
     assert r.status_code == 401
 
     # Assert relevant objects are not deleted
-    assert Network.objects.filter(name=populated_network.name).first() is not None
+    assert Network.objects.filter(name=populated_network.name).exists()
     assert workspace.get_arango_db().has_graph(populated_network.name)
 
 
@@ -136,7 +136,7 @@ def test_network_rest_delete_forbidden(
     assert r.status_code == 403
 
     # Assert relevant objects are not deleted
-    assert Network.objects.filter(name=network.name).first() is not None
+    assert Network.objects.filter(name=network.name).exists()
     assert workspace.get_arango_db().has_graph(network.name)
 
 

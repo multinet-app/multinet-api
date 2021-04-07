@@ -68,7 +68,7 @@ def test_workspace_rest_delete(owned_workspace: Workspace, authenticated_api_cli
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
-    assert Workspace.objects.filter(name=owned_workspace.name).first() is None
+    assert not Workspace.objects.filter(name=owned_workspace.name).exists()
     assert not arango_system_db().has_database(owned_workspace.arango_db_name)
 
 
@@ -79,7 +79,7 @@ def test_workspace_rest_delete_unauthorized(owned_workspace: Workspace, api_clie
     assert r.status_code == 401
 
     # Assert relevant objects are not deleted
-    assert Workspace.objects.filter(name=owned_workspace.name).first() is not None
+    assert Workspace.objects.filter(name=owned_workspace.name).exists()
     assert arango_system_db().has_database(owned_workspace.arango_db_name)
 
 
@@ -94,5 +94,5 @@ def test_workspace_rest_delete_forbidden(
     assert r.status_code == 403
 
     # Assert relevant objects are not deleted
-    assert Workspace.objects.filter(name=workspace.name).first() is not None
+    assert Workspace.objects.filter(name=workspace.name).exists()
     assert arango_system_db().has_database(workspace.arango_db_name)

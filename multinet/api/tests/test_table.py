@@ -90,7 +90,7 @@ def test_table_rest_delete(
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
-    assert Table.objects.filter(name=owned_workspace.name).first() is None
+    assert not Table.objects.filter(name=owned_workspace.name).exists()
     assert not owned_workspace.get_arango_db().has_collection(table.name)
 
 
@@ -104,7 +104,7 @@ def test_table_rest_delete_unauthorized(
     assert r.status_code == 401
 
     # Assert relevant objects are not deleted
-    assert Table.objects.filter(name=table.name).first() is not None
+    assert Table.objects.filter(name=table.name).exists()
     assert owned_workspace.get_arango_db().has_collection(table.name)
 
 
@@ -122,7 +122,7 @@ def test_table_rest_delete_forbidden(
     assert r.status_code == 403
 
     # Assert relevant objects are not deleted
-    assert Table.objects.filter(name=table.name).first() is not None
+    assert Table.objects.filter(name=table.name).exists()
     assert workspace.get_arango_db().has_collection(table.name)
 
 
