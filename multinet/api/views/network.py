@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from guardian.utils import get_40x_or_None
+from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -92,13 +93,11 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         request_body=NetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
     )
+    @method_decorator(
+        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
+    )
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-
-        response = get_40x_or_None(request, ['owner'], workspace, return_403=True)
-        if response:
-            return response
-
         edge_table: Table = get_object_or_404(
             Table, workspace=workspace, name=request.data.get('edge_table')
         )
@@ -143,14 +142,12 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
 
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
+    @method_decorator(
+        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
+    )
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-
-        response = get_40x_or_None(request, ['owner'], workspace, return_403=True)
-        if response:
-            return response
-
-        network: Network = get_object_or_404(Network, name=name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
         network.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
