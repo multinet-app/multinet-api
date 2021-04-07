@@ -2,16 +2,14 @@ from typing import Dict, List
 
 from arango.cursor import Cursor
 from drf_yasg import openapi
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 
 from multinet.api.utils.arango import ArangoQuery
 
 
-class MultinetPagination(PageNumberPagination):
-    page_size = 25
-    max_page_size = 100
-    page_size_query_param = 'page_size'
+class MultinetPagination(LimitOffsetPagination):
+    default_limit = 100
 
 
 ARRAY_OF_OBJECTS_SCHEMA = openapi.Schema(
