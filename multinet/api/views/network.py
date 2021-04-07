@@ -151,12 +151,8 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
             return response
 
         network: Network = get_object_or_404(Network, name=name)
-
-        response = get_40x_or_None(request, ['owner'], network, return_403=True)
-        if response:
-            return response
-
         network.delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
@@ -165,6 +161,8 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
     )
     @action(detail=True, url_path='nodes')
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
+        # Doesn't use the Network.nodes method, in order to do proper pagination.
+
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
@@ -180,6 +178,8 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
     )
     @action(detail=True, url_path='edges')
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
+        # Doesn't use the Network.edges method, in order to do proper pagination.
+
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
