@@ -26,6 +26,9 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
     pagination_class = PageNumberPagination
 
+    # Categorize entire ViewSet
+    swagger_tags = ['workspaces']
+
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
         responses={200: WorkspaceSerializer()},
