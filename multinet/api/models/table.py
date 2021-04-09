@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Type
 
 from arango.collection import StandardCollection
 from arango.cursor import Cursor
 from arango.exceptions import DocumentDeleteError, DocumentInsertError
 from django.db import models
+from django.db.models.signals import post_delete, pre_save
+from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
 
 from .workspace import Workspace
@@ -37,24 +39,6 @@ class Table(TimeStampedModel):
 
     class Meta:
         unique_together = ('workspace', 'name')
-
-    def save(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = workspace.get_arango_db()
-        if not db.has_collection(self.name):
-            db.create_collection(self.name, edge=self.edge)
-
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        workspace: Workspace = self.workspace
-
-        db = workspace.get_arango_db()
-        if db.has_collection(self.name):
-            db.delete_collection(self.name)
-
-        super().delete(*args, **kwargs)
 
     def count(self) -> int:
         return self.get_arango_collection().count()
@@ -142,3 +126,22 @@ class Table(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+# Handle arango sync
+@receiver(pre_save, sender=Table)
+def arango_coll_save(sender: Type[Table], instance: Table, **kwargs):
+    workspace: Workspace = instance.workspace
+
+    db = workspace.get_arango_db()
+    if not db.has_collection(instance.name):
+        db.create_collection(instance.name, edge=instance.edge)
+
+
+@receiver(post_delete, sender=Table)
+def arango_coll_delete(sender: Type[Table], instance: Table, **kwargs):
+    workspace: Workspace = instance.workspace
+
+    db = workspace.get_arango_db()
+    if db.has_collection(instance.name):
+        db.delete_collection(instance.name)
