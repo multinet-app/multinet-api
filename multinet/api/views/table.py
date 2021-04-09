@@ -1,9 +1,10 @@
 from dataclasses import asdict
 
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
-from guardian.utils import get_40x_or_None
+from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -50,17 +51,18 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
     pagination_class = MultinetPagination
 
+    # Categorize entire ViewSet
+    swagger_tags = ['tables']
+
     @swagger_auto_schema(
         request_body=TableCreateSerializer(),
         responses={200: TableReturnSerializer()},
     )
+    @method_decorator(
+        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
+    )
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-
-        response = get_40x_or_None(request, ['owner'], workspace, return_403=True)
-        if response:
-            return response
-
         serializer = TableSerializer(
             data={
                 **request.data,
@@ -80,14 +82,12 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         return Response(TableReturnSerializer(table).data, status=status.HTTP_200_OK)
 
+    @method_decorator(
+        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
+    )
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-
-        response = get_40x_or_None(request, ['owner'], workspace, return_403=True)
-        if response:
-            return response
-
-        table: Table = get_object_or_404(Table, name=name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
         table.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)

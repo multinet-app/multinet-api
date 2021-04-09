@@ -1,17 +1,19 @@
 # from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
+from guardian.decorators import permission_required_or_403
 from guardian.shortcuts import assign_perm
-from guardian.utils import get_40x_or_None
 from rest_framework import status
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace
 from multinet.api.views.serializers import WorkspaceCreateSerializer, WorkspaceSerializer
+
+from .common import MultinetPagination
 
 
 class WorkspaceViewSet(ReadOnlyModelViewSet):
@@ -24,7 +26,10 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     filter_backends = [filters.DjangoFilterBackend]
     filterset_fields = ['name']
 
-    pagination_class = PageNumberPagination
+    pagination_class = MultinetPagination
+
+    # Categorize entire ViewSet
+    swagger_tags = ['workspaces']
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -44,12 +49,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         assign_perm('owner', request.user, workspace)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
+    @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
-
-        response = get_40x_or_None(request, ['owner'], workspace, return_403=True)
-        if response:
-            return response
-
         workspace.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)

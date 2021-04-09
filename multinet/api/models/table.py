@@ -51,14 +51,10 @@ class Table(TimeStampedModel):
         """Return a specific document."""
         return self.get_arango_collection().find(query or {}, skip=None, limit=1)
 
-    def get_rows(self, page: Optional[int] = None, page_size: Optional[int] = None) -> Cursor:
+    def get_rows(self, limit: Optional[int] = None, offset: Optional[int] = None) -> Cursor:
         """Return all documents from the arango collection for this table.."""
-        skip = None
-        if page and page_size:
-            skip = (page - 1) * page_size
-
         coll = self.get_arango_collection()
-        return coll.find({}, skip, page_size)
+        return coll.find({}, limit=limit, skip=offset)
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
