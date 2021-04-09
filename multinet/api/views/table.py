@@ -50,6 +50,9 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
     pagination_class = MultinetPagination
 
+    # Categorize entire ViewSet
+    swagger_tags = ['tables']
+
     @swagger_auto_schema(
         request_body=TableCreateSerializer(),
         responses={200: TableReturnSerializer()},

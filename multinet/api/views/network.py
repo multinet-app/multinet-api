@@ -88,6 +88,9 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
 
     pagination_class = MultinetPagination
 
+    # Categorize entire ViewSet
+    swagger_tags = ['networks']
+
     @swagger_auto_schema(
         request_body=NetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
