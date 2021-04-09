@@ -124,21 +124,11 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         if validation_resp:
             return validation_resp
 
-        # Create graph in arango before creating the Network object here
-        workspace.get_arango_db().create_graph(
-            serializer.validated_data['name'],
-            edge_definitions=[
-                {
-                    'edge_collection': edge_table.name,
-                    'from_vertex_collections': list(node_tables.keys()),
-                    'to_vertex_collections': list(node_tables.keys()),
-                }
-            ],
-        )
-
-        network, created = Network.objects.get_or_create(
+        network, created = Network.get_or_create_with_edge_definition(
             name=serializer.validated_data['name'],
             workspace=workspace,
+            edge_table=edge_table.name,
+            node_tables=list(node_tables.keys()),
         )
 
         if created:

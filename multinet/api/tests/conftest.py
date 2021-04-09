@@ -59,20 +59,16 @@ def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table
 def populated_network(owned_workspace: Workspace, populated_edge_table: Table) -> Network:
     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
     network_name = Faker().pystr()
-
-    # Create graph in arango before creating the Network object here
-    owned_workspace.get_arango_db().create_graph(
-        network_name,
-        edge_definitions=[
-            {
-                'edge_collection': populated_edge_table.name,
-                'from_vertex_collections': node_tables,
-                'to_vertex_collections': node_tables,
-            }
-        ],
+    network, created = Network.get_or_create_with_edge_definition(
+        name=network_name,
+        workspace=owned_workspace,
+        edge_table=populated_edge_table.name,
+        node_tables=node_tables,
     )
 
-    network: Network = Network.objects.create(name=network_name, workspace=owned_workspace)
+    if created:
+        network.save()
+
     return network
 
 
