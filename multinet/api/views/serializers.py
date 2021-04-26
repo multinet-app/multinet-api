@@ -1,7 +1,8 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import Network, Table, Workspace
+from multinet.api.models import Network, Table, Upload, Workspace
+from multinet.api.tasks.process.utils import ColumnTypeEnum
 
 
 # The default ModelSerializer for User fails if the user already exists
@@ -102,3 +103,32 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
         ]
 
     workspace = WorkspaceSerializer()
+
+
+class UploadCreateSerializer(serializers.Serializer):
+    field_value = serializers.CharField()
+
+
+class UploadReturnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Upload
+        fields = '__all__'
+
+    workspace = WorkspaceSerializer()
+
+    # Specify blob as a CharField to coerce to object_key
+    blob = serializers.CharField()
+
+    # Specify user as a CharField to return username
+    user = serializers.CharField()
+
+
+class CSVColumnTypeSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    type = serializers.ChoiceField(choices=ColumnTypeEnum.values())
+
+
+class CSVUploadCreateSerializer(UploadCreateSerializer):
+    edge = serializers.BooleanField()
+    table_name = serializers.CharField()
+    columns = serializers.ListField(child=CSVColumnTypeSerializer())
