@@ -9,13 +9,14 @@ from rest_framework_extensions.routers import ExtendedSimpleRouter
 from multinet.api.views import (
     NetworkViewSet,
     TableViewSet,
+    UploadViewSet,
     WorkspaceViewSet,
     users_me_view,
     users_search_view,
 )
 
 router = ExtendedSimpleRouter()
-workspaces_routes = router.register(r'workspaces', WorkspaceViewSet)
+workspaces_routes = router.register('workspaces', WorkspaceViewSet)
 workspaces_routes.register(
     'tables',
     TableViewSet,
@@ -26,6 +27,12 @@ workspaces_routes.register(
     'networks',
     NetworkViewSet,
     basename='network',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
+workspaces_routes.register(
+    'uploads',
+    UploadViewSet,
+    basename='upload',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
@@ -40,7 +47,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('admin/', admin.site.urls),
-    path('api/upload/', include('s3_file_field.urls')),
+    path('api/s3-upload/', include('s3_file_field.urls')),
     path('api/', include(router.urls)),
     path('api/users/me', users_me_view),
     path('api/users/search', users_search_view),
