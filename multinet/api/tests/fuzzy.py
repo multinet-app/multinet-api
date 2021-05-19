@@ -1,6 +1,8 @@
 import re
 from typing import Dict
 
+from multinet.api.models.workspace import Workspace
+
 
 class Re:
     def __init__(self, pattern):
@@ -28,6 +30,20 @@ ARANGO_COLL = Re(r'[A-Za-z][-\w]{1,255}')
 ARANGO_DOC_KEY = Re(r'[-\w:\.@()+,=;$!*\'%]{1,254}')
 ARANGO_DOC_ID = Re(str(ARANGO_COLL) + r'\/' + str(ARANGO_DOC_KEY))
 ARANGO_DOC_REV = Re(r'[-_\w]+')
+
+
+def s3_file_field_re(filename: str):
+    return Re(f'{UUID_RE}/{filename}')
+
+
+def workspace_re(workspace: Workspace):
+    return {
+        'id': workspace.pk,
+        'name': workspace.name,
+        'created': TIMESTAMP_RE,
+        'modified': TIMESTAMP_RE,
+        'arango_db_name': workspace.arango_db_name,
+    }
 
 
 def dict_to_fuzzy_arango_doc(d: Dict):
