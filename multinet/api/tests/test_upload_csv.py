@@ -1,6 +1,5 @@
 import csv
 import pathlib
-import time
 from typing import Dict
 import uuid
 
@@ -127,23 +126,14 @@ def test_upload_valid_csv_task_response(
     data_file = airports_csv['data_file']
     table_name = airports_csv['table_name']
 
-    # Try fetching until job is finished
-    finished = False
+    # Since we're running with celery_task_always_eager=True, this job is finished
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{owned_workspace.name}/uploads/{r.json()["id"]}/'
+    )
+
     r_json = r.json()
-    upload_id = r_json['id']
-    for _ in range(10):
-        time.sleep(0.5)
-        r: Response = authenticated_api_client.get(
-            f'/api/workspaces/{owned_workspace.name}/uploads/{upload_id}/'
-        )
-
-        assert r.status_code == 200
-        r_json = r.json()
-        if r_json['status'] == Upload.UploadStatus.FINISHED:
-            finished = True
-            break
-
-    assert finished
+    assert r.status_code == 200
+    assert r_json['status'] == Upload.UploadStatus.FINISHED
     assert r_json['error_messages'] is None
 
     # Check that table is created
