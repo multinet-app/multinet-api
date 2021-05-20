@@ -40,28 +40,13 @@ def airports_csv(owned_workspace: Workspace, authenticated_api_client, s3ff_clie
             'field_value': field_value,
             'edge': False,
             'table_name': table_name,
-            'columns': [
-                {
-                    'key': 'latitude',
-                    'type': 'number',
-                },
-                {
-                    'key': 'longitude',
-                    'type': 'number',
-                },
-                {
-                    'key': 'altitude',
-                    'type': 'number',
-                },
-                {
-                    'key': 'timezone',
-                    'type': 'number',
-                },
-                {
-                    'key': 'year built',
-                    'type': 'number',
-                },
-            ],
+            'columns': {
+                'latitude': 'number',
+                'longitude': 'number',
+                'altitude': 'number',
+                'timezone': 'number',
+                'year built': 'number',
+            },
         },
         format='json',
     )
@@ -103,13 +88,13 @@ def test_create_upload_model_invalid_columns(owned_workspace: Workspace, authent
             'field_value': 'field_value',
             'edge': False,
             'table_name': 'table',
-            'columns': [{'key': 'foo', 'type': 'invalid'}],
+            'columns': {'foo': 'invalid'},
         },
         format='json',
     )
 
     assert r.status_code == 400
-    assert r.json() == {'columns': {'0': {'type': ['"invalid" is not a valid choice.']}}}
+    assert r.json() == {'columns': {'foo': ['"invalid" is not a valid choice.']}}
 
 
 @pytest.mark.django_db
@@ -122,7 +107,6 @@ def test_create_upload_model_invalid_field_value(
             'field_value': 'field_value',
             'edge': False,
             'table_name': 'table',
-            'columns': [],
         },
         format='json',
     )

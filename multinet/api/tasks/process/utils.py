@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import json
@@ -19,12 +18,6 @@ class ColumnTypeEnum(Enum):
     @classmethod
     def values(cls):
         return list(map(lambda c: c.value, cls))
-
-
-@dataclass
-class ColumnType:
-    key: bool
-    type: ColumnTypeEnum
 
 
 def fail_upload_with_message(upload: Upload, message: str):

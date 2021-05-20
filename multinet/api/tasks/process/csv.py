@@ -1,32 +1,32 @@
 import csv
 from io import StringIO
-from typing import Any, BinaryIO, Dict, List
+from typing import Any, BinaryIO, Dict
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from multinet.api.models import Table, Upload
 
-from .utils import ColumnType, complete_upload, fail_upload_with_message, processor_dict
+from .utils import ColumnTypeEnum, complete_upload, fail_upload_with_message, processor_dict
 
 logger = get_task_logger(__name__)
 
 
-def process_row(row: Dict[str, Any], cols: List[ColumnType]) -> Dict:
+def process_row(row: Dict[str, Any], cols: Dict[str, ColumnTypeEnum]) -> Dict:
     """Process a CSV row."""
     new_row = dict(row)
 
-    for col in cols:
-        entry = row.get(col.key)
+    for col_key, col_type in cols.items():
+        entry = row.get(col_key)
 
         # If null entry, skip
         if entry is None:
             continue
 
-        process_func = processor_dict.get(col.type)
+        process_func = processor_dict.get(col_type)
         if process_func is not None:
             try:
-                new_row[col.key] = process_func(entry)
+                new_row[col_key] = process_func(entry)
             except ValueError:
                 # If error processing row, keep as string
                 pass
@@ -35,10 +35,11 @@ def process_row(row: Dict[str, Any], cols: List[ColumnType]) -> Dict:
 
 
 @shared_task
-def process_csv(upload_id: int, table_name: str, edge: bool, columns: List[Dict]) -> None:
+def process_csv(
+    upload_id: int, table_name: str, edge: bool, columns: Dict[str, ColumnTypeEnum]
+) -> None:
     logger.info(f'Begin processing of upload {upload_id}')
     upload: Upload = Upload.objects.get(id=upload_id)
-    columns: List[ColumnType] = [ColumnType(**entry) for entry in columns]
 
     # Update status
     upload.status = Upload.UploadStatus.STARTED
