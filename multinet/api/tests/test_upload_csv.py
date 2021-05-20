@@ -93,6 +93,44 @@ def test_create_upload_model_csv(owned_workspace: Workspace, user: User, airport
     }
 
 
+@pytest.mark.django_db
+def test_create_upload_model_invalid_columns(owned_workspace: Workspace, authenticated_api_client):
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{owned_workspace.name}/uploads/csv/',
+        {
+            # Not an issue to specify invalid field_value, as that's checked after columns,
+            # so the request will return before that is checked
+            'field_value': 'field_value',
+            'edge': False,
+            'table_name': 'table',
+            'columns': [{'key': 'foo', 'type': 'invalid'}],
+        },
+        format='json',
+    )
+
+    assert r.status_code == 400
+    assert r.json() == {'columns': {'0': {'type': ['"invalid" is not a valid choice.']}}}
+
+
+@pytest.mark.django_db
+def test_create_upload_model_invalid_field_value(
+    owned_workspace: Workspace, authenticated_api_client
+):
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{owned_workspace.name}/uploads/csv/',
+        {
+            'field_value': 'field_value',
+            'edge': False,
+            'table_name': 'table',
+            'columns': [],
+        },
+        format='json',
+    )
+
+    assert r.status_code == 400
+    assert r.json() == {'field_value': ['field_value is not a valid signed string.']}
+
+
 # @pytest.mark.usefixtures('celery_session_app')
 # @pytest.mark.celery(task_always_eager=True)
 @pytest.mark.django_db
