@@ -28,7 +28,7 @@ class Upload(TimeStampedModel):
     workspace = models.ForeignKey(Workspace, related_name='uploads', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='uploads', null=True, on_delete=models.SET_NULL)
     data_type = models.CharField(max_length=20, choices=DataType.choices)
-    error_messages = ArrayField(models.CharField(max_length=500), null=True)
+    error_messages = ArrayField(models.CharField(max_length=500), null=True, blank=True)
     status = models.CharField(
         max_length=10, choices=UploadStatus.choices, default=UploadStatus.PENDING
     )
