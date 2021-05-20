@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
@@ -40,6 +42,11 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         read_only_fields = ['created']
 
 
+# ArangoDB Collection/Graph names must abide by this
+# TableNetworkCreateNameField = serializers.RegexField(regex=re.compile(r'^[a-zA-Z][a-zA-Z0-9_-]+$'))
+TableNetworkCreateNameField = serializers.RegexField(r'^[a-zA-Z][a-zA-Z0-9_-]+$')
+
+
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,6 +56,7 @@ class TableCreateSerializer(serializers.ModelSerializer):
             'edge',
         ]
         read_only_fields = ['created']
+        name = TableNetworkCreateNameField
 
 
 # Used for full Table serialization / validation
@@ -74,6 +82,7 @@ class NetworkCreateSerializer(serializers.ModelSerializer):
         model = Network
         fields = ['name', 'edge_table']
 
+    name = TableNetworkCreateNameField
     edge_table = serializers.CharField()
 
 
@@ -130,5 +139,5 @@ class CSVColumnTypeSerializer(serializers.Serializer):
 
 class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
-    table_name = serializers.CharField()
+    table_name = TableNetworkCreateNameField
     columns = serializers.ListField(child=CSVColumnTypeSerializer())
