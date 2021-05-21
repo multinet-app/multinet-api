@@ -45,7 +45,7 @@ class DevelopmentConfiguration(MultinetMixin, DevelopmentBaseConfiguration):
 
 
 class TestingConfiguration(MultinetMixin, TestingBaseConfiguration):
-    pass
+    CELERY_TASK_ALWAYS_EAGER = True
 
 
 class ProductionConfiguration(MultinetMixin, ProductionBaseConfiguration):

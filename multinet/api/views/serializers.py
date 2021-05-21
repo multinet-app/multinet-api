@@ -123,12 +123,9 @@ class UploadReturnSerializer(serializers.ModelSerializer):
     user = serializers.CharField()
 
 
-class CSVColumnTypeSerializer(serializers.Serializer):
-    key = serializers.CharField()
-    type = serializers.ChoiceField(choices=ColumnTypeEnum.values())
-
-
 class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
-    columns = serializers.ListField(child=CSVColumnTypeSerializer())
+    columns = serializers.DictField(
+        child=serializers.ChoiceField(choices=ColumnTypeEnum.values()), required=False
+    )
