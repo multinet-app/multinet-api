@@ -127,5 +127,10 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
     columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=ColumnTypeEnum.values()), required=False
+        child=serializers.ChoiceField(choices=ColumnTypeEnum.values()),
+        default=dict,
     )
+
+
+class D3JSONUploadCreateSerializer(UploadCreateSerializer):
+    network_name = serializers.CharField()
