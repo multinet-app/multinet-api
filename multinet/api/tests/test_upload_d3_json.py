@@ -9,6 +9,7 @@ import pytest
 from rest_framework.response import Response
 
 from multinet.api.models import Network, Table, Upload, Workspace
+from multinet.api.tasks.process.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
     TIMESTAMP_RE,
@@ -168,8 +169,17 @@ def test_valid_d3_json_task_response(
     # Get source data
     with open(miserables_json_file) as file_stream:
         loaded_miserables_json_file = json.load(file_stream)
-        nodes = sorted(loaded_miserables_json_file['nodes'], key=operator.itemgetter('id'))
-        links = sorted(loaded_miserables_json_file['links'], key=operator.itemgetter('source'))
+        nodes = sorted(
+            (d3_node_to_arango_doc(node) for node in loaded_miserables_json_file['nodes']),
+            key=operator.itemgetter('_key'),
+        )
+        links = sorted(
+            (
+                d3_link_to_arango_doc(link, node_table_name)
+                for link in loaded_miserables_json_file['links']
+            ),
+            key=operator.itemgetter('_from'),
+        )
 
     # Check that nodes were ingested correctly
     r: Response = authenticated_api_client.get(
@@ -182,13 +192,7 @@ def test_valid_d3_json_task_response(
 
     results = sorted(r_json['results'], key=operator.itemgetter('_key'))
     for i, node in enumerate(nodes):
-        result = results[i]
-
-        # Fix key as is done in task
-        node['_key'] = node.pop('id')
-
-        # Assert documents match
-        assert result == dict_to_fuzzy_arango_doc(node, exclude=['_key'])
+        assert results[i] == dict_to_fuzzy_arango_doc(node, exclude=['_key'])
 
     # Check that links were ingested correctly
     r: Response = authenticated_api_client.get(
@@ -201,11 +205,4 @@ def test_valid_d3_json_task_response(
 
     results = sorted(r_json['results'], key=operator.itemgetter('_from'))
     for i, link in enumerate(links):
-        result = results[i]
-
-        # Fix key as is done in task
-        link['_from'] = f'{node_table_name}/{link.pop("source")}'
-        link['_to'] = f'{node_table_name}/{link.pop("target")}'
-
-        # Assert documents match
-        assert result == dict_to_fuzzy_arango_doc(link)
+        assert results[i] == dict_to_fuzzy_arango_doc(link)
