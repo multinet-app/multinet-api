@@ -131,8 +131,8 @@ class UploadViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
                 {
                     'network_name': [
                         f'Network {network_name} or ancillary tables'
-                        ' ({node_table_name}, {edge_table_name})'
-                        ' already exist in workspace {workspace.name}.'
+                        f' ({node_table_name}, {edge_table_name})'
+                        f' already exist in workspace {workspace.name}.'
                     ]
                 },
                 status=status.HTTP_400_BAD_REQUEST,
