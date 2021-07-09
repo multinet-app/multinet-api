@@ -46,6 +46,7 @@ class NetworkCreationErrorSerializer(serializers.Serializer):
     )
 
 
+# TODO: Use for validation once it's added
 def validate_edge_table(
     workspace: Workspace, edge_table: Table, node_tables: List[str]
 ) -> Optional[Response]:
@@ -118,10 +119,6 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
             return Response(
                 'Cannot create network with empty edge table', status=status.HTTP_400_BAD_REQUEST
             )
-
-        validation_resp = validate_edge_table(workspace, edge_table, node_tables)
-        if validation_resp:
-            return validation_resp
 
         network = Network.create_with_edge_definition(
             name=serializer.validated_data['name'],
