@@ -68,17 +68,12 @@ def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table
 def populated_network(owned_workspace: Workspace, populated_edge_table: Table) -> Network:
     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
     network_name = Faker().pystr()
-    network, created = Network.get_or_create_with_edge_definition(
+    return Network.create_with_edge_definition(
         name=network_name,
         workspace=owned_workspace,
         edge_table=populated_edge_table.name,
         node_tables=node_tables,
     )
-
-    if created:
-        network.save()
-
-    return network
 
 
 def pytest_configure():

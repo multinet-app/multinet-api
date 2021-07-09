@@ -1,5 +1,5 @@
 import re
-from typing import Dict
+from typing import Dict, List, Optional
 
 from multinet.api.models.workspace import Workspace
 
@@ -46,12 +46,20 @@ def workspace_re(workspace: Workspace):
     }
 
 
-def dict_to_fuzzy_arango_doc(d: Dict):
-    return {
-        **d,
+def dict_to_fuzzy_arango_doc(d: Dict, exclude: Optional[List[str]] = None):
+    doc_fields = {
         '_id': ARANGO_DOC_ID,
         '_key': ARANGO_DOC_KEY,
         '_rev': ARANGO_DOC_REV,
+    }
+
+    if exclude is not None:
+        for key in exclude:
+            doc_fields.pop(key, None)
+
+    return {
+        **d,
+        **doc_fields,
     }
 
 

@@ -123,15 +123,12 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         if validation_resp:
             return validation_resp
 
-        network, created = Network.get_or_create_with_edge_definition(
+        network = Network.create_with_edge_definition(
             name=serializer.validated_data['name'],
             workspace=workspace,
             edge_table=edge_table.name,
             node_tables=list(node_tables.keys()),
         )
-
-        if created:
-            network.save()
 
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 

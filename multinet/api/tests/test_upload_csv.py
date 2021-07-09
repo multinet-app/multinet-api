@@ -114,8 +114,6 @@ def test_create_upload_model_invalid_field_value(
     assert r.json() == {'field_value': ['field_value is not a valid signed string.']}
 
 
-# @pytest.mark.usefixtures('celery_session_app')
-# @pytest.mark.celery(task_always_eager=True)
 @pytest.mark.django_db
 def test_upload_valid_csv_task_response(
     owned_workspace: Workspace, authenticated_api_client, airports_csv
