@@ -42,7 +42,7 @@ def process_d3_json(
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:
-        blob_file: BinaryIO = blob_file
+        blob_file: BinaryIO
         try:
             d3_dict = json.loads(blob_file.read().decode('utf-8'))
         except json.JSONDecodeError:
