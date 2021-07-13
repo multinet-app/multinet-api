@@ -32,6 +32,9 @@ class MultinetMixin(ConfigMixin):
         ]
 
         configuration.AUTHENTICATION_BACKENDS += ['guardian.backends.ObjectPermissionBackend']
+        configuration.REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] += [
+            'rest_framework.authentication.TokenAuthentication',
+        ]
 
     MULTINET_ARANGO_URL = values.Value(environ_required=True)
     MULTINET_ARANGO_PASSWORD = values.Value(environ_required=True)
