@@ -266,7 +266,7 @@ def test_table_rest_delete_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'deleted': table_rows,
+        'deleted': len(table_rows),
         'errors': [],
     }
 

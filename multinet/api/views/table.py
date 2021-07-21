@@ -35,7 +35,7 @@ class RowInsertResponseSerializer(serializers.Serializer):
 
 
 class RowDeleteResponseSerializer(serializers.Serializer):
-    deleted = serializers.ListField(child=serializers.JSONField())
+    deleted = serializers.IntegerField()
     errors = serializers.ListField(child=serializers.JSONField())
 
 

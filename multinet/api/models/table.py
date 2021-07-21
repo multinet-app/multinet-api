@@ -14,6 +14,9 @@ from more_itertools import chunked
 
 from .workspace import Workspace
 
+# The max number of documents that should be sent in bulk requests
+DOCUMENT_CHUNK_SIZE = 5000
+
 
 @dataclass
 class RowModifyError:
@@ -29,7 +32,7 @@ class RowInsertionResponse:
 
 @dataclass
 class RowDeletionResponse:
-    deleted: List[Dict]
+    deleted: int
     errors: List[RowModifyError]
 
 
@@ -59,35 +62,38 @@ class Table(TimeStampedModel):
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        inserted = 0
         errors = []
 
-        for chunk in chunked(rows, 5000):
-            chunk: List[Dict]
-
+        # Limit the amount of rows inserted per request, to prevent timeouts
+        for chunk in chunked(rows, DOCUMENT_CHUNK_SIZE):
             res = self.get_arango_collection().insert_many(chunk, overwrite=True)
-            inserted += len(chunk)
+            errors.extend(
+                (
+                    RowModifyError(index=i, message=doc.error_message)
+                    for i, doc in enumerate(res)
+                    if isinstance(doc, DocumentInsertError)
+                )
+            )
 
-            for i, doc in enumerate(res):
-                if isinstance(doc, DocumentInsertError):
-                    errors.append(RowModifyError(index=i, message=doc.error_message))
-                    inserted -= 1
-
+        inserted = len(rows) - len(errors)
         return RowInsertionResponse(inserted=inserted, errors=errors)
 
     def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().delete_many(rows, return_old=True)
-
-        deleted = []
         errors = []
 
-        for i, doc in enumerate(res):
-            if isinstance(doc, DocumentDeleteError):
-                errors.append(RowModifyError(index=i, message=doc.error_message))
-            else:
-                deleted.append(doc['old'])
+        # Limit the amount of rows deleted per request, to prevent timeouts
+        for chunk in chunked(rows, DOCUMENT_CHUNK_SIZE):
+            res = self.get_arango_collection().delete_many(chunk)
+            errors.extend(
+                (
+                    RowModifyError(index=i, message=doc.error_message)
+                    for i, doc in enumerate(res)
+                    if isinstance(doc, DocumentDeleteError)
+                )
+            )
 
+        deleted = len(rows) - len(errors)
         return RowDeletionResponse(deleted=deleted, errors=errors)
 
     def find_referenced_node_tables(self) -> Optional[Dict[str, Set[str]]]:
