@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
+from more_itertools import chunked
 
 from .workspace import Workspace
 
@@ -22,7 +23,7 @@ class RowModifyError:
 
 @dataclass
 class RowInsertionResponse:
-    inserted: List[Dict]
+    inserted: int
     errors: List[RowModifyError]
 
 
@@ -58,16 +59,19 @@ class Table(TimeStampedModel):
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().insert_many(rows, overwrite=True, return_new=True)
-
-        inserted = []
+        inserted = 0
         errors = []
 
-        for i, doc in enumerate(res):
-            if isinstance(doc, DocumentInsertError):
-                errors.append(RowModifyError(index=i, message=doc.error_message))
-            else:
-                inserted.append(doc['new'])
+        for chunk in chunked(rows, 5000):
+            chunk: List[Dict]
+
+            res = self.get_arango_collection().insert_many(chunk, overwrite=True)
+            inserted += len(chunk)
+
+            for i, doc in enumerate(res):
+                if isinstance(doc, DocumentInsertError):
+                    errors.append(RowModifyError(index=i, message=doc.error_message))
+                    inserted -= 1
 
         return RowInsertionResponse(inserted=inserted, errors=errors)
 

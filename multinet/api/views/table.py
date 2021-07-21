@@ -30,7 +30,7 @@ from .common import (
 
 
 class RowInsertResponseSerializer(serializers.Serializer):
-    inserted = serializers.ListField(child=serializers.JSONField())
+    inserted = serializers.IntegerField()
     errors = serializers.ListField(child=serializers.JSONField())
 
 

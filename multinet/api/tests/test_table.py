@@ -156,7 +156,7 @@ def test_table_rest_insert_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': inserted_table_rows,
+        'inserted': len(table_rows),
         'errors': [],
     }
 
@@ -191,9 +191,10 @@ def test_table_rest_update_rows(
         format='json',
     )
 
+    # Assert all inserted, no errors
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': inserted_new_table_rows,
+        'inserted': len(new_table_rows),
         'errors': [],
     }
 
@@ -220,12 +221,11 @@ def test_table_rest_upsert_rows(
     partially_updated_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows[:2]]
     upsert_payload = [*partially_updated_table_rows, *new_table_rows]
 
-    # Create fuzzy row lists
-    fuzzy_new_table_rows = list(map(dict_to_fuzzy_arango_doc, new_table_rows))
-    fuzzy_partially_updated_table_rows = list(
-        map(arango_doc_to_fuzzy_rev, partially_updated_table_rows)
-    )
-    fuzzy_upsert_payload = [*fuzzy_partially_updated_table_rows, *fuzzy_new_table_rows]
+    # Create fuzzy payload for later assertions
+    fuzzy_upsert_payload = [
+        *map(dict_to_fuzzy_arango_doc, new_table_rows),
+        *map(arango_doc_to_fuzzy_rev, partially_updated_table_rows),
+    ]
 
     # Test combined row insert/update
     r = authenticated_api_client.put(
@@ -236,7 +236,7 @@ def test_table_rest_upsert_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': fuzzy_upsert_payload,
+        'inserted': len(upsert_payload),
         'errors': [],
     }
 
@@ -247,12 +247,9 @@ def test_table_rest_upsert_rows(
 
     r_json = r.json()
     assert r_json['count'] == len(original_table_rows) + len(new_table_rows)
-    for row in r_json['results']:
-        assert (
-            row in original_table_rows
-            or row in fuzzy_partially_updated_table_rows
-            or row in fuzzy_new_table_rows
-        )
+    assert all(
+        row in original_table_rows or row in fuzzy_upsert_payload for row in r_json['results']
+    )
 
 
 @pytest.mark.django_db
