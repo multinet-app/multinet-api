@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Dict, List, Optional
+import uuid
 
 from arango import ArangoClient
 from arango.cursor import Cursor
@@ -67,6 +68,28 @@ class ArangoQuery:
         query_str = f'FOR doc in {collections_str} RETURN doc'
 
         return ArangoQuery(db, query_str=query_str, bind_vars=bind_vars)
+
+    def filter(self, doc: Dict) -> ArangoQuery:
+        """Filter an AQL query to match the provided document."""
+        # If empty filter, do nothing
+        if not doc:
+            return self
+
+        new_bind_vars = dict(self.bind_vars)
+        filter_query_lines = []
+        for k, v in doc.items():
+            # Create unique bind var keys, so they don't
+            # conflict with any previous or future keys
+            key_key = str(uuid.uuid4())[:8]
+            val_key = str(uuid.uuid4())[:8]
+
+            new_bind_vars[key_key] = k
+            new_bind_vars[val_key] = v
+            filter_query_lines.append(f'doc[@{key_key}] == @{val_key}')
+
+        filter_query_str = ' and '.join(filter_query_lines)
+        new_query_str = f'FOR doc IN ({self.query_str}) FILTER ({filter_query_str}) RETURN doc'
+        return ArangoQuery(self.db, query_str=new_query_str, bind_vars=new_bind_vars)
 
     def paginate(self, limit: int = 0, offset: int = 0) -> ArangoQuery:
         if not limit and not offset:
