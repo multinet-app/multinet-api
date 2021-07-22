@@ -11,6 +11,8 @@ from multinet.api.views import (
     TableViewSet,
     UploadViewSet,
     WorkspaceViewSet,
+    PermissionsViewSet,
+    UserPermissionsViewSet,
     users_me_view,
     users_search_view,
 )
@@ -33,6 +35,13 @@ workspaces_routes.register(
     'uploads',
     UploadViewSet,
     basename='upload',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
+workspaces_routes.register(
+    'permissions',
+    #PermissionsViewSet,
+    UserPermissionsViewSet,
+    basename='permission',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
