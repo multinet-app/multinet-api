@@ -1,3 +1,4 @@
+from django.contrib.auth import validators
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
@@ -16,6 +17,10 @@ class UserDetailSerializer(serializers.Serializer):
     last_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
     admin = serializers.BooleanField()
 
+class UserPermissionsSerializer(serializers.Serializer):
+    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
+    permissions = serializers.ListField()
+    # num_users = serializers.IntegerField()
 
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
 # and specify arnago_db_name on the extended serializer
@@ -104,6 +109,8 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
 
     workspace = WorkspaceSerializer()
 
+class PermissionsSerializer(serializers.Serializer):
+    user = serializers.CharField()
 
 class UploadCreateSerializer(serializers.Serializer):
     field_value = serializers.CharField()
