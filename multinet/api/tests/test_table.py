@@ -1,4 +1,5 @@
-from typing import List
+import json
+from typing import Dict, List
 
 from faker import Faker
 import pytest
@@ -135,6 +136,58 @@ def test_table_rest_retrieve_rows(
         authenticated_api_client,
         f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
         table_rows,
+    )
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_invalid(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    """Test that the use of an invalid filter param doesn't cause an error."""
+    table_rows = list(populated_node_table.get_rows())
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        table_rows,
+        params={'filter': 'foobar'},  # Should be a JSON string, not 'foobar'
+    )
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_one(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    table_rows: List[Dict] = list(populated_node_table.get_rows())
+    filter_doc = dict(table_rows[0])
+    filter_doc.pop('_key')
+    filter_doc.pop('_id')
+    filter_doc.pop('_rev')
+
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        result=[table_rows[0]],
+        params={'filter': json.dumps(filter_doc)},
+    )
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_many(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    # Create extra documents and insert common field
+    docs = generate_arango_documents(5)
+    for doc in docs:
+        doc['extra_field'] = 'value'
+    populated_node_table.put_rows(docs)
+    docs = [doc for doc in populated_node_table.get_rows() if 'extra_field' in doc]
+
+    filter_dict = {'extra_field': 'value'}
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        result=docs,
+        params={'filter': json.dumps(filter_dict)},
     )
 
 
