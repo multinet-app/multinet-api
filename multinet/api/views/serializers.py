@@ -17,11 +17,6 @@ class UserDetailSerializer(serializers.Serializer):
     last_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
     admin = serializers.BooleanField()
 
-class UserPermissionsSerializer(serializers.Serializer):
-    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    permissions = serializers.ListField()
-    # num_users = serializers.IntegerField()
-
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
 # and specify arnago_db_name on the extended serializer
 class WorkspaceCreateSerializer(serializers.ModelSerializer):
@@ -44,6 +39,13 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created']
 
+class PermissionsSerializer(serializers.Serializer):
+    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
+    permissions = serializers.ListField()
+
+class PermissionsReturnSerializer(serializers.Serializer):
+    workspace = WorkspaceSerializer()
+    permissions = PermissionsSerializer(many=True)
 
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
@@ -108,9 +110,6 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
         ]
 
     workspace = WorkspaceSerializer()
-
-class PermissionsSerializer(serializers.Serializer):
-    user = serializers.CharField()
 
 class UploadCreateSerializer(serializers.Serializer):
     field_value = serializers.CharField()
