@@ -12,7 +12,6 @@ from multinet.api.views import (
     UploadViewSet,
     WorkspaceViewSet,
     PermissionsViewSet,
-    UserPermissionsViewSet,
     users_me_view,
     users_search_view,
 )
@@ -37,13 +36,14 @@ workspaces_routes.register(
     basename='upload',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
-workspaces_routes.register(
-    'permissions',
-    #PermissionsViewSet,
-    UserPermissionsViewSet,
-    basename='permission',
-    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
-)
+# Don't know yet if I want to use a separate ViewSet for perms or use and action
+# on the workspace viewset
+# workspaces_routes.register(
+#     'permissions',
+#     PermissionsViewSet,
+#     basename='permission',
+#     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+# )
 
 # OpenAPI generation
 schema_view = get_schema_view(

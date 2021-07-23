@@ -31,6 +31,7 @@ class Role(Enum):
 
 class Workspace(TimeStampedModel):
     name = CharField(max_length=300, unique=True)
+    # public workspace property can go here
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
@@ -41,23 +42,9 @@ class Workspace(TimeStampedModel):
             # TODO: decide on a permissions model
             # roles determining permissions
             ('owner', 'Owns the workspace'),
-            ('maintainer', 'May grant roles on the workspace'),
+            ('maintainer', 'May grant all roles but owner on the workspace'),
             ('writer', 'May write to and remove from the workspace'),
             ('reader', 'May read and perform non-mutating queries on the workspace'),
-
-            # atomic permissions
-            # if all users are readers for all workspaces, then we don't need the first two
-            ('read', 'Read from the workspace'),
-            ('query', 'Access non-mutating AQL queries on the workspace'),
-            ('write', 'Write new data and update existing data on the worksapce'),
-            ('remove', 'Delete data on a workspace'),
-            ('rename', 'Rename the workspace'),
-            ('delete', 'Delete a workspace'),
-            ('grant', 'Assign roles for a given workspace'),
-            ('transfer', 'Transfer ownership of a given workspace'),
-            # The following permission does not exist on the previous architecture
-            # ('execute', 'Access mutating queries on a workspace')
-
         ]
 
     @property
@@ -101,6 +88,27 @@ class Workspace(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+
+class WorkspacePermissionsHelper():
+    """
+    Class to safely handle object permissions for workspaces. Ideally this class is the only way
+    object permissions are granted to and removed from users. Unsafe adding or removing of permissions
+    could result in a messy/illegal state for some users.
+    """
+    def make_owner(self, user, workspace):
+        pass
+
+    def make_maintainer(self, user, workspace):
+        pass
+
+    def make_writer(self, user, workspace):
+        pass
+
+    def make_reader(self, user, workspace):
+        pass
+
+    def remove_all(self, user, workspace):
+        pass
 
 # Handle arango sync
 @receiver(pre_save, sender=Workspace)
