@@ -7,12 +7,19 @@ import uuid
 from arango import ArangoClient
 from arango.cursor import Cursor
 from arango.database import StandardDatabase
+from arango.http import DefaultHTTPClient
 from django.conf import settings
+
+
+class NoTimeoutHttpClient(DefaultHTTPClient):
+    """Extend the default arango http client, to remove timeouts for bulk data."""
+
+    REQUEST_TIMEOUT = None
 
 
 @lru_cache()
 def arango_client():
-    return ArangoClient(hosts=settings.MULTINET_ARANGO_URL)
+    return ArangoClient(hosts=settings.MULTINET_ARANGO_URL, http_client=NoTimeoutHttpClient())
 
 
 def db(name: str):

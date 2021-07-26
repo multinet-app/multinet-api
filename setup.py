@@ -50,7 +50,6 @@ setup(
         'djangorestframework',
         'drf-extensions',
         'drf-yasg',
-        'more-itertools',
         'python-arango',
         # Production-only
         'gunicorn',
