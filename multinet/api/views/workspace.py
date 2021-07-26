@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
 from guardian.decorators import permission_required_or_403
-from guardian.shortcuts import assign_perm, remove_perm, get_users_with_perms, get_perms
+from guardian.shortcuts import assign_perm, get_users_with_perms, get_perms
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -13,8 +13,9 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from multinet.api.models import Workspace, workspace
+from multinet.api.models import Workspace
 from multinet.api.views.serializers import WorkspaceCreateSerializer, WorkspaceSerializer, PermissionsSerializer, PermissionsReturnSerializer
+from multinet.auth.decorators import require_permissions
 
 from .common import MultinetPagination
 
@@ -52,7 +53,8 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         assign_perm('owner', request.user, workspace)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
+    # @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
+    @require_permissions(minimum_permission='owner')
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -64,7 +66,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
     @action(detail=True, url_path='permissions')
     def get_workspace_permissions(self, request, name: str):
         """
-        Action to get all objet permissions for a given workspace.
+        Action to get all object permissions for a given workspace.
         Please note that get_permissions is not allowed as a function name, since it 
         is already in use by the framework.
         """
@@ -73,7 +75,6 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         users_with_perms = get_users_with_perms(workspace)
         permissions_list = [{'permissions': get_perms(user, workspace), 'username': user.username} for user in users_with_perms]
-        print(str(permissions_list)) # TEST
         response_data = {
             "workspace" : workspace, 
             "permissions" : permissions_list
@@ -105,18 +106,8 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         workspace.update_user_permissions(update_data)
 
-        # for user_permissions in validated_data:
-        #     # get the user to update
-        #     username = user_permissions["username"]
-        #     user = get_object_or_404(User, username=username)
-        #     permissions = user_permissions["permissions"]
-
-        #     workspace.update_user_permissions(user, permissions)
-
-
         return_data = {
             "permissions": update_data,
             "workspace": workspace
         }
-        
         return Response(PermissionsReturnSerializer(return_data).data, status=status.HTTP_200_OK)
