@@ -1,4 +1,5 @@
 # from django.http import HttpResponseRedirect
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
@@ -72,6 +73,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         users_with_perms = get_users_with_perms(workspace)
         permissions_list = [{'permissions': get_perms(user, workspace), 'username': user.username} for user in users_with_perms]
+        print(str(permissions_list)) # TEST
         response_data = {
             "workspace" : workspace, 
             "permissions" : permissions_list
@@ -82,11 +84,39 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         request_body=PermissionsSerializer(many=True),
         responses={200: PermissionsReturnSerializer()}
     )
-    @get_workspace_permissions.mapping.put
-    def put_workspace_permissions(self, request, name: str):
+    @get_workspace_permissions.mapping.patch
+    def patch_workspace_permissions(self, request, name: str):
+        """
+        Update existing workspace permissions
+        
+        PATCH endpoint for object permissions on workspaces. 
+        """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         request_data = PermissionsSerializer(data=request.data, many=True)
         request_data.is_valid(raise_exception=True)
-        
+        validated_data = request_data.validated_data
 
-        return Response('put_workspace_permissions', status=status.HTTP_200_OK)
+        # unpack the request data and add the user object to each dictionary, checking for existence
+        update_data = [dict(user_permissions) for user_permissions in validated_data]
+        for user_permissions in update_data:
+            user = get_object_or_404(User, username=user_permissions["username"])
+            print(user)
+            user_permissions["user"] = user
+
+        workspace.update_user_permissions(update_data)
+
+        # for user_permissions in validated_data:
+        #     # get the user to update
+        #     username = user_permissions["username"]
+        #     user = get_object_or_404(User, username=username)
+        #     permissions = user_permissions["permissions"]
+
+        #     workspace.update_user_permissions(user, permissions)
+
+
+        return_data = {
+            "permissions": update_data,
+            "workspace": workspace
+        }
+        
+        return Response(PermissionsReturnSerializer(return_data).data, status=status.HTTP_200_OK)
