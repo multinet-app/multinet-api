@@ -4,12 +4,14 @@ from typing import Type
 from uuid import uuid4
 from enum import Enum
 
+from django.db.models.fields import BooleanField
+
 from arango.database import StandardDatabase
 from django.db.models import CharField
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
-from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
+from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm, get_user_perms
 
 from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
 
@@ -23,7 +25,7 @@ Enum class of roles (see rfc-0005). Roles determine user permissions.
 
 Evaluate w
 """
-class Role(Enum):
+class PermissionLevel(Enum):
     READER = 1
     WRITER = 2
     MAINTAINER = 3
@@ -31,7 +33,7 @@ class Role(Enum):
 
 class Workspace(TimeStampedModel):
     name = CharField(max_length=300, unique=True)
-    # public workspace property can go here
+    # public = BooleanField(default=False)
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
@@ -81,6 +83,38 @@ class Workspace(TimeStampedModel):
         owners = get_users_with_perms(self, only_with_perms_in=['owner'])
         if owner in owners:
             remove_perm('owner', owner, self)
+    
+    def update_user_permissions(self, permissions: list[dict]):
+        """
+        Update workspace object permissions for this workspace.
+        """
+
+        owners = list(self.owners)
+
+        for user_permissions in permissions:
+            user = user_permissions["user"]
+            new_permissions = user_permissions["permissions"]
+            current_permissions = get_user_perms(user, self)
+
+            if 'owner' in current_permissions and 'owner' not in new_permissions:
+                # case for removing ownership
+                owners.remove(user)
+
+            if 'owner' in new_permissions and 'owner' not in current_permissions:
+                # add user as a new owner
+                owners.append(user)
+
+            # remove current non-owner permissions for the user
+            for perm in current_permissions:
+                if perm != 'owner':
+                    remove_perm(perm, user, self)
+
+            # add new permissions for the user
+            for perm in new_permissions:
+                if perm != 'owner':
+                    assign_perm(perm, user, self)
+        
+        self.set_owners(owners)
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)
