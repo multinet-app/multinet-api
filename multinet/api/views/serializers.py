@@ -41,7 +41,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
 
 class PermissionsSerializer(serializers.Serializer):
     username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    permissions = serializers.ListField()
+    permissions = serializers.ListField() #TODO: make this a single field
 
 class PermissionsReturnSerializer(serializers.Serializer):
     workspace = WorkspaceSerializer()
