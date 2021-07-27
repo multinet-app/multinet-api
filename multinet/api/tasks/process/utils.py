@@ -3,6 +3,7 @@ from enum import Enum
 import json
 from typing import Optional, Union
 
+import celery
 from dateutil import parser as dateutilparser
 
 from multinet.api.models import Upload
@@ -20,19 +21,36 @@ class ColumnTypeEnum(Enum):
         return list(map(lambda c: c.value, cls))
 
 
-def fail_upload_with_message(upload: Upload, message: str):
-    upload.status = Upload.UploadStatus.FAILED
-    if upload.error_messages is None:
-        upload.error_messages = [message]
-    else:
-        upload.error_messages.append(message)
+class ProcessUploadTask(celery.Task):
+    """
+    A celery task for upload processing.
 
-    upload.save()
+    NOTE: This task assumes that all arguments are passed using kwargs.
+    If an argument is passed positionally, it will not be seen by this task.
+    """
 
+    @staticmethod
+    def fail_upload_with_message(upload: Upload, message: str):
+        upload.status = Upload.UploadStatus.FAILED
+        if upload.error_messages is None:
+            upload.error_messages = [message]
+        else:
+            upload.error_messages.append(message)
 
-def complete_upload(upload: Upload):
-    upload.status = Upload.UploadStatus.FINISHED
-    upload.save()
+        upload.save()
+
+    @staticmethod
+    def complete_upload(upload: Upload):
+        upload.status = Upload.UploadStatus.FINISHED
+        upload.save()
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        upload: Upload = Upload.objects.get(id=kwargs['upload_id'])
+        self.fail_upload_with_message(upload, exc)
+
+    def on_success(self, retval, task_id, args, kwargs):
+        upload: Upload = Upload.objects.get(id=kwargs['upload_id'])
+        self.complete_upload(upload)
 
 
 def str_to_bool(entry: str) -> bool:

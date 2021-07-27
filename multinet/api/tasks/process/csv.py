@@ -7,7 +7,11 @@ from celery.utils.log import get_task_logger
 
 from multinet.api.models import Table, Upload
 
-from .utils import ColumnTypeEnum, complete_upload, fail_upload_with_message, processor_dict
+from .utils import (
+    ColumnTypeEnum,
+    ProcessUploadTask,
+    processor_dict,
+)
 
 logger = get_task_logger(__name__)
 
@@ -34,7 +38,7 @@ def process_row(row: Dict[str, Any], cols: Dict[str, ColumnTypeEnum]) -> Dict:
     return new_row
 
 
-@shared_task
+@shared_task(base=ProcessUploadTask)
 def process_csv(
     upload_id: int, table_name: str, edge: bool, columns: Dict[str, ColumnTypeEnum]
 ) -> None:
@@ -51,7 +55,7 @@ def process_csv(
         try:
             csv_rows = list(csv.DictReader(StringIO(blob_file.read().decode('utf-8'))))
         except csv.Error:
-            return fail_upload_with_message(upload, 'Failed to parse CSV.')
+            return ProcessUploadTask.fail_upload_with_message(upload, 'Failed to parse CSV.')
 
     # Cast entries in each row to appropriate type, if necessary
     for i, row in enumerate(csv_rows):
@@ -66,7 +70,3 @@ def process_csv(
 
     # Insert rows
     table.put_rows(csv_rows)
-
-    # Mark upload as finished, if it hasn't been marked as failed
-    if upload.status == Upload.UploadStatus.STARTED:
-        complete_upload(upload)
