@@ -7,11 +7,7 @@ from celery.utils.log import get_task_logger
 
 from multinet.api.models import Table, Upload
 
-from .utils import (
-    ColumnTypeEnum,
-    ProcessUploadTask,
-    processor_dict,
-)
+from .utils import ColumnTypeEnum, ProcessUploadTask, processor_dict
 
 logger = get_task_logger(__name__)
 

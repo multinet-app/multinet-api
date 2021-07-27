@@ -9,7 +9,6 @@ from dateutil import parser as dateutilparser
 
 from multinet.api.models import Upload
 
-
 logger = get_task_logger(__name__)
 
 
