@@ -1,4 +1,3 @@
-from django.contrib.auth import validators
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
@@ -17,6 +16,7 @@ class UserDetailSerializer(serializers.Serializer):
     last_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
     admin = serializers.BooleanField()
 
+
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
 # and specify arnago_db_name on the extended serializer
 class WorkspaceCreateSerializer(serializers.ModelSerializer):
@@ -27,6 +27,7 @@ class WorkspaceCreateSerializer(serializers.ModelSerializer):
             'name',
             'created',
             'modified',
+            'public',
         ]
         read_only_fields = ['created']
 
@@ -36,16 +37,20 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         model = Workspace
         fields = WorkspaceCreateSerializer.Meta.fields + [
             'arango_db_name',
+            'public',
         ]
         read_only_fields = ['created']
 
+
 class PermissionsSerializer(serializers.Serializer):
     username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    permissions = serializers.ListField() #TODO: make this a single field
+    permissions = serializers.ListField()  # TODO: make this a single field
+
 
 class PermissionsReturnSerializer(serializers.Serializer):
     workspace = WorkspaceSerializer()
     permissions = PermissionsSerializer(many=True)
+
 
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
@@ -110,6 +115,7 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
         ]
 
     workspace = WorkspaceSerializer()
+
 
 class UploadCreateSerializer(serializers.Serializer):
     field_value = serializers.CharField()
