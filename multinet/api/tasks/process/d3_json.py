@@ -33,12 +33,7 @@ def process_d3_json(
     node_table_name: str,
     edge_table_name: str,
 ) -> None:
-    logger.info(f'Begin processing of upload {upload_id}')
     upload: Upload = Upload.objects.get(id=upload_id)
-
-    # Update status
-    upload.status = Upload.UploadStatus.STARTED
-    upload.save()
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:
