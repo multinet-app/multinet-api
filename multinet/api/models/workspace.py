@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Type
 from uuid import uuid4
-from enum import Enum
 
-from django.db.models.fields import BooleanField
+# from django.db.models.fields import BooleanField
 
 from arango.database import StandardDatabase
-from django.db.models import CharField
+from django.db.models import CharField, BooleanField
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
@@ -16,6 +15,7 @@ from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm, g
 from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
 from multinet.api.utils.workspace_permissions import OWNER, MAINTAINER, WRITER, READER
 
+
 def create_default_arango_db_name():
     # Arango db names must start with a letter
     return f'w-{uuid4().hex}'
@@ -23,7 +23,7 @@ def create_default_arango_db_name():
 
 class Workspace(TimeStampedModel):
     name = CharField(max_length=300, unique=True)
-    # public = BooleanField(default=False)
+    public = BooleanField(default=False)
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
@@ -71,7 +71,7 @@ class Workspace(TimeStampedModel):
         owners = get_users_with_perms(self, only_with_perms_in=[OWNER])
         if owner in owners:
             remove_perm(OWNER, owner, self)
-    
+
     def update_user_permissions(self, permissions: list[dict]):
         """
         Update workspace object permissions for this workspace.
@@ -101,7 +101,7 @@ class Workspace(TimeStampedModel):
             for perm in new_permissions:
                 if perm != OWNER:
                     assign_perm(perm, user, self)
-        
+
         self.set_owners(owners)
 
     def get_arango_db(self) -> StandardDatabase:
@@ -109,6 +109,7 @@ class Workspace(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.name
+
 
 # Handle arango sync
 @receiver(pre_save, sender=Workspace)
