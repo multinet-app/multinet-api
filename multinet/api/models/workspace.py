@@ -41,68 +41,60 @@ class Workspace(TimeStampedModel):
     def owners(self):
         return get_users_with_perms(self, only_with_perms_in=[OWNER])
 
+    @property
+    def maintainers(self):
+        return get_users_with_perms(self, only_with_perms_in=[MAINTAINER])
+
+    @property
+    def writers(self):
+        return get_users_with_perms(self, only_with_perms_in=[WRITER])
+
+    @property
+    def readers(self):
+        return get_users_with_perms(self, only_with_perms_in=[READER])
+
+    def set_permissions(self, perm, new_users):
+        old_users = get_users_with_perms(self, only_with_perms_in=[perm])
+
+        removed_users = []
+        added_users = []
+
+        # remove old users
+        for user in old_users:
+            if user not in new_users:
+                remove_perm(perm, user, self)
+                removed_users.append(user)
+
+        # add new users
+        for user in new_users:
+            if user not in old_users:
+                assign_perm(perm, user, self)
+                added_users.append(user)
+
+        # return added/removed users so they can be emailed
+        return removed_users, added_users
+
     def set_owners(self, new_owners):
-        old_owners = get_users_with_perms(self, only_with_perms_in=[OWNER])
+        return self.set_permissions(OWNER, new_owners)
 
-        removed_owners = []
-        added_owners = []
+    def set_maintainers(self, new_maintainers):
+        return self.set_permissions(MAINTAINER, new_maintainers)
 
-        # Remove old owners
-        for old_owner in old_owners:
-            if old_owner not in new_owners:
-                remove_perm(OWNER, old_owner, self)
-                removed_owners.append(old_owner)
+    def set_writers(self, new_writers):
+        return self.set_permissions(WRITER, new_writers)
 
-        # Add new owners
-        for new_owner in new_owners:
-            if new_owner not in old_owners:
-                assign_perm(OWNER, new_owner, self)
-                added_owners.append(new_owner)
+    def set_readers(self, new_readers):
+        return self.set_permissions(READER, new_readers)
 
-        # Return the owners added/removed so they can be emailed
-        return removed_owners, added_owners
+    def add_user_permission(self, perm, user):
+        current_users = get_user_perms(self, only_with_perms_in=[perm])
+        if user not in current_users:
+            assign_perm(perm, user, self)
 
-    def add_owner(self, new_owner):
-        old_owners = get_users_with_perms(self, only_with_perms_in=[OWNER])
-        if new_owner not in old_owners:
-            assign_perm(OWNER, new_owner, self)
-
-    def remove_owner(self, owner):
-        owners = get_users_with_perms(self, only_with_perms_in=[OWNER])
-        if owner in owners:
-            remove_perm(OWNER, owner, self)
-
-    def update_user_permissions(self, permissions: list[dict]):
-        """
-        Update workspace object permissions for this workspace.
-        """
-
-        owners = list(self.owners)
-
-        for user_permissions in permissions:
-            user = user_permissions["user"]
-            new_permissions = user_permissions["permissions"]
-            current_permissions = get_user_perms(user, self)
-
-            if OWNER in current_permissions and OWNER not in new_permissions:
-                # case for removing ownership
-                owners.remove(user)
-
-            if OWNER in new_permissions and OWNER not in current_permissions:
-                # add user as a new owner
-                owners.append(user)
-
-            # remove current non-owner permissions for the user
-            for perm in current_permissions:
-                if perm != OWNER:
-                    remove_perm(perm, user, self)
-
-            # add new permissions for the user
-            for perm in new_permissions:
-                if perm != OWNER:
-                    assign_perm(perm, user, self)
-
-        self.set_owners(owners)
+    def remove_user_permission(self, perm, user):
+        current_users = get_users_with_perms(self, only_with_perms_in=[perm])
+        if user not in current_users:
+            remove_perm(perm, user, self)
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)
