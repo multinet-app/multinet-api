@@ -3,17 +3,15 @@ from __future__ import annotations
 from typing import Type
 from uuid import uuid4
 
-# from django.db.models.fields import BooleanField
-
 from arango.database import StandardDatabase
-from django.db.models import CharField, BooleanField
+from django.db.models import BooleanField, CharField
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
-from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm, get_user_perms
+from guardian.shortcuts import assign_perm, get_user_perms, get_users_with_perms, remove_perm
 
 from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
-from multinet.api.utils.workspace_permissions import OWNER, MAINTAINER, WRITER, READER
+from multinet.api.utils.workspace_permissions import MAINTAINER, OWNER, READER, WRITER
 
 
 def create_default_arango_db_name():

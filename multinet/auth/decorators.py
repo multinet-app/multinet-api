@@ -1,9 +1,11 @@
+from typing import Any
+
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
-from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import (PERMISSION_RANK, highest_permission)
 from guardian.shortcuts import get_user_perms
-from typing import Any
+
+from multinet.api.models import Workspace
+from multinet.api.utils.workspace_permissions import PERMISSION_RANK, highest_permission
 
 
 def require_permission(minimum_permission: str, allow_public=False) -> Any:
