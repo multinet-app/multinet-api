@@ -47,10 +47,7 @@ def process_csv(
     # Download data from S3/MinIO
     with upload.blob as blob_file:
         blob_file: BinaryIO = blob_file
-        try:
-            csv_rows = list(csv.DictReader(StringIO(blob_file.read().decode('utf-8'))))
-        except csv.Error:
-            return ProcessUploadTask.fail_upload_with_message(upload, 'Failed to parse CSV.')
+        csv_rows = list(csv.DictReader(StringIO(blob_file.read().decode('utf-8'))))
 
     # Cast entries in each row to appropriate type, if necessary
     for i, row in enumerate(csv_rows):

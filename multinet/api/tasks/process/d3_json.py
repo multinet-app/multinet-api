@@ -38,10 +38,7 @@ def process_d3_json(
     # Download data from S3/MinIO
     with upload.blob as blob_file:
         blob_file: BinaryIO
-        try:
-            d3_dict = json.loads(blob_file.read().decode('utf-8'))
-        except json.JSONDecodeError:
-            return ProcessUploadTask.fail_upload_with_message(upload, 'Failed to parse JSON.')
+        d3_dict = json.loads(blob_file.read().decode('utf-8'))
 
     # Change column names from the d3 format to the arango format
     d3_dict['nodes'] = [d3_node_to_arango_doc(node) for node in d3_dict['nodes']]
