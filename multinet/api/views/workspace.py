@@ -1,6 +1,8 @@
 # from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404
+from typing import OrderedDict
+
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
 from guardian.shortcuts import assign_perm, get_objects_for_user
@@ -11,17 +13,15 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from typing import OrderedDict
-
 from multinet.api.models import Workspace
+from multinet.api.utils.workspace_permissions import OWNER, READER, READER_LIST
 from multinet.api.views.serializers import (
+    PermissionsReturnSerializer,
+    PermissionsSerializer,
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
-    PermissionsSerializer,
-    PermissionsReturnSerializer
 )
 from multinet.auth.decorators import require_permission
-from multinet.api.utils.workspace_permissions import OWNER, READER, READER_LIST
 
 from .common import MultinetPagination
 
@@ -112,7 +112,6 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         serializer = PermissionsReturnSerializer(workspace)
-        print(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def build_user_list(self, validated_data: OrderedDict) -> list:
