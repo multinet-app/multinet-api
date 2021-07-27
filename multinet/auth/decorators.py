@@ -6,7 +6,7 @@ from guardian.shortcuts import get_user_perms
 from typing import Any
 
 
-def require_permission(minimum_permission: str) -> Any:
+def require_permission(minimum_permission: str, allow_public=False) -> Any:
     """
     Decorate an API endpoint to check for object permissions.
     This decorator works for enpoints that take action on a single workspace (i.e.
@@ -23,10 +23,11 @@ def require_permission(minimum_permission: str) -> Any:
             print(highest_permission(user_perms))
 
             # minimum_permission should likely be validated
-            if not highest_permission(user_perms) >= PERMISSION_RANK[minimum_permission]:
-                return HttpResponseForbidden()
+            if highest_permission(user_perms) >= PERMISSION_RANK[minimum_permission]\
+               or workspace.public:
+                return func(view_set, request, name)
 
-            return func(view_set, request, name)
+            return HttpResponseForbidden()
 
         return wrapper
     return require_permission_inner

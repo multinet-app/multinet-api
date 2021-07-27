@@ -37,19 +37,33 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         model = Workspace
         fields = WorkspaceCreateSerializer.Meta.fields + [
             'arango_db_name',
-            'public',
         ]
         read_only_fields = ['created']
 
 
 class PermissionsSerializer(serializers.Serializer):
-    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    permissions = serializers.ListField()  # TODO: make this a single field
+    public = serializers.BooleanField()
+    owners = UserSerializer(many=True)
+    maintainers = UserSerializer(many=True)
+    writers = UserSerializer(many=True)
+    readers = UserSerializer(many=True)
 
 
-class PermissionsReturnSerializer(serializers.Serializer):
-    workspace = WorkspaceSerializer()
-    permissions = PermissionsSerializer(many=True)
+class PermissionsReturnSerializer(serializers.ModelSerializer):
+    owners = UserSerializer(many=True)
+    maintainers = UserSerializer(many=True)
+    writers = UserSerializer(many=True)
+    readers = UserSerializer(many=True)
+
+    class Meta:
+        model = Workspace
+        fields = WorkspaceCreateSerializer.Meta.fields + [
+            'public',
+            'owners',
+            'maintainers',
+            'writers',
+            'readers'
+        ]
 
 
 # The required fields for table creation
