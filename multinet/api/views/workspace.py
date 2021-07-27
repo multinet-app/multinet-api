@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
-from guardian.shortcuts import assign_perm, get_users_with_perms, get_perms
+from guardian.shortcuts import assign_perm, get_users_with_perms, get_perms, get_objects_for_user
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     PermissionsReturnSerializer
 )
 from multinet.auth.decorators import require_permission
-from multinet.api.utils.workspace_permissions import OWNER, READER
+from multinet.api.utils.workspace_permissions import OWNER, READER, READER_LIST
 
 from .common import MultinetPagination
 
@@ -66,8 +66,22 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: WorkspaceSerializer(many=True)}
     )
     def list(self, request):
-        # filter for public or permissions. easy
-        return super().list(request)
+        """
+        Get all workspaces that the request user has permission to read.
+        This includes public workspaces.
+        Superusers have permission for every object.
+        """
+        public_workspaces = self.queryset.filter(public=True)
+        private_workspaces = get_objects_for_user(request.user,
+                                                  READER_LIST,
+                                                  self.queryset.filter(public=False),
+                                                  any_perm=True)
+        all_readable_workspaces = public_workspaces | private_workspaces
+        print(request.user.username)
+        print(list(private_workspaces))
+        print(get_perms(request.user, get_object_or_404(Workspace, name="mlntestpubliccreate")))
+        return Response(WorkspaceSerializer(all_readable_workspaces, many=True).data,
+                        status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         responses={200: WorkspaceSerializer()}
