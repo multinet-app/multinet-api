@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
@@ -10,11 +11,17 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField(validators=[UnicodeUsernameValidator()])
 
 
-class UserDetailSerializer(serializers.Serializer):
-    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    first_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    last_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    admin = serializers.BooleanField()
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_superuser'
+        ]
 
 
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
@@ -50,10 +57,10 @@ class PermissionsSerializer(serializers.Serializer):
 
 
 class PermissionsReturnSerializer(serializers.ModelSerializer):
-    owners = UserSerializer(many=True)
-    maintainers = UserSerializer(many=True)
-    writers = UserSerializer(many=True)
-    readers = UserSerializer(many=True)
+    owners = UserDetailSerializer(many=True)
+    maintainers = UserDetailSerializer(many=True)
+    writers = UserDetailSerializer(many=True)
+    readers = UserDetailSerializer(many=True)
 
     class Meta:
         model = Workspace
