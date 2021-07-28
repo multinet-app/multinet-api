@@ -83,18 +83,23 @@ class ArangoQuery:
         if not doc:
             return self
 
+        # Iterate through the dict, storing each key/value pair as bind vars,
+        # and creating a query filter using them
         new_bind_vars = dict(self.bind_vars)
         filter_query_lines = []
         for k, v in doc.items():
-            # Create unique bind var keys, so they don't
-            # conflict with any previous or future keys
+            # Create unique bind var keys for dict key and value
             key_key = str(uuid.uuid4())[:8]
             val_key = str(uuid.uuid4())[:8]
 
+            # Store the dict key and value using the generated keys
             new_bind_vars[key_key] = k
             new_bind_vars[val_key] = v
+
+            # Reference the variable keys in the query
             filter_query_lines.append(f'doc[@{key_key}] == @{val_key}')
 
+        # Join the filters and wrap query
         filter_query_str = ' and '.join(filter_query_lines)
         new_query_str = f'FOR doc IN ({self.query_str}) FILTER ({filter_query_str}) RETURN doc'
         return ArangoQuery(self.db, query_str=new_query_str, bind_vars=new_bind_vars)
