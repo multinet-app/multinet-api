@@ -112,8 +112,11 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         # Attempt filtering
         try:
             query = query.filter(json.loads(request.query_params.get('filter', '{}')))
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            return Response(
+                {'filter': [str(e)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         paginated_query = pagination.paginate_queryset(query, request)
         return pagination.get_paginated_response(paginated_query)
