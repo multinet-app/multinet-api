@@ -1,4 +1,3 @@
-# from django.http import HttpResponseRedirect
 from typing import OrderedDict
 
 from django.contrib.auth.models import User
@@ -135,7 +134,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         """
         Update existing workspace permissions
 
-        PATCH endpoint for object permissions on workspaces.
+        PUT endpoint for object permissions on workspaces.
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         serializer = PermissionsSerializer(data=request.data)
