@@ -143,14 +143,14 @@ def test_table_rest_retrieve_rows(
 def test_table_rest_retrieve_rows_filter_invalid(
     populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
 ):
-    """Test that the use of an invalid filter param doesn't cause an error."""
-    table_rows = list(populated_node_table.get_rows())
-    assert_limit_offset_results(
-        authenticated_api_client,
+    """Test that the use of an invalid filter param returns the expected error."""
+    r = authenticated_api_client.get(
         f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
-        table_rows,
-        params={'filter': 'foobar'},  # Should be a JSON string, not 'foobar'
+        {'filter': 'foobar'},  # Should be a JSON string, not 'foobar'
     )
+
+    assert r.status_code == 400
+    assert 'filter' in r.json()
 
 
 @pytest.mark.django_db
