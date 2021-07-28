@@ -14,7 +14,8 @@ from django.conf import settings
 class NoTimeoutHttpClient(DefaultHTTPClient):
     """Extend the default arango http client, to remove timeouts for bulk data."""
 
-    REQUEST_TIMEOUT = None
+    # Set the request timeout to 1 hour (in seconds)
+    REQUEST_TIMEOUT = 60 * 60
 
 
 @lru_cache()
