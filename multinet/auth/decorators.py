@@ -1,14 +1,14 @@
+from functools import wraps
 from typing import Any
 
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
-from guardian.shortcuts import get_user_perms
 
 from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import PERMISSION_RANK, highest_permission
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 
-def require_permission(minimum_permission: str, allow_public=False) -> Any:
+def require_permission(minimum_permission: WorkspacePermission, allow_public=False) -> Any:
     """
     Decorate an API endpoint to check for object permissions.
     This decorator works for enpoints that take action on a single workspace (i.e.
@@ -16,20 +16,19 @@ def require_permission(minimum_permission: str, allow_public=False) -> Any:
     does not have appropriate permissions.
     """
     def require_permission_inner(func: Any) -> Any:
+
+        @wraps(func)
         def wrapper(view_set: Any, request: Any, name: str) -> Any:
             workspace: Workspace = get_object_or_404(Workspace, name=name)
-            user = request.user
-            user_perms = get_user_perms(user, workspace)
-
-            print(PERMISSION_RANK[minimum_permission])
-            print(highest_permission(user_perms))
-
-            # minimum_permission should likely be validated
-            if highest_permission(user_perms) >= PERMISSION_RANK[minimum_permission]\
-               or workspace.public:
+            if workspace.public and allow_public:
                 return func(view_set, request, name)
 
-            return HttpResponseForbidden()
+            user = request.user
+            user_perm = workspace.get_user_permission(user)
+
+            if user_perm is None or minimum_permission.value not in user_perm.associated_perms:
+                return HttpResponseForbidden()
+            return func(view_set, request, name)
 
         return wrapper
     return require_permission_inner
