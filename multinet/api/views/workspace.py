@@ -1,6 +1,7 @@
 from typing import OrderedDict, Union
 
 from django.contrib.auth.models import User
+from django.http.response import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
@@ -10,7 +11,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from multinet.api.models import Workspace
 from multinet.api.utils.workspace_permissions import WorkspacePermission
@@ -25,7 +25,7 @@ from multinet.auth.decorators import require_permission
 from .common import MultinetPagination
 
 
-class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
+class WorkspaceViewSet(ReadOnlyModelViewSet):
     queryset = Workspace.objects.all()
     lookup_field = 'name'
 
@@ -39,6 +39,13 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
     # Categorize entire ViewSet
     swagger_tags = ['workspaces']
+
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        user_permission = obj.get_user_permission(request.user)
+        if request.method == 'GET':
+            if WorkspacePermission.reader.value not in user_permission.associated_perms:
+                raise HttpResponseForbidden()
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -82,18 +89,9 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         return Response(WorkspaceSerializer(all_readable_workspaces, many=True).data,
                         status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(
-        responses={200: WorkspaceSerializer()}
-    )
-    @require_permission(minimum_permission=WorkspacePermission.reader, allow_public=True)
-    def retrieve(self, request, name):
-        """
-        Get a single workspace by name. Requesting user must have at least reader permission.
-        """
-        return super().retrieve(request, name)
-
     @require_permission(minimum_permission=WorkspacePermission.owner)
     def destroy(self, request, name):
+        print(request.method)
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)

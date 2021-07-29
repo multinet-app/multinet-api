@@ -60,6 +60,7 @@ class Workspace(TimeStampedModel):
         Return None if the user has no permission for this workspace.
         """
         permission_keys = get_user_perms(user, self)
+
         valid_permission_keys = filter(lambda key: WorkspacePermission.get_rank_from_key(key) > 0,
                                        permission_keys)
         valid_permission_keys = list(valid_permission_keys)
@@ -80,6 +81,8 @@ class Workspace(TimeStampedModel):
         """
         need_to_add = True  # assume we will add the permission
         current_permissions = get_user_perms(user, self)
+
+        # TODO: make sure default django permissions are not wiped
         for p in current_permissions:
             if p == permission.value:
                 need_to_add = False  # no need to add, since the permission already exists

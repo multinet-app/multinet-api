@@ -18,17 +18,22 @@ def require_permission(minimum_permission: WorkspacePermission, allow_public=Fal
     def require_permission_inner(func: Any) -> Any:
 
         @wraps(func)
-        def wrapper(view_set: Any, request: Any, name: str) -> Any:
-            workspace: Workspace = get_object_or_404(Workspace, name=name)
+        def wrapper(view_set: Any, request: Any, name="", **kwargs) -> Any:
+            workspace_name = name
+            if workspace_name == "":
+                if 'parent_lookup_workspace__name' in kwargs:
+                    workspace_name = kwargs['parent_lookup_workspace__name']
+
+            workspace: Workspace = get_object_or_404(Workspace, name=workspace_name)
             if workspace.public and allow_public:
-                return func(view_set, request, name)
+                return func(view_set, request, workspace_name)
 
             user = request.user
             user_perm = workspace.get_user_permission(user)
 
             if user_perm is None or minimum_permission.value not in user_perm.associated_perms:
                 return HttpResponseForbidden()
-            return func(view_set, request, name)
+            return func(view_set, request, workspace_name)
 
         return wrapper
     return require_permission_inner
