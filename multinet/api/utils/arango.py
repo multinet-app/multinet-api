@@ -78,7 +78,22 @@ class ArangoQuery:
         return ArangoQuery(db, query_str=query_str, bind_vars=bind_vars)
 
     def filter(self, doc: Dict) -> ArangoQuery:
-        """Filter an AQL query to match the provided document."""
+        """
+        Filter an AQL query to match the provided document.
+
+        This function transforms a dict into the syntax required for filtering an AQL query.
+        For example, the dict `{"foo": "bar"}` would become `FILTER doc['foo'] == 'bar'`.
+        This is done by creating bind variables for each key and value used, and then injecting
+        those variables into the query (to prevent any unwanted behavior from injected variables).
+        So instead of directly using the variables as shown in the above example query, the
+        following would be done::
+
+            bind_vars = {"f2e59b48": "foo", "a7f3755d": "bar"}
+            query_str = "FILTER doc[@f2e59b48] == @a7f3755d"
+
+        Since a dict almost always has multiple key/value pairs, this is done for every pair and
+        joined together into the final query.
+        """
         # If empty filter, do nothing
         if not doc:
             return self
