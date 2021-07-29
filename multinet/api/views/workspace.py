@@ -1,10 +1,10 @@
-from typing import OrderedDict
+from typing import OrderedDict, Union
 
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
-from guardian.shortcuts import assign_perm, get_objects_for_user
+from guardian.shortcuts import get_objects_for_user
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -13,7 +13,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import OWNER, READER, READER_LIST
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
     PermissionsReturnSerializer,
     PermissionsSerializer,
@@ -60,7 +60,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         if created:
             workspace.save()
 
-        assign_perm(OWNER, request.user, workspace)
+        workspace.set_user_permission(request.user, WorkspacePermission.owner)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -74,7 +74,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         """
         public_workspaces = self.queryset.filter(public=True)
         private_workspaces = get_objects_for_user(request.user,
-                                                  READER_LIST,
+                                                  WorkspacePermission.reader.associated_perms,
                                                   self.queryset.filter(public=False),
                                                   any_perm=True)
         all_readable_workspaces = public_workspaces | private_workspaces
@@ -85,15 +85,14 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
     @swagger_auto_schema(
         responses={200: WorkspaceSerializer()}
     )
-    @require_permission(minimum_permission=READER, allow_public=True)
+    @require_permission(minimum_permission=WorkspacePermission.reader, allow_public=True)
     def retrieve(self, request, name):
         """
         Get a single workspace by name. Requesting user must have at least reader permission.
         """
-        workspace: Workspace = get_object_or_404(Workspace, name=name)
-        return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
+        return super().retrieve(request, name)
 
-    @require_permission(minimum_permission=OWNER)
+    @require_permission(minimum_permission=WorkspacePermission.owner)
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -103,6 +102,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: PermissionsReturnSerializer()}
     )
     @action(detail=True, url_path='permissions')
+    @require_permission(minimum_permission=WorkspacePermission.maintainer)
     def get_workspace_permissions(self, request, name: str):
         """
         Action to get all object permissions for a given workspace.
@@ -130,6 +130,7 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: PermissionsSerializer()}
     )
     @get_workspace_permissions.mapping.put
+    @require_permission(minimum_permission=WorkspacePermission.maintainer)
     def put_workspace_permissions(self, request, name: str):
         """
         Update existing workspace permissions
@@ -141,18 +142,23 @@ class WorkspaceViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
+        # maintainers and owners can make changes to all of this data
         workspace.public = validated_data['public']
+        workspace.save()
 
-        new_owners = self.build_user_list(validated_data['owners'])
-        workspace.set_owners(new_owners)
-
-        new_maintainers = self.build_user_list(validated_data['maintainers'])
-        workspace.set_maintainers(new_maintainers)
+        new_readers = self.build_user_list(validated_data['readers'])
+        workspace.set_readers(new_readers)
 
         new_writers = self.build_user_list(validated_data['writers'])
         workspace.set_writers(new_writers)
 
-        new_readers = self.build_user_list(validated_data['readers'])
-        workspace.set_readers(new_readers)
+        new_maintainers = self.build_user_list(validated_data['maintainers'])
+        workspace.set_maintainers(new_maintainers)
+
+        # require ownership before editing owners list
+        permission: Union[WorkspacePermission, None] = workspace.get_user_permission(request.user)
+        if permission == WorkspacePermission.owner:
+            new_owners = self.build_user_list(validated_data['owners'])
+            workspace.set_owners(new_owners)
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)

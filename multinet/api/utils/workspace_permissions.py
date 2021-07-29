@@ -1,35 +1,63 @@
 """Module for storing constants and helper functions regarding workspace permissions"""
-
-OWNER = 'owner'
-MAINTAINER = 'maintainer'
-WRITER = 'writer'
-READER = 'reader'
-
-OWNER_LIST = [OWNER]
-MAINTAINER_LIST = OWNER_LIST + [MAINTAINER]
-WRITER_LIST = MAINTAINER_LIST + [WRITER]
-READER_LIST = WRITER_LIST + [READER]
-
-PERMISSION_RANK = {OWNER: 4, MAINTAINER: 3, WRITER: 2, READER: 1}
+from enum import Enum
 
 
-def valid_permission(permission: str):
-    """Check a string to see if it is a valid permission."""
-    return permission in [OWNER, MAINTAINER, WRITER, READER]
-
-
-def get_rank(permission: str):
-    """Get the rank associated with a permission string"""
-    if not valid_permission:
-        return 0
-    return PERMISSION_RANK[permission]
-
-
-def highest_permission(permissions: list):
+class WorkspacePermission(Enum):
     """
-    Given a list of valid permissions, return the highest ranked permission.
-    Owner is the highest ranking permission.
+    Class that handles the hierarchy of permissions in multinet.
+    There are 4 object-level permissions for workspaces. They are:
+
+    1) Reader - lowest level
+    2) Writer
+    3) Maintainer
+    4) Owner - highest level
+
+    This enum class handles translating between django-guardian permission keys
+    (which are strings) and each permission's inherent rank.
     """
-    if len(permissions) == 0:
-        return 0
-    return max([get_rank(perm) for perm in permissions])
+    owner = 'owner'
+    maintainer = 'maintainer'
+    writer = 'writer'
+    reader = 'reader'
+
+    @classmethod
+    def get_rank_from_key(cls, permission_key: str):
+        try:
+            permission = WorkspacePermission(permission_key)
+            return permission.rank
+        except ValueError:
+            return 0
+
+    @property
+    def rank(self):
+        if self == WorkspacePermission.owner:
+            return 4
+        elif self == WorkspacePermission.maintainer:
+            return 3
+        elif self == WorkspacePermission.writer:
+            return 2
+        return 1
+
+    @property
+    def associated_perms(self):
+        """
+        For a WorkspacePermission, its associated_perms is a list of django-guardian permission
+        code names that the given WorkspacePermission implies. For example, an owner is implicitly a
+        maintainer, writer and reader. We can use these lists with django-guardian's API
+        to handle requests.
+        """
+        perms = [self.value]
+        if self == WorkspacePermission.writer:
+            perms += [WorkspacePermission.reader.value]
+        elif self == WorkspacePermission.maintainer:
+            perms += [
+                WorkspacePermission.writer.value,
+                WorkspacePermission.reader.value
+            ]
+        elif self == WorkspacePermission.owner:
+            perms += [
+                WorkspacePermission.writer.value,
+                WorkspacePermission.reader.value,
+                WorkspacePermission.maintainer.value
+            ]
+        return perms
