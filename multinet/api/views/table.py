@@ -1,8 +1,10 @@
 from dataclasses import asdict
+import json
 
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
@@ -30,12 +32,12 @@ from .common import (
 
 
 class RowInsertResponseSerializer(serializers.Serializer):
-    inserted = serializers.ListField(child=serializers.JSONField())
+    inserted = serializers.IntegerField()
     errors = serializers.ListField(child=serializers.JSONField())
 
 
 class RowDeleteResponseSerializer(serializers.Serializer):
-    deleted = serializers.ListField(child=serializers.JSONField())
+    deleted = serializers.IntegerField()
     errors = serializers.ListField(child=serializers.JSONField())
 
 
@@ -93,7 +95,10 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
+        manual_parameters=[
+            openapi.Parameter('filter', 'query', type='object'),
+            *LIMIT_OFFSET_QUERY_PARAMS,
+        ],
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
@@ -103,8 +108,17 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         pagination = ArangoPagination()
         query = ArangoQuery.from_collections(workspace.get_arango_db(), [table.name])
-        paginated_query = pagination.paginate_queryset(query, request)
 
+        # Attempt filtering
+        try:
+            query = query.filter(json.loads(request.query_params.get('filter', '{}')))
+        except json.JSONDecodeError as e:
+            return Response(
+                {'filter': [str(e)]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        paginated_query = pagination.paginate_queryset(query, request)
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(

@@ -1,4 +1,5 @@
-from typing import List
+import json
+from typing import Dict, List
 
 from faker import Faker
 import pytest
@@ -139,6 +140,58 @@ def test_table_rest_retrieve_rows(
 
 
 @pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_invalid(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    """Test that the use of an invalid filter param returns the expected error."""
+    r = authenticated_api_client.get(
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        {'filter': 'foobar'},  # Should be a JSON string, not 'foobar'
+    )
+
+    assert r.status_code == 400
+    assert 'filter' in r.json()
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_one(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    table_rows: List[Dict] = list(populated_node_table.get_rows())
+    filter_doc = dict(table_rows[0])
+    filter_doc.pop('_key')
+    filter_doc.pop('_id')
+    filter_doc.pop('_rev')
+
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        result=[table_rows[0]],
+        params={'filter': json.dumps(filter_doc)},
+    )
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_filter_many(
+    populated_node_table: Table, owned_workspace: Workspace, authenticated_api_client: APIClient
+):
+    # Create extra documents and insert common field
+    docs = generate_arango_documents(5)
+    for doc in docs:
+        doc['extra_field'] = 'value'
+    populated_node_table.put_rows(docs)
+    docs = [doc for doc in populated_node_table.get_rows() if 'extra_field' in doc]
+
+    filter_dict = {'extra_field': 'value'}
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{owned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        result=docs,
+        params={'filter': json.dumps(filter_dict)},
+    )
+
+
+@pytest.mark.django_db
 def test_table_rest_insert_rows(
     table_factory: TableFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
 ):
@@ -156,7 +209,7 @@ def test_table_rest_insert_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': inserted_table_rows,
+        'inserted': len(table_rows),
         'errors': [],
     }
 
@@ -191,9 +244,10 @@ def test_table_rest_update_rows(
         format='json',
     )
 
+    # Assert all inserted, no errors
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': inserted_new_table_rows,
+        'inserted': len(new_table_rows),
         'errors': [],
     }
 
@@ -220,12 +274,11 @@ def test_table_rest_upsert_rows(
     partially_updated_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows[:2]]
     upsert_payload = [*partially_updated_table_rows, *new_table_rows]
 
-    # Create fuzzy row lists
-    fuzzy_new_table_rows = list(map(dict_to_fuzzy_arango_doc, new_table_rows))
-    fuzzy_partially_updated_table_rows = list(
-        map(arango_doc_to_fuzzy_rev, partially_updated_table_rows)
-    )
-    fuzzy_upsert_payload = [*fuzzy_partially_updated_table_rows, *fuzzy_new_table_rows]
+    # Create fuzzy payload for later assertions
+    fuzzy_upsert_payload = [
+        *map(dict_to_fuzzy_arango_doc, new_table_rows),
+        *map(arango_doc_to_fuzzy_rev, partially_updated_table_rows),
+    ]
 
     # Test combined row insert/update
     r = authenticated_api_client.put(
@@ -236,7 +289,7 @@ def test_table_rest_upsert_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'inserted': fuzzy_upsert_payload,
+        'inserted': len(upsert_payload),
         'errors': [],
     }
 
@@ -247,12 +300,9 @@ def test_table_rest_upsert_rows(
 
     r_json = r.json()
     assert r_json['count'] == len(original_table_rows) + len(new_table_rows)
-    for row in r_json['results']:
-        assert (
-            row in original_table_rows
-            or row in fuzzy_partially_updated_table_rows
-            or row in fuzzy_new_table_rows
-        )
+    assert all(
+        row in original_table_rows or row in fuzzy_upsert_payload for row in r_json['results']
+    )
 
 
 @pytest.mark.django_db
@@ -269,7 +319,7 @@ def test_table_rest_delete_rows(
 
     assert r.status_code == 200
     assert r.json() == {
-        'deleted': table_rows,
+        'deleted': len(table_rows),
         'errors': [],
     }
 
