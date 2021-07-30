@@ -1,7 +1,6 @@
 from typing import OrderedDict, Union
 
 from django.contrib.auth.models import User
-from django.http.response import HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
@@ -40,12 +39,22 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     # Categorize entire ViewSet
     swagger_tags = ['workspaces']
 
-    def check_object_permissions(self, request, obj):
-        super().check_object_permissions(request, obj)
-        user_permission = obj.get_user_permission(request.user)
-        if request.method == 'GET':
-            if WorkspacePermission.reader.value not in user_permission.associated_perms:
-                raise HttpResponseForbidden()
+    def get_queryset(self):
+        """
+        Override parent method.
+        Filter the queryset on a per-request basis to include only public workspaces
+        and those workspaces for which the request user has at least reader access.
+        """
+        print("getting queryset")
+        public_workspaces = self.queryset.filter(public=True)
+        private_workspaces = self.queryset.filter(public=False)
+        reader_workspaces = get_objects_for_user(self.request.user,
+                                                 WorkspacePermission.reader.associated_perms,
+                                                 private_workspaces,
+                                                 any_perm=True,
+                                                 accept_global_perms=False)
+        all_readable_workspaces = public_workspaces | reader_workspaces
+        return all_readable_workspaces
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -69,25 +78,6 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         workspace.set_user_permission(request.user, WorkspacePermission.owner)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        responses={200: WorkspaceSerializer(many=True)}
-    )
-    def list(self, request):
-        """
-        Get all workspaces that the request user has permission to read.
-        This includes public workspaces.
-        Superusers have permission for every object.
-        """
-        public_workspaces = self.queryset.filter(public=True)
-        private_workspaces = get_objects_for_user(request.user,
-                                                  WorkspacePermission.reader.associated_perms,
-                                                  self.queryset.filter(public=False),
-                                                  any_perm=True)
-        all_readable_workspaces = public_workspaces | private_workspaces
-
-        return Response(WorkspaceSerializer(all_readable_workspaces, many=True).data,
-                        status=status.HTTP_200_OK)
 
     @require_permission(minimum_permission=WorkspacePermission.owner)
     def destroy(self, request, name):

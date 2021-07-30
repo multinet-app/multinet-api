@@ -31,7 +31,7 @@ def require_permission(minimum_permission: WorkspacePermission, allow_public=Fal
             user = request.user
             user_perm = workspace.get_user_permission(user)
 
-            if user_perm is None or minimum_permission.value not in user_perm.associated_perms:
+            if user_perm is None or user_perm not in minimum_permission.associated_perms:
                 return HttpResponseForbidden()
             return func(view_set, request, workspace_name)
 
