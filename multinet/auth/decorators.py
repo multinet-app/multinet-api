@@ -2,6 +2,7 @@ from functools import wraps
 from typing import Any
 
 from django.http import HttpResponseForbidden
+from django.http.response import HttpResponseNotFound
 from django.shortcuts import get_object_or_404
 
 from multinet.api.models import Workspace
@@ -25,15 +26,20 @@ def require_permission(minimum_permission: WorkspacePermission, allow_public=Fal
                     workspace_name = kwargs['parent_lookup_workspace__name']
 
             workspace: Workspace = get_object_or_404(Workspace, name=workspace_name)
-            if workspace.public and allow_public:
-                return func(view_set, request, workspace_name)
-
             user = request.user
             user_perm = workspace.get_user_permission(user)
 
-            if user_perm is None or user_perm not in minimum_permission.associated_perms:
-                return HttpResponseForbidden()
-            return func(view_set, request, workspace_name)
+            if workspace.public and allow_public:
+                return func(view_set, request, workspace_name)
+
+            if user_perm is None:
+                if workspace.public:
+                    return HttpResponseForbidden()
+                return HttpResponseNotFound()
+
+            if user_perm.value >= minimum_permission.value:
+                return func(view_set, request, workspace_name)
+            return HttpResponseForbidden()
 
         return wrapper
     return require_permission_inner

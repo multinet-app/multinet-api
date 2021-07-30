@@ -49,7 +49,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         public_workspaces = self.queryset.filter(public=True)
         private_workspaces = self.queryset.filter(public=False)
         reader_workspaces = get_objects_for_user(self.request.user,
-                                                 WorkspacePermission.reader.associated_perms,
+                                                 WorkspacePermission.get_permission_codenames(),
                                                  private_workspaces,
                                                  any_perm=True,
                                                  accept_global_perms=False)
