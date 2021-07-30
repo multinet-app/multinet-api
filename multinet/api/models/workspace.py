@@ -30,27 +30,27 @@ class Workspace(TimeStampedModel):
     class Meta:
         ordering = ['id']
         permissions = [
-            (WorkspacePermission.owner.value, 'Owns the workspace'),
-            (WorkspacePermission.maintainer.value, 'Grants roles except owner on the workspace'),
-            (WorkspacePermission.reader.value, 'Creates and deletes data on the workspace'),
-            (WorkspacePermission.writer.value, 'Views data on the workspace'),
+            (WorkspacePermission.owner.name, 'Owns the workspace'),
+            (WorkspacePermission.maintainer.name, 'Grants roles except owner on the workspace'),
+            (WorkspacePermission.reader.name, 'Creates and deletes data on the workspace'),
+            (WorkspacePermission.writer.name, 'Views data on the workspace'),
         ]
 
     @property
     def owners(self):
-        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.owner.value])
+        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.owner.name])
 
     @property
     def maintainers(self):
-        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.maintainer.value])
+        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.maintainer.name])
 
     @property
     def writers(self):
-        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.writer.value])
+        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.writer.name])
 
     @property
     def readers(self):
-        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.reader.value])
+        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.reader.name])
 
     def get_user_permission(self, user: User) -> WorkspacePermission:
         """
@@ -59,21 +59,19 @@ class Workspace(TimeStampedModel):
         ranking permission.
         Return None if the user has no permission for this workspace.
         """
-        permission_keys = get_user_perms(user, self)
+        permission_names = get_user_perms(user, self)
+        hierarchichal_permissions = [WorkspacePermission[name] for name in permission_names
+                                     if name in WorkspacePermission.get_permission_codenames()]
 
-        valid_permission_keys = filter(lambda key: WorkspacePermission.get_rank_from_key(key) > 0,
-                                       permission_keys)
-        valid_permission_keys = list(valid_permission_keys)
-
-        if len(valid_permission_keys) == 0:
+        if len(hierarchichal_permissions) == 0:
             return None
 
-        permission_key = max(valid_permission_keys, key=WorkspacePermission.get_rank_from_key)
-        return WorkspacePermission(permission_key)
+        max_permission = max(hierarchichal_permissions, key=lambda perm: perm.value)
+        return max_permission
 
     def set_user_permission(self, user: User, permission: WorkspacePermission) -> bool:
         """
-        Wrapper for django-guardian's assing_perm. Set a user permission for this workspace.
+        Wrapper for django-guardian's assign_perm. Set a user permission for this workspace.
         This should be the only way object permissions are set. This ensures that a user only
         has one permission for the workspace.
 
@@ -84,7 +82,7 @@ class Workspace(TimeStampedModel):
 
         permission_level_codenames = WorkspacePermission.get_permission_codenames()
         for p in current_permissions:
-            if p == permission.value:
+            if p == permission.name:
                 need_to_add = False  # no need to add, since the permission already exists
             elif p in permission_level_codenames:
                 # for our defined permissions (owner, maintainer, writer, reader),
@@ -92,11 +90,11 @@ class Workspace(TimeStampedModel):
                 remove_perm(p, user, self)
 
         if need_to_add:
-            assign_perm(permission.value, user, self)
+            assign_perm(permission.name, user, self)
         return need_to_add
 
     def set_permissions(self, perm: WorkspacePermission, new_users: list):
-        old_users = get_users_with_perms(self, only_with_perms_in=[perm.value])
+        old_users = get_users_with_perms(self, only_with_perms_in=[perm.name])
 
         removed_users = []
         added_users = []
@@ -104,12 +102,12 @@ class Workspace(TimeStampedModel):
         # remove old users
         for user in old_users:
             if user not in new_users:
-                remove_perm(perm.value, user, self)
+                remove_perm(perm.name, user, self)
                 removed_users.append(user)
 
         # add new users
         for user in new_users:
-            was_added = self.set_user_permission(user, WorkspacePermission(perm))
+            was_added = self.set_user_permission(user, perm)
             if was_added:
                 added_users.append(user)
 

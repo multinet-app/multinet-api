@@ -15,54 +15,15 @@ class WorkspacePermission(Enum):
     This enum class handles translating between django-guardian permission keys
     (which are strings) and each permission's inherent rank.
     """
-    owner = 'owner'
-    maintainer = 'maintainer'
-    writer = 'writer'
-    reader = 'reader'
+    owner = 4
+    maintainer = 3
+    writer = 2
+    reader = 1
 
     @classmethod
     def get_permission_codenames(cls):
-        return [permission.value for permission in cls]
-
-    @classmethod
-    def get_rank_from_key(cls, permission_key: str):
-        try:
-            permission = WorkspacePermission(permission_key)
-            return permission.rank
-        except ValueError:
-            return 0
-
-    @property
-    def rank(self):
-        if self == WorkspacePermission.owner:
-            return 4
-        elif self == WorkspacePermission.maintainer:
-            return 3
-        elif self == WorkspacePermission.writer:
-            return 2
-        return 1
-
-    @property
-    def associated_perms(self):
         """
-        For a WorkspacePermission, its associated_perms is a list of django-guardian permission
-        code names that the given WorkspacePermission implies. For example, writers, maintainers,
-        and owners are all implicity 'readers,' so this property will evaluate to
-        ['owner', 'maintainer', 'writer', 'reader'] on WorkspacePermission.reader.
-        to handle requests.
+        Returns all of the permission code names for the workspace as a list.
+        This type of list is often useful with django-guardian shortcuts.
         """
-        perms = [self.value]
-        if self == WorkspacePermission.maintainer:
-            perms += [WorkspacePermission.owner.value]
-        elif self == WorkspacePermission.writer:
-            perms += [
-                WorkspacePermission.maintainer.value,
-                WorkspacePermission.owner.value
-            ]
-        elif self == WorkspacePermission.reader:
-            perms += [
-                WorkspacePermission.writer.value,
-                WorkspacePermission.maintainer.value,
-                WorkspacePermission.owner.value
-            ]
-        return perms
+        return [permission.name for permission in cls]
