@@ -45,7 +45,6 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         Filter the queryset on a per-request basis to include only public workspaces
         and those workspaces for which the request user has at least reader access.
         """
-        print("getting queryset")
         public_workspaces = self.queryset.filter(public=True)
         private_workspaces = self.queryset.filter(public=False)
         reader_workspaces = get_objects_for_user(self.request.user,
@@ -79,9 +78,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_user_permission(request.user, WorkspacePermission.owner)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @require_permission(minimum_permission=WorkspacePermission.owner)
+    @require_permission(WorkspacePermission.owner, True)
     def destroy(self, request, name):
-        print(request.method)
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -90,7 +88,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         responses={200: PermissionsReturnSerializer()}
     )
     @action(detail=True, url_path='permissions')
-    @require_permission(minimum_permission=WorkspacePermission.maintainer)
+    # @require_permission(minimum_permission=WorkspacePermission.maintainer)
     def get_workspace_permissions(self, request, name: str):
         """
         Action to get all object permissions for a given workspace.
@@ -118,7 +116,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         responses={200: PermissionsSerializer()}
     )
     @get_workspace_permissions.mapping.put
-    @require_permission(minimum_permission=WorkspacePermission.maintainer)
+    @require_permission(WorkspacePermission.maintainer, True)
     def put_workspace_permissions(self, request, name: str):
         """
         Update existing workspace permissions

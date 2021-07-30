@@ -85,7 +85,7 @@ class Workspace(TimeStampedModel):
             if p == permission.name:
                 need_to_add = False  # no need to add, since the permission already exists
             elif p in permission_level_codenames:
-                # for our defined permissions (owner, maintainer, writer, reader),
+                # for our defined permissions (see WorkspacePermission enum),
                 # ensure the user only has one
                 remove_perm(p, user, self)
 

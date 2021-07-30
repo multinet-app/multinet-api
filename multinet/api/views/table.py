@@ -1,10 +1,9 @@
 from dataclasses import asdict
+from django.http.response import Http404
 
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
-from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -19,6 +18,9 @@ from multinet.api.views.serializers import (
     TableReturnSerializer,
     TableSerializer,
 )
+
+from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.auth.decorators import require_permission
 
 from .common import (
     ARRAY_OF_OBJECTS_SCHEMA,
@@ -43,6 +45,20 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
 
+    def get_queryset(self):
+        """
+        Get the queryset for table endpoints. Check that the requesting user has at least read
+        level access to the workspace associated with the request (or the workspace is public).
+        """
+        tables = super().get_queryset()
+
+        parent_query_dict = self.get_parents_query_dict()
+        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
+
+        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
+            return tables
+        raise Http404
+
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = TableReturnSerializer
 
@@ -58,9 +74,7 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         request_body=TableCreateSerializer(),
         responses={200: TableReturnSerializer()},
     )
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
+    @require_permission(WorkspacePermission.writer, False)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         serializer = TableSerializer(
@@ -82,9 +96,7 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
         return Response(TableReturnSerializer(table).data, status=status.HTTP_200_OK)
 
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
+    @require_permission(WorkspacePermission.writer, False)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -97,10 +109,11 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
+    @require_permission(WorkspacePermission.reader, False, allow_public=True)
     def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
+
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
-
         pagination = ArangoPagination()
         query = ArangoQuery.from_collections(workspace.get_arango_db(), [table.name])
         paginated_query = pagination.paginate_queryset(query, request)
@@ -112,6 +125,7 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: RowInsertResponseSerializer()},
     )
     @get_rows.mapping.put
+    @require_permission(WorkspacePermission.writer, False)
     def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -127,6 +141,7 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         responses={200: RowDeleteResponseSerializer()},
     )
     @get_rows.mapping.delete
+    @require_permission(WorkspacePermission.writer, False)
     def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
