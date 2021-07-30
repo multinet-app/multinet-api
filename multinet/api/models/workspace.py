@@ -82,11 +82,13 @@ class Workspace(TimeStampedModel):
         need_to_add = True  # assume we will add the permission
         current_permissions = get_user_perms(user, self)
 
-        # TODO: make sure default django permissions are not wiped
+        permission_level_codenames = WorkspacePermission.get_permission_codenames()
         for p in current_permissions:
             if p == permission.value:
                 need_to_add = False  # no need to add, since the permission already exists
-            else:
+            elif p in permission_level_codenames:
+                # for our defined permissions (owner, maintainer, writer, reader),
+                # ensure the user only has one
                 remove_perm(p, user, self)
 
         if need_to_add:

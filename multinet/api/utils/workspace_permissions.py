@@ -21,6 +21,10 @@ class WorkspacePermission(Enum):
     reader = 'reader'
 
     @classmethod
+    def get_permission_codenames(cls):
+        return [permission.value for permission in cls]
+
+    @classmethod
     def get_rank_from_key(cls, permission_key: str):
         try:
             permission = WorkspacePermission(permission_key)
@@ -42,22 +46,23 @@ class WorkspacePermission(Enum):
     def associated_perms(self):
         """
         For a WorkspacePermission, its associated_perms is a list of django-guardian permission
-        code names that the given WorkspacePermission implies. For example, an owner is implicitly a
-        maintainer, writer and reader. We can use these lists with django-guardian's API
+        code names that the given WorkspacePermission implies. For example, writers, maintainers,
+        and owners are all implicity 'readers,' so this property will evaluate to
+        ['owner', 'maintainer', 'writer', 'reader'] on WorkspacePermission.reader.
         to handle requests.
         """
         perms = [self.value]
-        if self == WorkspacePermission.writer:
-            perms += [WorkspacePermission.reader.value]
-        elif self == WorkspacePermission.maintainer:
+        if self == WorkspacePermission.maintainer:
+            perms += [WorkspacePermission.owner.value]
+        elif self == WorkspacePermission.writer:
             perms += [
-                WorkspacePermission.writer.value,
-                WorkspacePermission.reader.value
+                WorkspacePermission.maintainer.value,
+                WorkspacePermission.owner.value
             ]
-        elif self == WorkspacePermission.owner:
+        elif self == WorkspacePermission.reader:
             perms += [
                 WorkspacePermission.writer.value,
-                WorkspacePermission.reader.value,
-                WorkspacePermission.maintainer.value
+                WorkspacePermission.maintainer.value,
+                WorkspacePermission.owner.value
             ]
         return perms
