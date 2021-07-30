@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
 )
-from multinet.auth.decorators import require_permission
+from multinet.auth.decorators import require_workspace_permission
 
 from .common import MultinetPagination
 
@@ -78,7 +78,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_user_permission(request.user, WorkspacePermission.owner)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @require_permission(WorkspacePermission.owner, True)
+    @require_workspace_permission(WorkspacePermission.owner)
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -88,7 +88,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         responses={200: PermissionsReturnSerializer()}
     )
     @action(detail=True, url_path='permissions')
-    # @require_permission(minimum_permission=WorkspacePermission.maintainer)
+    @require_workspace_permission(WorkspacePermission.maintainer)
     def get_workspace_permissions(self, request, name: str):
         """
         Action to get all object permissions for a given workspace.
@@ -116,7 +116,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         responses={200: PermissionsSerializer()}
     )
     @get_workspace_permissions.mapping.put
-    @require_permission(WorkspacePermission.maintainer, True)
+    @require_workspace_permission(WorkspacePermission.maintainer)
     def put_workspace_permissions(self, request, name: str):
         """
         Update existing workspace permissions
