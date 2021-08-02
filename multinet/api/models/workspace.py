@@ -37,8 +37,17 @@ class Workspace(TimeStampedModel):
         ]
 
     @property
-    def owners(self):
-        return get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.owner.name])
+    def owner(self):
+        """
+        Return the workspace owner. Django-guardian allows for potentially more than one user with
+        the 'owner' permission, so we must take care to limit the number of owners ourselves by
+        using this property and Workspace.set_owner to handle assigning owners.
+        """
+        owners = list(get_users_with_perms(self,
+                      only_with_perms_in=[WorkspacePermission.owner.name]))
+        if len(owners) > 0:
+            return owners[0]
+        return None
 
     @property
     def maintainers(self):
@@ -114,8 +123,16 @@ class Workspace(TimeStampedModel):
         # return added/removed users so they can be emailed
         return removed_users, added_users
 
-    def set_owners(self, new_owners):
-        return self.set_permissions(WorkspacePermission.owner, new_owners)
+    def set_owner(self, new_owner):
+        """
+        Set owner for this workspace. Removes current owner's owner permission as a side effect.
+        Note that this should be the only way ownership for a workspace is set.
+        """
+        old_owner = self.owner
+        self.set_user_permission(new_owner, WorkspacePermission.owner)
+        if old_owner is not None:
+            remove_perm(WorkspacePermission.owner.name, old_owner, self)
+        return old_owner, new_owner
 
     def set_maintainers(self, new_maintainers):
         return self.set_permissions(WorkspacePermission.maintainer, new_maintainers)
