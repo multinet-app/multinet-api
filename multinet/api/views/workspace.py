@@ -47,11 +47,13 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """
         public_workspaces = self.queryset.filter(public=True)
         private_workspaces = self.queryset.filter(public=False)
-        reader_workspaces = get_objects_for_user(self.request.user,
-                                                 WorkspacePermission.get_permission_codenames(),
-                                                 private_workspaces,
-                                                 any_perm=True,
-                                                 accept_global_perms=False)
+        reader_workspaces = get_objects_for_user(
+            self.request.user,
+            WorkspacePermission.get_permission_codenames(),
+            private_workspaces,
+            any_perm=True,
+            accept_global_perms=False,
+        )
         all_readable_workspaces = public_workspaces | reader_workspaces
         return all_readable_workspaces
 
@@ -84,9 +86,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(
-        responses={200: PermissionsReturnSerializer()}
-    )
+    @swagger_auto_schema(responses={200: PermissionsReturnSerializer()})
     @action(detail=True, url_path='permissions')
     @require_workspace_permission(WorkspacePermission.maintainer)
     def get_workspace_permissions(self, request, name: str):
@@ -112,8 +112,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         return user_list
 
     @swagger_auto_schema(
-        request_body=PermissionsSerializer(),
-        responses={200: PermissionsSerializer()}
+        request_body=PermissionsSerializer(), responses={200: PermissionsSerializer()}
     )
     @get_workspace_permissions.mapping.put
     @require_workspace_permission(WorkspacePermission.maintainer)
@@ -144,7 +143,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         # require ownership before editing owners list
         permission: Union[WorkspacePermission, None] = workspace.get_user_permission(request.user)
         if permission == WorkspacePermission.owner:
-            new_owner_name = validated_data['owner']
+            new_owner_name = validated_data['owner']['username']
             new_owner = get_object_or_404(User, username=new_owner_name)
             workspace.set_owner(new_owner)
 

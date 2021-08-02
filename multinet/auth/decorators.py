@@ -28,8 +28,9 @@ def _get_workspace_and_user(*args, **kwargs):
     return workspace, user
 
 
-def require_workspace_permission(minimum_permission: WorkspacePermission, allow_public=False)\
-        -> Any:
+def require_workspace_permission(
+    minimum_permission: WorkspacePermission, allow_public=False
+) -> Any:
     """
     Decorate a Workspace API endpoint to check for object permissions.
     This decorator works for endpoints that take action on a single workspace, or on children
@@ -37,14 +38,12 @@ def require_workspace_permission(minimum_permission: WorkspacePermission, allow_
     Returns Http403 if the request's user does not have appropriate permissions,
     or Http404 if the request's user has no permissions and workspace is not public.
     """
-    def require_permission_inner(func: Any) -> Any:
 
+    def require_permission_inner(func: Any) -> Any:
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
-
             workspace, user = _get_workspace_and_user(*args, **kwargs)
             user_perm = workspace.get_user_permission(user)
-
             if workspace.public and allow_public:
                 return func(*args, **kwargs)
 
@@ -58,4 +57,5 @@ def require_workspace_permission(minimum_permission: WorkspacePermission, allow_
             return HttpResponseForbidden()
 
         return wrapper
+
     return require_permission_inner

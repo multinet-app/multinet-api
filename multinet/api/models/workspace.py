@@ -43,8 +43,9 @@ class Workspace(TimeStampedModel):
         the 'owner' permission, so we must take care to limit the number of owners ourselves by
         using this property and Workspace.set_owner to handle assigning owners.
         """
-        owners = list(get_users_with_perms(self,
-                      only_with_perms_in=[WorkspacePermission.owner.name]))
+        owners = list(
+            get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.owner.name])
+        )
         if len(owners) > 0:
             return owners[0]
         return None
@@ -69,8 +70,11 @@ class Workspace(TimeStampedModel):
         Return None if the user has no permission for this workspace.
         """
         permission_names = get_user_perms(user, self)
-        hierarchichal_permissions = [WorkspacePermission[name] for name in permission_names
-                                     if name in WorkspacePermission.get_permission_codenames()]
+        hierarchichal_permissions = [
+            WorkspacePermission[name]
+            for name in permission_names
+            if name in WorkspacePermission.get_permission_codenames()
+        ]
 
         if len(hierarchichal_permissions) == 0:
             return None
@@ -100,6 +104,7 @@ class Workspace(TimeStampedModel):
 
         if need_to_add:
             assign_perm(permission.name, user, self)
+        print("Perms in set_user_permissions: " + str(get_user_perms(user, self)))
         return need_to_add
 
     def set_permissions(self, perm: WorkspacePermission, new_users: list):
@@ -129,9 +134,9 @@ class Workspace(TimeStampedModel):
         Note that this should be the only way ownership for a workspace is set.
         """
         old_owner = self.owner
-        self.set_user_permission(new_owner, WorkspacePermission.owner)
         if old_owner is not None:
             remove_perm(WorkspacePermission.owner.name, old_owner, self)
+        self.set_user_permission(new_owner, WorkspacePermission.owner)
         return old_owner, new_owner
 
     def set_maintainers(self, new_maintainers):
