@@ -50,14 +50,14 @@ class WorkspaceSerializer(serializers.ModelSerializer):
 
 class PermissionsSerializer(serializers.Serializer):
     public = serializers.BooleanField()
-    owners = UserSerializer(many=True)
+    owner = UserSerializer()
     maintainers = UserSerializer(many=True)
     writers = UserSerializer(many=True)
     readers = UserSerializer(many=True)
 
 
 class PermissionsReturnSerializer(serializers.ModelSerializer):
-    owners = UserDetailSerializer(many=True)
+    owner = UserDetailSerializer()
     maintainers = UserDetailSerializer(many=True)
     writers = UserDetailSerializer(many=True)
     readers = UserDetailSerializer(many=True)
@@ -66,7 +66,7 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
         model = Workspace
         fields = WorkspaceCreateSerializer.Meta.fields + [
             'public',
-            'owners',
+            'owner',
             'maintainers',
             'writers',
             'readers'

@@ -75,7 +75,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         if created:
             workspace.save()
 
-        workspace.set_user_permission(request.user, WorkspacePermission.owner)
+        workspace.set_owner(request.user)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
     @require_workspace_permission(WorkspacePermission.owner)
@@ -144,7 +144,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         # require ownership before editing owners list
         permission: Union[WorkspacePermission, None] = workspace.get_user_permission(request.user)
         if permission == WorkspacePermission.owner:
-            new_owners = self.build_user_list(validated_data['owners'])
-            workspace.set_owners(new_owners)
+            new_owner_name = validated_data['owner']
+            new_owner = get_object_or_404(User, username=new_owner_name)
+            workspace.set_owner(new_owner)
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)
