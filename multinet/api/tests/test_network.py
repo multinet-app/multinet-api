@@ -33,14 +33,14 @@ def test_network_rest_list(
 
 @pytest.mark.django_db
 def test_network_rest_create(
-    owned_workspace: Workspace,
+    writeable_workspace: Workspace,
     populated_edge_table: Table,
     populated_node_table: Table,
     authenticated_api_client: APIClient,
 ):
     network_name = 'network'
     r = authenticated_api_client.post(
-        f'/api/workspaces/{owned_workspace.name}/networks/',
+        f'/api/workspaces/{writeable_workspace.name}/networks/',
         {'name': network_name, 'edge_table': populated_edge_table.name},
         format='json',
     )
@@ -53,11 +53,12 @@ def test_network_rest_create(
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
         'workspace': {
-            'id': owned_workspace.pk,
-            'name': owned_workspace.name,
+            'id': writeable_workspace.pk,
+            'name': writeable_workspace.name,
             'created': TIMESTAMP_RE,
             'modified': TIMESTAMP_RE,
-            'arango_db_name': owned_workspace.arango_db_name,
+            'arango_db_name': writeable_workspace.arango_db_name,
+            'public': False,
         },
     }
 
@@ -65,7 +66,24 @@ def test_network_rest_create(
     network: Network = Network.objects.get(name=network_name)
 
     # Assert that object was created in arango
-    assert owned_workspace.get_arango_db().has_graph(network.name)
+    assert writeable_workspace.get_arango_db().has_graph(network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_create_forbidden(
+    readable_workspace: Workspace,
+    populated_edge_table: Table,
+    populated_node_table: Table,
+    authenticated_api_client: APIClient,
+):
+    network_name = 'network'
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{readable_workspace.name}/networks/',
+        {'name': network_name, 'edge_table': populated_edge_table.name},
+        format='json',
+    )
+    print("Owner at time of test:" + str(readable_workspace.owner))
+    assert r.status_code == 403
 
 
 @pytest.mark.django_db
@@ -87,6 +105,7 @@ def test_network_rest_retrieve(populated_network: Network, authenticated_api_cli
             'created': TIMESTAMP_RE,
             'modified': TIMESTAMP_RE,
             'arango_db_name': workspace.arango_db_name,
+            'public': False,
         },
     }
 

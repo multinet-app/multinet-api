@@ -2,7 +2,7 @@ import itertools
 
 from django.contrib.auth.models import User
 from faker import Faker
-from guardian.shortcuts import assign_perm
+from guardian.shortcuts import assign_perm, get_user_perms
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
@@ -11,8 +11,16 @@ from s3_file_field.testing import S3FileFieldTestClient
 from multinet.api.models import Network, Table, Workspace
 from multinet.api.tests.utils import generate_arango_documents
 from multinet.api.utils.arango import arango_system_db
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 
-from .factories import NetworkFactory, TableFactory, UserFactory, WorkspaceFactory
+from .factories import (
+    NetworkFactory,
+    PrivateWorkspaceFactory,
+    PublicWorkspaceFactory,
+    TableFactory,
+    UserFactory,
+    WorkspaceFactory,
+)
 
 
 @pytest.fixture
@@ -38,8 +46,23 @@ def s3ff_client(authenticated_api_client):
 @pytest.fixture
 def owned_workspace(user: User, workspace: Workspace) -> Workspace:
     """Return a workspace with the `user` fixture as an owner."""
-    assign_perm('owner', user, workspace)
+    assign_perm(WorkspacePermission.owner.name, user, workspace)
+    return workspace
 
+
+@pytest.fixture
+def writeable_workspace(user: User, workspace: Workspace) -> Workspace:
+    """Return a workspace with the `user` fixture as a writer"""
+    workspace.set_user_permission(user, WorkspacePermission.writer)
+    return workspace
+
+
+@pytest.fixture
+def readable_workspace(user: User, workspace: Workspace) -> Workspace:
+    """Return a workspace with the `user` fixture as a reader."""
+    workspace.set_user_permission(user, WorkspacePermission.reader)
+    print("User in fixture: " + str(user))
+    print("User perms in fixture: " + str(get_user_perms(user, workspace)))
     return workspace
 
 
@@ -93,5 +116,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 register(UserFactory)
 register(WorkspaceFactory)
+register(PublicWorkspaceFactory)
+register(PrivateWorkspaceFactory)
 register(NetworkFactory)
 register(TableFactory)

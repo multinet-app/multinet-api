@@ -107,7 +107,7 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         networks = super().get_queryset()
 
         parent_query_dict = self.get_parents_query_dict()
-        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace_name'])
+        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
 
         if workspace.get_user_permission(self.request.user) is not None or workspace.public:
             return networks

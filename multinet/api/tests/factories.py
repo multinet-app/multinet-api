@@ -22,6 +22,22 @@ class WorkspaceFactory(factory.django.DjangoModelFactory):
     name = factory.fuzzy.FuzzyText()
 
 
+class PrivateWorkspaceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Workspace
+
+    name = factory.fuzzy.FuzzyText()
+    public = False
+
+
+class PublicWorkspaceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Workspace
+
+    name = factory.fuzzy.FuzzyText()
+    public = True
+
+
 class NetworkFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Network
