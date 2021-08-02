@@ -1,10 +1,10 @@
+from multinet.auth.decorators import require_workspace_permission
 from typing import List, Optional
+from django.http.response import Http404
 
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -20,6 +20,7 @@ from multinet.api.views.serializers import (
     NetworkReturnSerializer,
     NetworkSerializer,
 )
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 from .common import (
     LIMIT_OFFSET_QUERY_PARAMS,
@@ -93,13 +94,30 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
     # Categorize entire ViewSet
     swagger_tags = ['networks']
 
+    def get_queryset(self):
+        """
+        Get the queryset for network endpoints. Check that the requeting user has
+        appropriate permissions for the associated workspace.
+        """
+
+        # prevent warning for schema generation incompatibility
+        if getattr(self, "swagger_fake_view", False):
+            return Network.objects.none()
+
+        networks = super().get_queryset()
+
+        parent_query_dict = self.get_parents_query_dict()
+        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace_name'])
+
+        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
+            return networks
+        raise Http404
+
     @swagger_auto_schema(
         request_body=NetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
     )
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
+    @require_workspace_permission(WorkspacePermission.writer)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         edge_table: Table = get_object_or_404(
@@ -129,9 +147,7 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
 
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
+    @require_workspace_permission(WorkspacePermission.writer)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
@@ -144,6 +160,7 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='nodes')
+    @require_workspace_permission(WorkspacePermission.reader, allow_public=True)
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.nodes method, in order to do proper pagination.
 
@@ -161,6 +178,7 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='edges')
+    @require_workspace_permission(WorkspacePermission.reader, allow_public=True)
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.edges method, in order to do proper pagination.
 

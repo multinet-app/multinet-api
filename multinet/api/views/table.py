@@ -47,20 +47,6 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
 
-    def get_queryset(self):
-        """
-        Get the queryset for table endpoints. Check that the requesting user has at least read
-        level access to the workspace associated with the request (or the workspace is public).
-        """
-        tables = super().get_queryset()
-
-        parent_query_dict = self.get_parents_query_dict()
-        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
-
-        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
-            return tables
-        raise Http404
-
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = TableReturnSerializer
 
@@ -71,6 +57,25 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
     # Categorize entire ViewSet
     swagger_tags = ['tables']
+
+    def get_queryset(self):
+        """
+        Get the queryset for table endpoints. Check that the requeting user has
+        appropriate permissions for the associated workspace.
+        """
+
+        # prevent warning for schema generation incompatibility
+        if getattr(self, "swagger_fake_view", False):
+            return Table.objects.none()
+
+        tables = super().get_queryset()
+
+        parent_query_dict = self.get_parents_query_dict()
+        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
+
+        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
+            return tables
+        raise Http404
 
     @swagger_auto_schema(
         request_body=TableCreateSerializer(),
