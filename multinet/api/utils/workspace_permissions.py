@@ -15,6 +15,7 @@ class WorkspacePermission(Enum):
     This enum class handles translating between django-guardian permission keys
     (which are strings) and each permission's inherent rank.
     """
+
     owner = 4
     maintainer = 3
     writer = 2

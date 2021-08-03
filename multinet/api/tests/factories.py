@@ -15,19 +15,11 @@ class UserFactory(factory.django.DjangoModelFactory):
     last_name = factory.Faker('last_name')
 
 
-class WorkspaceFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Workspace
-
-    name = factory.fuzzy.FuzzyText()
-
-
 class PrivateWorkspaceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Workspace
 
     name = factory.fuzzy.FuzzyText()
-    public = False
 
 
 class PublicWorkspaceFactory(factory.django.DjangoModelFactory):
@@ -43,7 +35,7 @@ class NetworkFactory(factory.django.DjangoModelFactory):
         model = Network
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(WorkspaceFactory)
+    workspace = factory.SubFactory(PrivateWorkspaceFactory)
 
 
 class EdgeTableFactory(factory.django.DjangoModelFactory):
@@ -51,7 +43,7 @@ class EdgeTableFactory(factory.django.DjangoModelFactory):
         model = Table
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(WorkspaceFactory)
+    workspace = factory.SubFactory(PrivateWorkspaceFactory)
     edge = True
 
 
@@ -60,7 +52,7 @@ class NodeTableFactory(factory.django.DjangoModelFactory):
         model = Table
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(WorkspaceFactory)
+    workspace = factory.SubFactory(PrivateWorkspaceFactory)
 
 
 # Default table to node table

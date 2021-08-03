@@ -2,7 +2,8 @@ import itertools
 
 from django.contrib.auth.models import User
 from faker import Faker
-from guardian.shortcuts import assign_perm, get_user_perms
+
+# from guardian.shortcuts import assign_perm
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
@@ -15,11 +16,10 @@ from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 from .factories import (
     NetworkFactory,
-    PrivateWorkspaceFactory,
     PublicWorkspaceFactory,
     TableFactory,
     UserFactory,
-    WorkspaceFactory,
+    PrivateWorkspaceFactory,
 )
 
 
@@ -53,7 +53,8 @@ def public_workspace(workspace: Workspace) -> Workspace:
 @pytest.fixture
 def owned_workspace(user: User, workspace: Workspace) -> Workspace:
     """Return a workspace with the `user` fixture as an owner."""
-    assign_perm(WorkspacePermission.owner.name, user, workspace)
+    # assign_perm(WorkspacePermission.owner.name, user, workspace)
+    workspace.set_owner(user)
     return workspace
 
 
@@ -68,8 +69,6 @@ def writeable_workspace(user: User, workspace: Workspace) -> Workspace:
 def readable_workspace(user: User, workspace: Workspace) -> Workspace:
     """Return a workspace with the `user` fixture as a reader."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
-    print("User in fixture: " + str(user))
-    print("User perms in fixture: " + str(list(get_user_perms(user, workspace))))
     return workspace
 
 
@@ -94,51 +93,80 @@ def populated_edge_table(workspace: Workspace, populated_node_table: Table) -> T
     return table
 
 
-@pytest.fixture
-def populated_network(readable_workspace: Workspace, populated_edge_table: Table) -> Network:
-    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
-    network_name = Faker().pystr()
-    return Network.create_with_edge_definition(
-        name=network_name,
-        workspace=readable_workspace,
-        edge_table=populated_edge_table.name,
-        node_tables=node_tables,
-    )
+# @pytest.fixture
+# def populated_network(readable_workspace: Workspace, populated_edge_table: Table) -> Network:
+#     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+#     network_name = Faker().pystr()
+#     return Network.create_with_edge_definition(
+#         name=network_name,
+#         workspace=readable_workspace,
+#         edge_table=populated_edge_table.name,
+#         node_tables=node_tables,
+#     )
 
 
-@pytest.fixture
-def public_populated_network(public_workspace: Workspace, populated_edge_table: Table) -> Network:
-    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
-    network_name = Faker().pystr()
-    return Network.create_with_edge_definition(
-        name=network_name,
-        workspace=public_workspace,
-        edge_table=populated_edge_table.name,
-        node_tables=node_tables,
-    )
+# @pytest.fixture
+# def public_populated_network(public_workspace: Workspace, populated_edge_table: Table) -> Network:
+#     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+#     network_name = Faker().pystr()
+#     return Network.create_with_edge_definition(
+#         name=network_name,
+#         workspace=public_workspace,
+#         edge_table=populated_edge_table.name,
+#         node_tables=node_tables,
+#     )
 
 
-@pytest.fixture
-def private_populated_network(workspace: Workspace, populated_edge_table: Table) -> Network:
+# @pytest.fixture
+# def private_populated_network(workspace: Workspace, populated_edge_table: Table) -> Network:
+#     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+#     network_name = Faker().pystr()
+#     return Network.create_with_edge_definition(
+#         name=network_name,
+#         workspace=workspace,
+#         edge_table=populated_edge_table.name,
+#         node_tables=node_tables,
+#     )
+
+
+# @pytest.fixture
+# def writeable_populated_network(
+#     writeable_workspace: Workspace, populated_edge_table: Table
+# ) -> Network:
+#     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+#     network_name = Faker().pystr()
+#     return Network.create_with_edge_definition(
+#         name=network_name,
+#         workspace=writeable_workspace,
+#         edge_table=populated_edge_table.name,
+#         node_tables=node_tables,
+#     )
+
+
+def populated_table(workspace: Workspace, edge: bool) -> Table:
+    if not edge:
+        # create a node table
+        table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=workspace)
+        nodes = generate_arango_documents(5)
+        table.put_rows(nodes)
+        return table
+    else:
+        # create an edge table
+        table: Table = Table.objects.create(name=Faker().pystr(), edge=True, workspace=workspace)
+        node_table = populated_table(workspace, False)
+        nodes = list(node_table.get_rows())
+        edges = [{'_from': a['_id'], '_to': b['_id']} for a, b in itertools.combinations(nodes, 2)]
+        table.put_rows(edges)
+        return table
+
+
+def populated_network(workspace: Workspace) -> Network:
+    populated_edge_table = populated_table(workspace, True)
     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
     network_name = Faker().pystr()
     return Network.create_with_edge_definition(
         name=network_name,
         workspace=workspace,
-        edge_table=populated_edge_table.name,
-        node_tables=node_tables,
-    )
-
-
-@pytest.fixture
-def writeable_populated_network(
-    writeable_workspace: Workspace, populated_edge_table: Table
-) -> Network:
-    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
-    network_name = Faker().pystr()
-    return Network.create_with_edge_definition(
-        name=network_name,
-        workspace=writeable_workspace,
         edge_table=populated_edge_table.name,
         node_tables=node_tables,
     )
@@ -160,8 +188,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 register(UserFactory)
-register(WorkspaceFactory)
-register(PublicWorkspaceFactory)
-register(PrivateWorkspaceFactory)
+register(PrivateWorkspaceFactory, _name="workspace")
+register(PublicWorkspaceFactory, _name="public_workspace")
 register(NetworkFactory)
 register(TableFactory)
