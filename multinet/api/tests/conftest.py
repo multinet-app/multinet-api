@@ -44,6 +44,13 @@ def s3ff_client(authenticated_api_client):
 
 
 @pytest.fixture
+def public_workspace(workspace: Workspace) -> Workspace:
+    workspace.public = True
+    workspace.save()
+    return workspace
+
+
+@pytest.fixture
 def owned_workspace(user: User, workspace: Workspace) -> Workspace:
     """Return a workspace with the `user` fixture as an owner."""
     assign_perm(WorkspacePermission.owner.name, user, workspace)
@@ -62,13 +69,13 @@ def readable_workspace(user: User, workspace: Workspace) -> Workspace:
     """Return a workspace with the `user` fixture as a reader."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
     print("User in fixture: " + str(user))
-    print("User perms in fixture: " + str(get_user_perms(user, workspace)))
+    print("User perms in fixture: " + str(list(get_user_perms(user, workspace))))
     return workspace
 
 
 @pytest.fixture
-def populated_node_table(owned_workspace: Workspace) -> Table:
-    table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=owned_workspace)
+def populated_node_table(workspace: Workspace) -> Table:
+    table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=workspace)
 
     nodes = generate_arango_documents(5)
     table.put_rows(nodes)
@@ -77,8 +84,8 @@ def populated_node_table(owned_workspace: Workspace) -> Table:
 
 
 @pytest.fixture
-def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table) -> Table:
-    table: Table = Table.objects.create(name=Faker().pystr(), edge=True, workspace=owned_workspace)
+def populated_edge_table(workspace: Workspace, populated_node_table: Table) -> Table:
+    table: Table = Table.objects.create(name=Faker().pystr(), edge=True, workspace=workspace)
 
     nodes = list(populated_node_table.get_rows())
     edges = [{'_from': a['_id'], '_to': b['_id']} for a, b in itertools.combinations(nodes, 2)]
@@ -88,12 +95,50 @@ def populated_edge_table(owned_workspace: Workspace, populated_node_table: Table
 
 
 @pytest.fixture
-def populated_network(owned_workspace: Workspace, populated_edge_table: Table) -> Network:
+def populated_network(readable_workspace: Workspace, populated_edge_table: Table) -> Network:
     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
     network_name = Faker().pystr()
     return Network.create_with_edge_definition(
         name=network_name,
-        workspace=owned_workspace,
+        workspace=readable_workspace,
+        edge_table=populated_edge_table.name,
+        node_tables=node_tables,
+    )
+
+
+@pytest.fixture
+def public_populated_network(public_workspace: Workspace, populated_edge_table: Table) -> Network:
+    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+    network_name = Faker().pystr()
+    return Network.create_with_edge_definition(
+        name=network_name,
+        workspace=public_workspace,
+        edge_table=populated_edge_table.name,
+        node_tables=node_tables,
+    )
+
+
+@pytest.fixture
+def private_populated_network(workspace: Workspace, populated_edge_table: Table) -> Network:
+    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+    network_name = Faker().pystr()
+    return Network.create_with_edge_definition(
+        name=network_name,
+        workspace=workspace,
+        edge_table=populated_edge_table.name,
+        node_tables=node_tables,
+    )
+
+
+@pytest.fixture
+def writeable_populated_network(
+    writeable_workspace: Workspace, populated_edge_table: Table
+) -> Network:
+    node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
+    network_name = Faker().pystr()
+    return Network.create_with_edge_definition(
+        name=network_name,
+        workspace=writeable_workspace,
         edge_table=populated_edge_table.name,
         node_tables=node_tables,
     )
