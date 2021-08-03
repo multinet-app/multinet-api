@@ -33,6 +33,18 @@ def test_table_rest_list(
 
 
 @pytest.mark.django_db
+def test_table_rest_list_public():
+    """Test whether a user can see all tables on a public workspace."""
+    assert 1 == 0
+
+
+@pytest.mark.django_db
+def test_table_rest_list_private():
+    """Test to ensure the user cannot see tables on a private workspace."""
+    assert 1 == 0
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize('edge', [True, False])
 def test_table_rest_create(
     owned_workspace: Workspace, authenticated_api_client: APIClient, edge: bool
@@ -57,6 +69,7 @@ def test_table_rest_create(
             'created': TIMESTAMP_RE,
             'modified': TIMESTAMP_RE,
             'arango_db_name': owned_workspace.arango_db_name,
+            'public': False,
         },
     }
 
@@ -68,6 +81,24 @@ def test_table_rest_create(
 
 
 @pytest.mark.django_db
+def test_table_rest_create_forbidden():
+    """
+    Test that the user gets a 403 when trying to create a table on a workspace
+    that they are not a writer on
+    """
+    assert 1 == 0
+
+
+@pytest.mark.django_db
+def test_table_rest_create_no_access():
+    """
+    Test that the user gets a 404 when trying to create a table on a workspace
+    that they have no permission for
+    """
+    assert 1 == 0
+
+
+@pytest.mark.django_db
 def test_table_rest_retrieve(owned_workspace: Workspace, authenticated_api_client: APIClient):
     assert authenticated_api_client.get(f'/api/workspaces/{owned_workspace.name}/').data == {
         'id': owned_workspace.pk,
@@ -76,6 +107,18 @@ def test_table_rest_retrieve(owned_workspace: Workspace, authenticated_api_clien
         'modified': TIMESTAMP_RE,
         'arango_db_name': owned_workspace.arango_db_name,
     }
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_public():
+    """Test that a user can see a specific table on a public workspace"""
+    assert 1 == 0
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_no_access():
+    """Test that a user gets a 404 for trying to view a specific table on a workspace."""
+    assert 1 == 0
 
 
 @pytest.mark.django_db
@@ -189,6 +232,18 @@ def test_table_rest_retrieve_rows_filter_many(
         result=docs,
         params={'filter': json.dumps(filter_dict)},
     )
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_public():
+    """User can see rows of a table on a public workspace"""
+    assert 1 == 0
+
+
+@pytest.mark.django_db
+def test_table_rest_retrieve_rows_private():
+    """User cannot see rows of a table on a private workspace without access"""
+    assert 1 == 0
 
 
 @pytest.mark.django_db
@@ -334,3 +389,15 @@ def test_table_rest_delete_rows(
         'previous': None,
         'results': [],
     }
+
+
+@pytest.mark.django_db
+def test_table_rest_delete_rows_forbidden():
+    """403 if a user tries to delete rows on a table they're not a writer for"""
+    assert 1 == 0
+
+
+@pytest.mark.django_db
+def test_table_rest_delete_rows_no_acces():
+    """404 if a user tries to delete rows on a table without any permission"""
+    assert 1 == 0

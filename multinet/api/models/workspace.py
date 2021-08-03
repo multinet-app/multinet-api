@@ -104,7 +104,6 @@ class Workspace(TimeStampedModel):
 
         if need_to_add:
             assign_perm(permission.name, user, self)
-        print("Perms in set_user_permissions: " + str(get_user_perms(user, self)))
         return need_to_add
 
     def set_permissions(self, perm: WorkspacePermission, new_users: list):

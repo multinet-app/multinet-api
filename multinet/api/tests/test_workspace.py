@@ -3,12 +3,12 @@ from typing import List
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
+from django.contrib.auth.models import User
 
 from multinet.api.models import Workspace
 from multinet.api.tests.factories import (
-    WorkspaceFactory,
-    PublicWorkspaceFactory,
     PrivateWorkspaceFactory,
+    PublicWorkspaceFactory,
 )
 from multinet.api.utils.arango import arango_system_db
 
@@ -24,22 +24,33 @@ def test_workspace_arango_sync(workspace: Workspace):
 def test_workspace_rest_list(
     public_workspace_factory: PublicWorkspaceFactory,
     private_workspace_factory: PrivateWorkspaceFactory,
+    user: User,
     authenticated_api_client: APIClient,
 ):
+    """
+    Test that a user can retrieve a list of workspaces that either are public or
+    the user has permission to read.
+    """
     fake = Faker()
-    public_workspace_names: List[str] = [
+    accessible_workspace_names: List[str] = [
         public_workspace_factory(name=fake.pystr()).name for _ in range(3)
     ]
-    _: List[str] = [private_workspace_factory(name=fake.pystr()).name for _ in range(3)]
+    private_workspaces: List[Workspace] = [
+        private_workspace_factory(name=fake.pystr()) for _ in range(3)
+    ]
+
+    private_workspaces[0].set_readers([user])
+    private_workspaces[1].set_owner(user)
+    accessible_workspace_names += [private_workspaces[0].name, private_workspaces[1].name]
 
     r = authenticated_api_client.get('/api/workspaces/')
     r_json = r.json()
 
     # Test that we get the expected results from both django and arango
     sysdb = arango_system_db()
-    assert r_json['count'] == len(public_workspace_names)
+    assert r_json['count'] == len(accessible_workspace_names)
     for workspace in r_json['results']:
-        assert workspace['name'] in public_workspace_names
+        assert workspace['name'] in accessible_workspace_names
         assert sysdb.has_database(workspace['arango_db_name'])
 
 
@@ -60,14 +71,15 @@ def test_workspace_rest_create(authenticated_api_client: APIClient):
 
 @pytest.mark.django_db
 def test_workspace_rest_retrieve_owned(
-    owned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    assert authenticated_api_client.get(f'/api/workspaces/{owned_workspace.name}/').data == {
-        'id': owned_workspace.pk,
-        'name': owned_workspace.name,
+    workspace.set_owner(user)
+    assert authenticated_api_client.get(f'/api/workspaces/{workspace.name}/').data == {
+        'id': workspace.pk,
+        'name': workspace.name,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
-        'arango_db_name': owned_workspace.arango_db_name,
+        'arango_db_name': workspace.arango_db_name,
         'public': False,
     }
 
@@ -99,45 +111,53 @@ def test_workspace_rest_retrieve_no_access(
 
 
 @pytest.mark.django_db
-def test_workspace_rest_delete(owned_workspace: Workspace, authenticated_api_client: APIClient):
-    r = authenticated_api_client.delete(f'/api/workspaces/{owned_workspace.name}/')
+def test_workspace_rest_delete(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
+):
+    workspace.set_owner(user)
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
 
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
-    assert not Workspace.objects.filter(name=owned_workspace.name).exists()
-    assert not arango_system_db().has_database(owned_workspace.arango_db_name)
+    assert not Workspace.objects.filter(name=workspace.name).exists()
+    assert not arango_system_db().has_database(workspace.arango_db_name)
 
 
 @pytest.mark.django_db
-def test_workspace_rest_delete_unauthorized(owned_workspace: Workspace, api_client: APIClient):
-    r = api_client.delete(f'/api/workspaces/{owned_workspace.name}/')
+def test_workspace_rest_delete_unauthorized(
+    workspace: Workspace, user: User, api_client: APIClient
+):
+    workspace.set_owner(user)
+
+    r = api_client.delete(f'/api/workspaces/{workspace.name}/')
 
     assert r.status_code == 401
 
     # Assert relevant objects are not deleted
-    assert Workspace.objects.filter(name=owned_workspace.name).exists()
-    assert arango_system_db().has_database(owned_workspace.arango_db_name)
+    assert Workspace.objects.filter(name=workspace.name).exists()
+    assert arango_system_db().has_database(workspace.arango_db_name)
 
 
 @pytest.mark.django_db
 def test_workspace_rest_delete_forbidden(
-    readable_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    response = authenticated_api_client.delete(f'/api/workspaces/{readable_workspace.name}/')
+    workspace.set_readers([user])
+    response = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
     assert response.status_code == 403
 
     # Assert relevant objects are not deleted
-    assert Workspace.objects.filter(name=readable_workspace.name).exists()
-    assert arango_system_db().has_database(readable_workspace.arango_db_name)
+    assert Workspace.objects.filter(name=workspace.name).exists()
+    assert arango_system_db().has_database(workspace.arango_db_name)
 
 
 @pytest.mark.django_db
 def test_workspace_rest_delete_no_access(
-    workspace_factory: WorkspaceFactory, authenticated_api_client: APIClient
+    private_workspace_factory: PrivateWorkspaceFactory, authenticated_api_client: APIClient
 ):
     # Create workspace this way, so the authenticated user has no access
-    workspace: Workspace = workspace_factory()
+    workspace: Workspace = private_workspace_factory()
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
 
     # Without any access, don't reveal that this workspace exists at all
