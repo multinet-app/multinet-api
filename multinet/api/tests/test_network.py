@@ -29,7 +29,7 @@ def test_network_rest_list(
     Test that an authenticated user can see networks on a private workspace
     for which that user has reader permission.
     """
-    workspace.set_readers([user])
+    workspace.set_user_permission(user, WorkspacePermission.reader)
     fake = Faker()
     network_names: List[str] = [
         network_factory(name=fake.pystr(), workspace=workspace).name for _ in range(3)
@@ -136,7 +136,7 @@ def test_network_rest_create_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_readers([user])
+    workspace.set_user_permission(user, WorkspacePermission.reader)
     edge_table = populated_table(workspace, True)
     network_name = 'network'
     r = authenticated_api_client.post(
