@@ -1,6 +1,5 @@
 from dataclasses import asdict
 import json
-from django.http.response import Http404
 
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
@@ -11,17 +10,15 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from multinet.api.models import Table, Workspace
 from multinet.api.utils.arango import ArangoQuery
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
     TableCreateSerializer,
     TableReturnSerializer,
     TableSerializer,
 )
-
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
@@ -30,6 +27,7 @@ from .common import (
     PAGINATED_RESULTS_SCHEMA,
     ArangoPagination,
     MultinetPagination,
+    WorkspaceChildMixin,
 )
 
 
@@ -43,7 +41,7 @@ class RowDeleteResponseSerializer(serializers.Serializer):
     errors = serializers.ListField(child=serializers.JSONField())
 
 
-class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
+class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
 
@@ -57,25 +55,6 @@ class TableViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
 
     # Categorize entire ViewSet
     swagger_tags = ['tables']
-
-    def get_queryset(self):
-        """
-        Get the queryset for table endpoints. Check that the requeting user has
-        appropriate permissions for the associated workspace.
-        """
-
-        # prevent warning for schema generation incompatibility
-        if getattr(self, "swagger_fake_view", False):
-            return Table.objects.none()
-
-        tables = super().get_queryset()
-
-        parent_query_dict = self.get_parents_query_dict()
-        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
-
-        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
-            return tables
-        raise Http404
 
     @swagger_auto_schema(
         request_body=TableCreateSerializer(),

@@ -1,6 +1,4 @@
-from multinet.auth.decorators import require_workspace_permission
 from typing import List, Optional
-from django.http.response import Http404
 
 from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
@@ -10,23 +8,25 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from rest_framework_extensions.mixins import DetailSerializerMixin, NestedViewSetMixin
+from rest_framework_extensions.mixins import DetailSerializerMixin
 
 from multinet.api.models import Network, Table, Workspace
 from multinet.api.utils.arango import ArangoQuery
+from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
     NetworkCreateSerializer,
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
 )
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     LIMIT_OFFSET_QUERY_PARAMS,
     PAGINATED_RESULTS_SCHEMA,
     ArangoPagination,
     MultinetPagination,
+    WorkspaceChildMixin,
 )
 
 EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
@@ -81,7 +81,7 @@ def validate_edge_table(
         return Response(serialized_resp.data, status=status.HTTP_400_BAD_REQUEST)
 
 
-class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
+class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
     queryset = Network.objects.all().select_related('workspace')
     lookup_field = 'name'
 
@@ -93,25 +93,6 @@ class NetworkViewSet(NestedViewSetMixin, DetailSerializerMixin, ReadOnlyModelVie
 
     # Categorize entire ViewSet
     swagger_tags = ['networks']
-
-    def get_queryset(self):
-        """
-        Get the queryset for network endpoints. Check that the requeting user has
-        appropriate permissions for the associated workspace.
-        """
-
-        # prevent warning for schema generation incompatibility
-        if getattr(self, "swagger_fake_view", False):
-            return Network.objects.none()
-
-        networks = super().get_queryset()
-
-        parent_query_dict = self.get_parents_query_dict()
-        workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
-
-        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
-            return networks
-        raise Http404
 
     @swagger_auto_schema(
         request_body=NetworkCreateSerializer(),

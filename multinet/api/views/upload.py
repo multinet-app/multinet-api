@@ -2,20 +2,19 @@ from typing import Dict, Optional
 
 from django.core import signing
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from guardian.decorators import permission_required_or_403
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from rest_framework_extensions.mixins import NestedViewSetMixin
+from utils.workspace_permissions import WorkspacePermission
 
 from multinet.api.models import Network, Table, Upload, Workspace
 from multinet.api.tasks.process import process_csv, process_d3_json
+from multinet.auth.decorators import require_workspace_permission
 
-from .common import MultinetPagination
+from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (
     CSVUploadCreateSerializer,
     D3JSONUploadCreateSerializer,
@@ -39,7 +38,7 @@ def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
     return object_key
 
 
-class UploadViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
+class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
     queryset = Upload.objects.all().select_related('workspace')
 
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -54,10 +53,8 @@ class UploadViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         request_body=CSVUploadCreateSerializer(),
         responses={200: UploadReturnSerializer()},
     )
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
     @action(detail=False, url_path='csv', methods=['POST'])
+    @require_workspace_permission(WorkspacePermission.writer)
     def upload_csv(self, request, parent_lookup_workspace__name: str):
         """Create an upload of a CSV file."""
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -102,10 +99,8 @@ class UploadViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         request_body=D3JSONUploadCreateSerializer(),
         responses={200: UploadReturnSerializer()},
     )
-    @method_decorator(
-        permission_required_or_403('owner', (Workspace, 'name', 'parent_lookup_workspace__name'))
-    )
     @action(detail=False, url_path='d3_json', methods=['POST'])
+    @require_workspace_permission(WorkspacePermission.writer)
     def upload_d3_json(self, request, parent_lookup_workspace__name: str):
         """Create an upload of a D3 JSON file."""
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
