@@ -1,12 +1,12 @@
 from functools import wraps
 from typing import Any
+from django.contrib.auth.models import User
 
 from django.http import HttpResponseForbidden
 from django.http.response import HttpResponseNotFound
 from django.shortcuts import get_object_or_404
 
-from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.api.models import Workspace, WorkspaceRole
 
 
 def _get_workspace_and_user(*args, **kwargs):
@@ -22,15 +22,13 @@ def _get_workspace_and_user(*args, **kwargs):
     elif 'name' in kwargs:
         workspace_name = kwargs['name']
 
-    workspace = get_object_or_404(Workspace, name=workspace_name)
-    user = args[1].user
+    workspace: Workspace = get_object_or_404(Workspace, name=workspace_name)
+    user: User = args[1].user
 
     return workspace, user
 
 
-def require_workspace_permission(
-    minimum_permission: WorkspacePermission, allow_public=False
-) -> Any:
+def require_workspace_permission(minimum_permission: WorkspaceRole, allow_public=False) -> Any:
     """
     Decorate a Workspace API endpoint to check for object permissions.
     This decorator works for endpoints that take action on a single workspace, or on children
@@ -52,7 +50,7 @@ def require_workspace_permission(
                     return HttpResponseForbidden()
                 return HttpResponseNotFound()
 
-            if user_perm.value >= minimum_permission.value:
+            if user_perm >= minimum_permission:
                 return func(*args, **kwargs)
             return HttpResponseForbidden()
 

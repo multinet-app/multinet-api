@@ -5,14 +5,13 @@ import pytest
 from rest_framework.test import APIClient
 from django.contrib.auth.models import User
 
-from multinet.api.models import Network, Table, Workspace
+from multinet.api.models import Network, Table, Workspace, WorkspaceRole
 from multinet.api.tests.factories import (
     NetworkFactory,
     PrivateWorkspaceFactory,
     PublicWorkspaceFactory,
 )
 from multinet.api.tests.utils import assert_limit_offset_results
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 from .conftest import populated_network, populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
@@ -29,7 +28,7 @@ def test_network_rest_list(
     Test that an authenticated user can see networks on a private workspace
     for which that user has reader permission.
     """
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     fake = Faker()
     network_names: List[str] = [
         network_factory(name=fake.pystr(), workspace=workspace).name for _ in range(3)
@@ -93,7 +92,7 @@ def test_network_rest_create(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
 
     edge_table = populated_table(workspace, True)
     node_table_name = list(edge_table.find_referenced_node_tables().keys())[0]
@@ -136,7 +135,7 @@ def test_network_rest_create_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     edge_table = populated_table(workspace, True)
     network_name = 'network'
     r = authenticated_api_client.post(
@@ -166,7 +165,7 @@ def test_network_rest_create_no_access(
 def test_network_rest_retrieve(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     network = populated_network(workspace)
 
     assert authenticated_api_client.get(
@@ -224,7 +223,7 @@ def test_network_rest_retrieve_no_access(workspace: Workspace, authenticated_api
 @pytest.mark.django_db
 def test_network_rest_delete(workspace: Workspace, user: User, authenticated_api_client: APIClient):
     """Tests deleting a network on a workspace for which the user is a writer."""
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     network = populated_network(workspace)
 
     r = authenticated_api_client.delete(
@@ -262,7 +261,7 @@ def test_network_rest_delete_forbidden(
     """
     Tests deleting a network on a workspace for which the user does not have sufficient permissions.
     """
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     network: Table = network_factory(workspace=workspace)
     r = authenticated_api_client.delete(
         f'/api/workspaces/{workspace.name}/networks/{network.name}/'
@@ -293,7 +292,7 @@ def test_network_rest_delete_no_access(workspace: Workspace, authenticated_api_c
 def test_network_rest_retrieve_nodes(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     network = populated_network(workspace)
     nodes = list(network.nodes())
 
@@ -334,7 +333,7 @@ def test_network_rest_retrieve_nodes_no_access(
 def test_network_rest_retrieve_edges(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     network = populated_network(workspace)
     edges = list(network.edges())
 

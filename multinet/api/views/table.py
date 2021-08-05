@@ -9,9 +9,8 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from multinet.api.models import Table, Workspace
+from multinet.api.models import Table, Workspace, WorkspaceRole
 from multinet.api.utils.arango import ArangoQuery
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
     TableCreateSerializer,
     TableReturnSerializer,
@@ -58,7 +57,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         request_body=TableCreateSerializer(),
         responses={200: TableReturnSerializer()},
     )
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         serializer = TableSerializer(
@@ -80,7 +79,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         return Response(TableReturnSerializer(table).data, status=status.HTTP_200_OK)
 
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -93,7 +92,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
-    @require_workspace_permission(WorkspacePermission.reader, allow_public=True)
+    @require_workspace_permission(WorkspaceRole.READER, allow_public=True)
     def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
 
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -109,7 +108,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: RowInsertResponseSerializer()},
     )
     @get_rows.mapping.put
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -125,7 +124,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: RowDeleteResponseSerializer()},
     )
     @get_rows.mapping.delete
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)

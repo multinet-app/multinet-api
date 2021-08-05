@@ -8,9 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from utils.workspace_permissions import WorkspacePermission
 
-from multinet.api.models import Network, Table, Upload, Workspace
+from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRole
 from multinet.api.tasks.process import process_csv, process_d3_json
 from multinet.auth.decorators import require_workspace_permission
 
@@ -54,7 +53,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: UploadReturnSerializer()},
     )
     @action(detail=False, url_path='csv', methods=['POST'])
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def upload_csv(self, request, parent_lookup_workspace__name: str):
         """Create an upload of a CSV file."""
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -100,7 +99,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: UploadReturnSerializer()},
     )
     @action(detail=False, url_path='d3_json', methods=['POST'])
-    @require_workspace_permission(WorkspacePermission.writer)
+    @require_workspace_permission(WorkspaceRole.WRITER)
     def upload_d3_json(self, request, parent_lookup_workspace__name: str):
         """Create an upload of a D3 JSON file."""
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)

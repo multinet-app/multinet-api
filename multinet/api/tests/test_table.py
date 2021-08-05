@@ -5,9 +5,8 @@ import pytest
 from rest_framework.test import APIClient
 from django.contrib.auth.models import User
 
-from multinet.api.models import Table, Workspace
+from multinet.api.models import Table, Workspace, WorkspaceRole
 from multinet.api.tests.factories import TableFactory
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 from .conftest import populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, arango_doc_to_fuzzy_rev, dict_to_fuzzy_arango_doc
@@ -21,7 +20,7 @@ def test_table_rest_list(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     fake = Faker()
     table_names: List[str] = [
         table_factory(name=fake.pystr(), workspace=workspace).name for _ in range(3)
@@ -75,7 +74,7 @@ def test_table_rest_list_private(
 def test_table_rest_create(
     workspace: Workspace, user: User, authenticated_api_client: APIClient, edge: bool
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/tables/',
@@ -116,7 +115,7 @@ def test_table_rest_create_forbidden(
     Test that the user gets a 403 when trying to create a table on a workspace
     that they are not a writer on
     """
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/tables/',
@@ -151,7 +150,7 @@ def test_table_rest_retrieve(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     table: Table = table_factory(workspace=workspace)
 
     assert authenticated_api_client.get(
@@ -216,7 +215,7 @@ def test_table_rest_delete(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     table: Table = table_factory(workspace=workspace)
 
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
@@ -232,7 +231,7 @@ def test_table_rest_delete(
 def test_table_rest_delete_unauthorized(
     table_factory: TableFactory, workspace: Workspace, user: User, api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     table: Table = table_factory(workspace=workspace)
     r = api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
 
@@ -251,7 +250,7 @@ def test_table_rest_delete_forbidden(
     authenticated_api_client: APIClient,
 ):
     # Create workspace this way, so the authenticated user doesn't have writer permission
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     table: Table = table_factory(workspace=workspace)
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
 
@@ -280,7 +279,7 @@ def test_table_rest_delete_no_access(
 def test_table_rest_retrieve_rows(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     assert_limit_offset_results(
@@ -326,7 +325,7 @@ def test_table_rest_insert_rows(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     table: Table = table_factory(workspace=workspace)
 
     table_rows = generate_arango_documents(5)
@@ -366,7 +365,7 @@ def test_table_rest_insert_rows_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     table: Table = table_factory(workspace=workspace)
     table_rows = generate_arango_documents(5)
 
@@ -402,7 +401,7 @@ def test_table_rest_update_rows(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     # Assert table contents beforehand
     original_table_rows = list(populated_node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
@@ -454,7 +453,7 @@ def test_table_rest_update_rows_no_access(
 def test_table_rest_update_rows_forbidden(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     node_table = populated_table(workspace, False)
     original_table_rows = list(node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
@@ -474,7 +473,7 @@ def test_table_rest_upsert_rows(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     # Create row lists
     original_table_rows = list(populated_node_table.get_rows())
     new_table_rows = generate_arango_documents(3)
@@ -523,7 +522,7 @@ def test_table_rest_delete_rows(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRole.WRITER)
     table_rows = list(populated_node_table.get_rows())
     r = authenticated_api_client.delete(
         f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
@@ -555,7 +554,7 @@ def test_table_rest_delete_rows_forbidden(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
     """403 if a user tries to delete rows on a table they're not a writer for"""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRole.READER)
     node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     r = authenticated_api_client.delete(

@@ -1,18 +1,17 @@
 from typing import OrderedDict, Union
 
+from django.db import models
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from drf_yasg.utils import swagger_auto_schema
-from guardian.shortcuts import get_objects_for_user
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.api.models import Workspace, WorkspacePermission, WorkspaceRole
 from multinet.api.views.serializers import (
     PermissionsReturnSerializer,
     PermissionsSerializer,
@@ -45,17 +44,10 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         Filter the queryset on a per-request basis to include only public workspaces
         and those workspaces for which the request user has at least reader access.
         """
-        public_workspaces = self.queryset.filter(public=True)
-        private_workspaces = self.queryset.filter(public=False)
-        reader_workspaces = get_objects_for_user(
-            self.request.user,
-            WorkspacePermission.get_permission_codenames(),
-            private_workspaces,
-            any_perm=True,
-            accept_global_perms=False,
+        visible_workspace_filter = models.Q(
+            workspacepermission__in=WorkspacePermission.objects.filter(user=self.request.user.id)
         )
-        all_readable_workspaces = public_workspaces | reader_workspaces
-        return all_readable_workspaces
+        return Workspace.objects.filter(models.Q(public=True) | visible_workspace_filter)
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -80,7 +72,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_owner(request.user)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @require_workspace_permission(WorkspacePermission.owner)
+    @require_workspace_permission(WorkspaceRole.OWNER)
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -88,7 +80,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
     @swagger_auto_schema(responses={200: PermissionsReturnSerializer()})
     @action(detail=True, url_path='permissions')
-    @require_workspace_permission(WorkspacePermission.maintainer)
+    @require_workspace_permission(WorkspaceRole.MAINTAINER)
     def get_workspace_permissions(self, request, name: str):
         """
         Action to get all object permissions for a given workspace.
@@ -115,7 +107,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         request_body=PermissionsSerializer(), responses={200: PermissionsSerializer()}
     )
     @get_workspace_permissions.mapping.put
-    @require_workspace_permission(WorkspacePermission.maintainer)
+    @require_workspace_permission(WorkspaceRole.MAINTAINER)
     def put_workspace_permissions(self, request, name: str):
         """
         Update existing workspace permissions
@@ -141,8 +133,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_maintainers(new_maintainers)
 
         # require ownership before editing owners list
-        permission: Union[WorkspacePermission, None] = workspace.get_user_permission(request.user)
-        if permission == WorkspacePermission.owner:
+        permission: Union[WorkspaceRole, None] = workspace.get_user_permission(request.user)
+        if permission == WorkspaceRole.OWNER:
             new_owner_name = validated_data['owner']['username']
             new_owner = get_object_or_404(User, username=new_owner_name)
             workspace.set_owner(new_owner)
