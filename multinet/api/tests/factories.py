@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 import factory
 import factory.fuzzy
+from multinet.api.models.upload import Upload
 
 from multinet.api.models import Network, Table, Workspace
 
@@ -58,3 +59,11 @@ class NodeTableFactory(factory.django.DjangoModelFactory):
 # Default table to node table
 class TableFactory(NodeTableFactory):
     pass
+
+
+class UploadFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Upload
+
+    workspace = factory.SubFactory(PrivateWorkspaceFactory)
+    user = factory.SubFactory(UserFactory)

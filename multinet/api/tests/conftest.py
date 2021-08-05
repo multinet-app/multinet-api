@@ -17,6 +17,7 @@ from .factories import (
     NetworkFactory,
     PublicWorkspaceFactory,
     TableFactory,
+    UploadFactory,
     UserFactory,
     PrivateWorkspaceFactory,
 )
@@ -108,3 +109,4 @@ register(PrivateWorkspaceFactory, _name="workspace")
 register(PublicWorkspaceFactory, _name="public_workspace")
 register(NetworkFactory)
 register(TableFactory)
+register(UploadFactory)
