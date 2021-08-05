@@ -12,7 +12,15 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelOptions(
             name='workspace',
-            options={'ordering': ['id'], 'permissions': [('owner', 'Owns the workspace'), ('maintainer', 'Grants roles except owner on the workspace'), ('reader', 'Creates and deletes data on the workspace'), ('writer', 'Views data on the workspace')]},
+            options={
+                'ordering': ['id'],
+                'permissions': [
+                    ('owner', 'Owns the workspace'),
+                    ('maintainer', 'Grants roles except owner on the workspace'),
+                    ('reader', 'Creates and deletes data on the workspace'),
+                    ('writer', 'Views data on the workspace'),
+                ],
+            },
         ),
         migrations.AddField(
             model_name='workspace',
