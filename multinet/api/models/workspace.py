@@ -39,7 +39,9 @@ class Workspace(TimeStampedModel):
     @property
     def owner(self):
         """
-        Return the workspace owner. Django-guardian allows for potentially more than one user with
+        Return the workspace owner.
+
+        Django-guardian allows for potentially more than one user with
         the 'owner' permission, so we must take care to limit the number of owners ourselves by
         using this property and Workspace.set_owner to handle assigning owners.
         """
@@ -65,9 +67,9 @@ class Workspace(TimeStampedModel):
     def get_user_permission(self, user: User) -> WorkspacePermission:
         """
         Get the object-level permission for a given user on this workspace.
+
         In the event that there are more than one (not ideal), return the highest
-        ranking permission.
-        Return None if the user has no permission for this workspace.
+        ranking permission. Return None if the user has no permission for this workspace.
         """
         permission_names = get_user_perms(user, self)
         hierarchichal_permissions = [
@@ -84,11 +86,11 @@ class Workspace(TimeStampedModel):
 
     def set_user_permission(self, user: User, permission: WorkspacePermission) -> bool:
         """
-        Wrapper for django-guardian's assign_perm. Set a user permission for this workspace.
-        This should be the only way object permissions are set. This ensures that a user only
-        has one permission for the workspace.
+        Set a user permission for this workspace.
 
-        Returns True if the permission was added, False if there was no need to add the permission.
+        This should be the only way object permissions are set. This ensures that a user only
+        has one permission for the workspace. Returns True if the permission was added, False
+        if there was no need to add the permission.
         """
         need_to_add = True  # assume we will add the permission
         current_permissions = get_user_perms(user, self)
@@ -129,8 +131,10 @@ class Workspace(TimeStampedModel):
 
     def set_owner(self, new_owner):
         """
-        Set owner for this workspace. Removes current owner's owner permission as a side effect.
-        Note that this should be the only way ownership for a workspace is set.
+        Set owner for this workspace.
+
+        Removes current owner's owner permission as a side effect. This should be the only way
+        ownership for a workspace is set.
         """
         old_owner = self.owner
         if old_owner is not None:

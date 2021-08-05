@@ -1,9 +1,9 @@
 from typing import List
 
+from django.contrib.auth.models import User
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
-from django.contrib.auth.models import User
 
 from multinet.api.models import Network, Table, Workspace
 from multinet.api.tests.factories import (
@@ -25,10 +25,6 @@ def test_network_rest_list(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    """
-    Test that an authenticated user can see networks on a private workspace
-    for which that user has reader permission.
-    """
     workspace.set_user_permission(user, WorkspacePermission.reader)
     fake = Faker()
     network_names: List[str] = [
@@ -74,10 +70,7 @@ def test_network_rest_list_private(
     private_workspace_factory: PrivateWorkspaceFactory,
     authenticated_api_client: APIClient,
 ):
-    """
-    Test that an authenticated user can not see networks on a private workspace.
-    For which they have no permissions.
-    """
+    """Test that an authenticated user can not see networks on a private workspace."""
     fake = Faker()
     private_workspace: Workspace = private_workspace_factory()
     for _ in range(3):
@@ -259,9 +252,7 @@ def test_network_rest_delete_forbidden(
     network_factory: NetworkFactory,
     authenticated_api_client: APIClient,
 ):
-    """
-    Tests deleting a network on a workspace for which the user does not have sufficient permissions.
-    """
+    """Tests deleting a network on a workspace without sufficient permissions."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
     network: Table = network_factory(workspace=workspace)
     r = authenticated_api_client.delete(

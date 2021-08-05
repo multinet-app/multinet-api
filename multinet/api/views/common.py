@@ -67,13 +67,14 @@ class ArangoPagination(LimitOffsetPagination):
 class WorkspaceChildMixin(NestedViewSetMixin):
     def get_queryset(self):
         """
-        Get the queryset for workspace child enpoints endpoints. Check that the requeting user has
-        appropriate permissions for the associated workspace.
+        Get the queryset for workspace child enpoints.
+
+        Check that the requeting user has appropriate permissions for the associated workspace.
         """
         child_objects = super().get_queryset()
 
         # prevent warning for schema generation incompatibility
-        if getattr(self, "swagger_fake_view", False):
+        if getattr(self, 'swagger_fake_view', False):
             return child_objects.none()
 
         parent_query_dict = self.get_parents_query_dict()

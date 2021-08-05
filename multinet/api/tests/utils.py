@@ -1,11 +1,10 @@
 from typing import Dict, List, Optional
 
 from django.contrib.auth.models import User
-
 from rest_framework.test import APIClient
 
-from multinet.api.tests.factories import UserFactory
 from multinet.api.models import Workspace
+from multinet.api.tests.factories import UserFactory
 from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 
@@ -22,7 +21,7 @@ def create_users_with_permissions(user_factory: UserFactory, workspace: Workspac
 
 def get_field_value(data_file, s3ff_client):
 
-    field_value = ""
+    field_value = ''
     with open(data_file) as file_stream:
         field_value = s3ff_client.upload_file(
             file_stream,  # This can be any file-like object

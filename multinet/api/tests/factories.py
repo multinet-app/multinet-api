@@ -1,9 +1,9 @@
 from django.contrib.auth.models import User
 import factory
 import factory.fuzzy
-from multinet.api.models.upload import Upload
 
 from multinet.api.models import Network, Table, Workspace
+from multinet.api.models.upload import Upload
 
 
 class UserFactory(factory.django.DjangoModelFactory):

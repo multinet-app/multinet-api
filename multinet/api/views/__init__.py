@@ -10,5 +10,5 @@ __all__ = [
     'NetworkViewSet',
     'TableViewSet',
     'UploadViewSet',
-    'WorkspaceViewSet'
+    'WorkspaceViewSet',
 ]

@@ -131,10 +131,6 @@ def test_create_upload_model_csv_forbidden(
 def test_create_upload_model_csv_no_permission(
     workspace: Workspace, authenticated_api_client, s3ff_client
 ):
-    """
-    Test that a use with no permission on the workspace gets a 404 if they try
-    to create an upload for the workspace
-    """
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'

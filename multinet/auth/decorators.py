@@ -11,12 +11,14 @@ from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 def _get_workspace_and_user(*args, **kwargs):
     """
-    Helper function to retrieve the workspace and user from the arguments
+    Determine the workspace and user from ambiguous arguments.
+
+    Helper function to get the workspace and user from the arguments
     passed to an API endpoint function. Since different endpoints have different
     arguments, the permission-checking decorator must be able to handle a variety of scenarios.
     This function pulls out the workspace name passed on the keyword arguments passed in.
     """
-    workspace_name = ""
+    workspace_name = ''
     if 'parent_lookup_workspace__name' in kwargs:
         workspace_name = kwargs['parent_lookup_workspace__name']
     elif 'name' in kwargs:
@@ -32,7 +34,8 @@ def require_workspace_permission(
     minimum_permission: WorkspacePermission, allow_public=False
 ) -> Any:
     """
-    Decorate a Workspace API endpoint to check for object permissions.
+    Check a request for proper workspace-level permissions.
+
     This decorator works for endpoints that take action on a single workspace, or on children
     (tables and networks) on a single workspace.
     Returns Http403 if the request's user does not have appropriate permissions,

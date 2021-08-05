@@ -20,7 +20,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'email',
             'first_name',
             'last_name',
-            'is_superuser'
+            'is_superuser',
         ]
 
 
@@ -69,7 +69,7 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
             'owner',
             'maintainers',
             'writers',
-            'readers'
+            'readers',
         ]
 
 

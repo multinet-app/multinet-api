@@ -1,9 +1,9 @@
 from typing import Dict, List
 
+from django.contrib.auth.models import User
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
-from django.contrib.auth.models import User
 
 from multinet.api.models import Workspace
 from multinet.api.tests.factories import (
@@ -11,9 +11,9 @@ from multinet.api.tests.factories import (
     PublicWorkspaceFactory,
     UserFactory,
 )
+from multinet.api.tests.utils import create_users_with_permissions
 from multinet.api.utils.arango import arango_system_db
 from multinet.api.utils.workspace_permissions import WorkspacePermission
-from multinet.api.tests.utils import create_users_with_permissions
 
 from .fuzzy import TIMESTAMP_RE
 
@@ -30,10 +30,7 @@ def test_workspace_rest_list(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    """
-    Test that a user can retrieve a list of workspaces that either are public or
-    the user has permission to read.
-    """
+    """Test list endpoint for workspaces."""
     fake = Faker()
     accessible_workspace_names: List[str] = [
         public_workspace_factory(name=fake.pystr()).name for _ in range(3)

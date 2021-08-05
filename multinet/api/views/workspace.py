@@ -41,7 +41,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """
-        Override parent method.
+        Get the workspaces for a request.
+
         Filter the queryset on a per-request basis to include only public workspaces
         and those workspaces for which the request user has at least reader access.
         """
@@ -91,8 +92,10 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @require_workspace_permission(WorkspacePermission.maintainer)
     def get_workspace_permissions(self, request, name: str):
         """
+        Get workspace permission details for a workspace.
+
         Action to get all object permissions for a given workspace.
-        Please note that get_permissions is not allowed as a function name, since it
+        Note that get_permissions is not allowed as a function name, since it
         is already in use by the framework.
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
@@ -101,6 +104,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
     def build_user_list(self, validated_data: OrderedDict) -> list:
         """
+        Build a list of user objects from an ordered dictionary of user data.
+
         Accepts an unordered dictionary containing a list of validated user data, e.g.
         as a result of validating a PermissionsSerializer with request data.
         Returns a list of user objects.
@@ -117,11 +122,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @get_workspace_permissions.mapping.put
     @require_workspace_permission(WorkspacePermission.maintainer)
     def put_workspace_permissions(self, request, name: str):
-        """
-        Update existing workspace permissions
-
-        PUT endpoint for object permissions on workspaces.
-        """
+        """Update existing workspace permissions."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         serializer = PermissionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

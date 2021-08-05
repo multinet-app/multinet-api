@@ -1,10 +1,10 @@
 import json
 from typing import Dict, List
 
+from django.contrib.auth.models import User
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
-from django.contrib.auth.models import User
 
 from multinet.api.models import Table, Workspace
 from multinet.api.tests.factories import TableFactory
@@ -113,10 +113,7 @@ def test_table_rest_create(
 def test_table_rest_create_forbidden(
     workspace: Workspace, user: User, authenticated_api_client: APIClient, edge: bool
 ):
-    """
-    Test that the user gets a 403 when trying to create a table on a workspace
-    that they are not a writer on
-    """
+    """Test creating a table on a workspace with insufficient permission."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
@@ -132,10 +129,7 @@ def test_table_rest_create_forbidden(
 def test_table_rest_create_no_access(
     workspace: Workspace, authenticated_api_client: APIClient, edge: bool
 ):
-    """
-    Test that the user gets a 404 when trying to create a table on a workspace
-    that they have no permission for
-    """
+    """Test creating a table on a workspace with no permission."""
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/tables/',
@@ -178,7 +172,7 @@ def test_table_rest_retrieve(
 def test_table_rest_retrieve_public(
     public_workspace: Workspace, table_factory: TableFactory, authenticated_api_client: APIClient
 ):
-    """Test that a user can see a specific table on a public workspace"""
+    """Test that a user can see a specific table on a public workspace."""
     table = table_factory(workspace=public_workspace)
 
     assert authenticated_api_client.get(
@@ -359,7 +353,7 @@ def test_table_rest_retrieve_rows_filter_many(
 def test_table_rest_retrieve_rows_public(
     public_workspace: Workspace, authenticated_api_client: APIClient
 ):
-    """User can see rows of a table on a public workspace"""
+    """Test retrieving table rows for a public workspace."""
     node_table = populated_table(public_workspace, False)
     table_rows = list(node_table.get_rows())
 
@@ -374,7 +368,7 @@ def test_table_rest_retrieve_rows_public(
 def test_table_rest_retrieve_rows_private(
     workspace: Workspace, authenticated_api_client: APIClient
 ):
-    """User cannot see rows of a table on a private workspace without access"""
+    """Test retrieving table rows for a private workspace."""
     node_table = populated_table(workspace, False)
     r = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
@@ -616,7 +610,7 @@ def test_table_rest_delete_rows(
 def test_table_rest_delete_rows_forbidden(
     workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    """403 if a user tries to delete rows on a table they're not a writer for"""
+    """Test deleting rows with insufficient workspace permission."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
     node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
@@ -632,7 +626,7 @@ def test_table_rest_delete_rows_forbidden(
 def test_table_rest_delete_rows_no_access(
     workspace: Workspace, authenticated_api_client: APIClient
 ):
-    """404 if a user tries to delete rows on a table without any permission"""
+    """Test deleting rows with no workspace permission."""
     node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     r = authenticated_api_client.delete(

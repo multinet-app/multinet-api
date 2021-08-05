@@ -5,9 +5,9 @@ from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 import pytest
 from rest_framework.response import Response
+from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Upload, Workspace
 from multinet.api.tasks.process.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
@@ -18,8 +18,8 @@ from multinet.api.tests.fuzzy import (
     s3_file_field_re,
     workspace_re,
 )
-from multinet.api.views.upload import InvalidFieldValueResponse
 from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.api.views.upload import InvalidFieldValueResponse
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 miserables_json_file = data_dir / 'miserables.json'

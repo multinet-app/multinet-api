@@ -1,10 +1,10 @@
-"""Module for storing constants and helper functions regarding workspace permissions"""
 from enum import Enum
 
 
 class WorkspacePermission(Enum):
     """
     Class that handles the hierarchy of permissions in multinet.
+
     There are 4 object-level permissions for workspaces. They are:
 
     1) Reader - lowest level
@@ -23,8 +23,5 @@ class WorkspacePermission(Enum):
 
     @classmethod
     def get_permission_codenames(cls):
-        """
-        Returns all of the permission code names for the workspace as a list.
-        This type of list is often useful with django-guardian shortcuts.
-        """
+        """Return all permission code names for workspaces as a list."""
         return [permission.name for permission in cls]

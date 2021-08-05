@@ -15,11 +15,11 @@ from multinet.api.utils.arango import arango_system_db
 
 from .factories import (
     NetworkFactory,
+    PrivateWorkspaceFactory,
     PublicWorkspaceFactory,
     TableFactory,
     UploadFactory,
     UserFactory,
-    PrivateWorkspaceFactory,
 )
 
 
@@ -105,8 +105,8 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 register(UserFactory)
-register(PrivateWorkspaceFactory, _name="workspace")
-register(PublicWorkspaceFactory, _name="public_workspace")
+register(PrivateWorkspaceFactory, _name='workspace')
+register(PublicWorkspaceFactory, _name='public_workspace')
 register(NetworkFactory)
 register(TableFactory)
 register(UploadFactory)
