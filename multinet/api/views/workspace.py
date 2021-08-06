@@ -134,10 +134,14 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_maintainers(new_maintainers)
 
         # require ownership before editing owners list
-        request_user_role: Union[WorkspaceRoleChoice, None] = WorkspaceRole.objects.get(
-            workspace=workspace.pk, user=request.user.pk
-        )
-        if request_user_role == WorkspaceRoleChoice.OWNER:
+        request_user_permission: Union[WorkspaceRoleChoice, None] = WorkspaceRole.objects.filter(
+            workspace=workspace, user=request.user
+        ).first()
+
+        if (
+            request_user_permission is not None
+            and request_user_permission.role == WorkspaceRoleChoice.OWNER
+        ):
             new_owner_name = validated_data['owner']['username']
             new_owner = get_object_or_404(User, username=new_owner_name)
             workspace.set_owner(new_owner)

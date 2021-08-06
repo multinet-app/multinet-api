@@ -3,16 +3,15 @@ from typing import Dict, List, Optional
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from multinet.api.models import Workspace
+from multinet.api.models import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UserFactory
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 
 def create_users_with_permissions(user_factory: UserFactory, workspace: Workspace):
     for permission in [
-        WorkspacePermission.reader,
-        WorkspacePermission.writer,
-        WorkspacePermission.maintainer,
+        WorkspaceRoleChoice.READER,
+        WorkspaceRoleChoice.WRITER,
+        WorkspaceRoleChoice.MAINTAINER,
     ]:
         user_list: List[User] = [user_factory() for _ in range(3)]
         for user in user_list:

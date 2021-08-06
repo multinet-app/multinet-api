@@ -29,7 +29,9 @@ def _get_workspace_and_user(*args, **kwargs):
     return workspace, user
 
 
-def require_workspace_permission(minimum_role: WorkspaceRoleChoice, allow_public=False) -> Any:
+def require_workspace_permission(
+    minimum_permission: WorkspaceRoleChoice, allow_public=False
+) -> Any:
     """
     Check a request for proper workspace-level permissions.
 
@@ -43,17 +45,17 @@ def require_workspace_permission(minimum_role: WorkspaceRoleChoice, allow_public
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             workspace, user = _get_workspace_and_user(*args, **kwargs)
-            user_role: WorkspaceRole = workspace.get_user_role(user)
+            user_permission: WorkspaceRole = workspace.get_user_permission(user)
 
             if workspace.public and allow_public:
                 return func(*args, **kwargs)
 
-            if user_role is None:
+            if user_permission is None:
                 if workspace.public:
                     return HttpResponseForbidden()
                 return HttpResponseNotFound()
 
-            if user_role.role >= minimum_role:
+            if user_permission.role >= minimum_permission:
                 return func(*args, **kwargs)
             return HttpResponseForbidden()
 

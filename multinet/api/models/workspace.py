@@ -92,33 +92,39 @@ class Workspace(TimeStampedModel):
             )
         ]
 
-    def get_user_role(self, user: User) -> Union[WorkspaceRole | None]:
+    def get_user_permission(self, user: User) -> Union[WorkspaceRole | None]:
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
-    def set_user_role(self, user: User, role: WorkspaceRoleChoice) -> bool:
+    def set_user_permission(self, user: User, permission: WorkspaceRoleChoice) -> bool:
         """
         Set a user role for this workspace.
 
         This should be the only way object roles are set.
         """
-        current_role = WorkspaceRole.objects.get(workspace=self.pk, user=user.pk)
+        current_role = WorkspaceRole.objects.filter(workspace=self, user=user).first()
         if current_role is None:
-            WorkspaceRole.objects.create(workspace=self.pk, user=user.pk, role=role)
+            WorkspaceRole.objects.create(workspace=self, user=user, role=permission)
         else:
-            current_role.role = role
+            current_role.role = permission
             current_role.save()
 
-    def set_role(self, role: WorkspaceRoleChoice, new_users: list):
-        current_roles = WorkspaceRole.objects.filter(workspace=self.pk)
+    def set_permission(self, permission: WorkspaceRoleChoice, new_users: list):
+        current_roles = WorkspaceRole.objects.filter(workspace=self)
+
+        for role in current_roles:
+            user = role.user
+            current_permission = role.role
+            if user in new_users:
+                if role.role != permission:
+                    role.role = permission
+                    role.save()
+                new_users.remove(user)
+            elif current_permission == permission:
+                role.delete()
 
         for user in new_users:
-            current_role = current_roles.filter(user=user.pk).first()
-            if current_role is None:
-                WorkspaceRole.objects.create(workspace=self, user=user, role=role)
-            else:
-                current_role.role = role
-                current_role.save()
+            WorkspaceRole.objects.create(workspace=self, user=user, role=permission)
 
     def set_owner(self, new_owner):
         """
@@ -131,6 +137,7 @@ class Workspace(TimeStampedModel):
             workspace=self.pk, role=WorkspaceRoleChoice.OWNER
         ).first()
         old_owner = None
+
         if current_owner_permission is not None:
             old_owner = current_owner_permission.user
             current_owner_permission.delete()
@@ -138,13 +145,13 @@ class Workspace(TimeStampedModel):
         return old_owner, new_owner
 
     def set_maintainers(self, new_maintainers):
-        return self.set_role(WorkspaceRoleChoice.MAINTAINER, new_maintainers)
+        return self.set_permission(WorkspaceRoleChoice.MAINTAINER, new_maintainers)
 
     def set_writers(self, new_writers):
-        return self.set_role(WorkspaceRoleChoice.WRITER, new_writers)
+        return self.set_permission(WorkspaceRoleChoice.WRITER, new_writers)
 
     def set_readers(self, new_readers):
-        return self.set_role(WorkspaceRoleChoice.READER, new_readers)
+        return self.set_permission(WorkspaceRoleChoice.READER, new_readers)
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)
