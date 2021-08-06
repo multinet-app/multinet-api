@@ -6,7 +6,6 @@ from rest_framework.test import APIClient
 from multinet.api.models import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UserFactory
 
-
 ALL_ROLES = [choice for choice in WorkspaceRoleChoice]
 AT_LEAST_WRITER = [
     WorkspaceRoleChoice.WRITER,

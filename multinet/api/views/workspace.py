@@ -18,7 +18,6 @@ from multinet.api.views.serializers import (
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
 )
-
 from multinet.auth.decorators import require_workspace_permission
 
 from .common import MultinetPagination

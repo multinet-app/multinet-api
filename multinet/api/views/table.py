@@ -18,7 +18,6 @@ from multinet.api.views.serializers import (
     TableReturnSerializer,
     TableSerializer,
 )
-
 from multinet.auth.decorators import require_workspace_permission
 
 from .common import (

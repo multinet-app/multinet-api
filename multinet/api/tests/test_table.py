@@ -12,10 +12,10 @@ from multinet.api.tests.factories import TableFactory
 from .conftest import populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, arango_doc_to_fuzzy_rev, dict_to_fuzzy_arango_doc
 from .utils import (
+    ALL_ROLES,
+    AT_LEAST_WRITER,
     assert_limit_offset_results,
     generate_arango_documents,
-    AT_LEAST_WRITER,
-    ALL_ROLES,
 )
 
 
