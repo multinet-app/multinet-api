@@ -66,9 +66,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         serializer = WorkspaceCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        is_public = False
-        if 'public' in serializer.validated_data:
-            is_public = serializer.validated_data['public']
+        is_public = serializer.validated_data.get('public', False)
 
         workspace, created = Workspace.objects.get_or_create(
             name=serializer.validated_data['name'],

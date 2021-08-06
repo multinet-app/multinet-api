@@ -45,12 +45,9 @@ class Workspace(TimeStampedModel):
         the 'owner' permission, so we must take care to limit the number of owners ourselves by
         using this property and Workspace.set_owner to handle assigning owners.
         """
-        owners = list(
-            get_users_with_perms(self, only_with_perms_in=[WorkspacePermission.owner.name])
-        )
-        if len(owners) > 0:
-            return owners[0]
-        return None
+        return get_users_with_perms(
+            self, only_with_perms_in=[WorkspacePermission.owner.name]
+        ).first()
 
     @property
     def maintainers(self):
@@ -71,18 +68,12 @@ class Workspace(TimeStampedModel):
         In the event that there are more than one (not ideal), return the highest
         ranking permission. Return None if the user has no permission for this workspace.
         """
-        permission_names = get_user_perms(user, self)
         hierarchichal_permissions = [
-            WorkspacePermission[name]
-            for name in permission_names
-            if name in WorkspacePermission.get_permission_codenames()
+            WorkspacePermission[perm]
+            for perm in get_user_perms(user, self)
+            if perm in WorkspacePermission.get_permission_codenames()
         ]
-
-        if len(hierarchichal_permissions) == 0:
-            return None
-
-        max_permission = max(hierarchichal_permissions, key=lambda perm: perm.value)
-        return max_permission
+        return max(hierarchichal_permissions, key=lambda perm: perm.value, default=None)
 
     def set_user_permission(self, user: User, permission: WorkspacePermission) -> bool:
         """
