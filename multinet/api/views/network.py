@@ -10,16 +10,16 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin
 
-from multinet.api.models import Network, Table, Workspace
+from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
     NetworkCreateSerializer,
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
 )
-from multinet.auth.decorators import require_workspace_permission
+
+# from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     LIMIT_OFFSET_QUERY_PARAMS,
@@ -98,7 +98,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         request_body=NetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
     )
-    @require_workspace_permission(WorkspacePermission.writer)
+    # @require_workspace_permissWorkspaceRoleChoice.WRITER)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         edge_table: Table = get_object_or_404(
@@ -128,7 +128,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
-    @require_workspace_permission(WorkspacePermission.writer)
+    # @require_workspace_permissWorkspaceRoleChoice.WRITER)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
@@ -141,7 +141,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='nodes')
-    @require_workspace_permission(WorkspacePermission.reader)
+    # @require_workspace_permissWorkspaceRoleChoice.READER, allow_public=True)
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.nodes method, in order to do proper pagination.
 
@@ -159,7 +159,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='edges')
-    @require_workspace_permission(WorkspacePermission.reader)
+    # @require_workspace_permissWorkspaceRoleChoice.READER, allow_public=True)
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.edges method, in order to do proper pagination.
 

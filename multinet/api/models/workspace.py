@@ -6,7 +6,6 @@ from uuid import uuid4
 from arango.database import StandardDatabase
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.constraints import Deferrable
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
@@ -28,7 +27,7 @@ class WorkspaceRoleChoice(models.IntegerChoices):
 
 class WorkspaceRole(TimeStampedModel):
     workspace = models.ForeignKey('api.Workspace', on_delete=models.CASCADE)
-    user = (models.ForeignKey(User, on_delete=models.CASCADE),)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     role = models.PositiveSmallIntegerField(choices=WorkspaceRoleChoice.choices)
 
     class Meta:
@@ -40,7 +39,6 @@ class WorkspaceRole(TimeStampedModel):
                 fields=['workspace'],
                 condition=models.Q(role=WorkspaceRoleChoice.OWNER),
                 name='singe_workspace_owner',
-                deferrable=Deferrable.DEFER,
             ),
         ]
 
@@ -60,30 +58,39 @@ class Workspace(TimeStampedModel):
     @property
     def owner(self):
         """Return the workspace owner."""
-        owner_permission = WorkspaceRole.objects.get(
+        owner_permission: WorkspaceRole = WorkspaceRole.objects.filter(
             workspace=self.pk, role=WorkspaceRoleChoice.OWNER
-        )
+        ).first()
         if owner_permission is not None:
-            return owner_permission
+            return owner_permission.user
         return None
 
     @property
     def maintainers(self):
-        return WorkspaceRole.objects.filter(
-            workspace=self.pk, WorkspaceRole=WorkspaceRoleChoice.MAINTAINER
-        )
+        return [
+            role.user
+            for role in WorkspaceRole.objects.filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.MAINTAINER
+            )
+        ]
 
     @property
     def writers(self):
-        return WorkspaceRole.objects.filter(
-            workspace=self.pk, WorkspaceRole=WorkspaceRoleChoice.WRITER
-        )
+        return [
+            role.user
+            for role in WorkspaceRole.objects.filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.WRITER
+            )
+        ]
 
     @property
     def readers(self):
-        return WorkspaceRole.objects.filter(
-            workspace=self.pk, WorkspaceRole=WorkspaceRoleChoice.READER
-        )
+        return [
+            role.user
+            for role in WorkspaceRole.objects.filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.READER
+            )
+        ]
 
     def get_user_role(self, user: User) -> WorkspaceRole:
         """Get the WorkspaceRole for a given user on this workspace."""
@@ -103,12 +110,12 @@ class Workspace(TimeStampedModel):
             current_role.save()
 
     def set_permissions(self, role: WorkspaceRoleChoice, new_users: list):
-        current_roles = Workspace.objects.filter(workspace=self.pk)
+        current_roles = WorkspaceRole.objects.filter(workspace=self.pk)
 
         for user in new_users:
-            current_role = current_roles.filter(user=user.pk)
+            current_role = current_roles.filter(user=user.pk).first()
             if current_role is None:
-                WorkspaceRole.objects.create(workspace=self.pk, user=user.pk, role=role)
+                WorkspaceRole.objects.create(workspace=self, user=user, role=role)
             else:
                 current_role.role = role
                 current_role.save()
@@ -120,15 +127,14 @@ class Workspace(TimeStampedModel):
         Removes current owner's owner permission as a side effect. This should be the only
         way ownership for a workspace is set. Returns the tuple (old_owner, new_owner).
         """
-        current_owner_permission: WorkspaceRole = WorkspaceRole.objects.get(
+        current_owner_permission: WorkspaceRole = WorkspaceRole.objects.filter(
             workspace=self.pk, role=WorkspaceRoleChoice.OWNER
-        )
-        old_owner = current_owner_permission.user
+        ).first()
+        old_owner = None
         if current_owner_permission is not None:
+            old_owner = current_owner_permission.user
             current_owner_permission.delete()
-        WorkspaceRole.objects.create(
-            workspace=self.pk, user=new_owner.pk, role=WorkspaceRoleChoice.OWNER
-        )
+        WorkspaceRole.objects.create(workspace=self, user=new_owner, role=WorkspaceRoleChoice.OWNER)
         return old_owner, new_owner
 
     def set_maintainers(self, new_maintainers):

@@ -8,7 +8,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from multinet.api.models import Workspace
+from multinet.api.models import Workspace, WorkspaceRole
 from multinet.api.utils.arango import ArangoQuery
 
 
@@ -79,7 +79,10 @@ class WorkspaceChildMixin(NestedViewSetMixin):
 
         parent_query_dict = self.get_parents_query_dict()
         workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
+        workspace_role = WorkspaceRole.objects.filter(
+            workspace=workspace, user=self.request.user
+        ).first()
 
-        if workspace.get_user_permission(self.request.user) is not None or workspace.public:
+        if workspace_role is not None or workspace.public:
             return child_objects
         raise Http404
