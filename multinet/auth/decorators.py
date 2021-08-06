@@ -5,8 +5,7 @@ from django.http import HttpResponseForbidden
 from django.http.response import HttpResponseNotFound
 from django.shortcuts import get_object_or_404
 
-from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 
 
 def _get_workspace_and_user(*args, **kwargs):
@@ -30,7 +29,7 @@ def _get_workspace_and_user(*args, **kwargs):
     return workspace, user
 
 
-def require_workspace_permission(minimum_permission: WorkspacePermission) -> Any:
+def require_workspace_permission(minimum_role: WorkspaceRoleChoice, allow_public=False) -> Any:
     """
     Check a request for proper workspace-level permissions.
 
@@ -44,16 +43,17 @@ def require_workspace_permission(minimum_permission: WorkspacePermission) -> Any
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             workspace, user = _get_workspace_and_user(*args, **kwargs)
-            user_perm = workspace.get_user_permission(user)
-            if workspace.public and minimum_permission == WorkspacePermission.reader:
+            user_role: WorkspaceRole = workspace.get_user_role(user)
+
+            if workspace.public and allow_public:
                 return func(*args, **kwargs)
 
-            if user_perm is None:
+            if user_role is None:
                 if workspace.public:
                     return HttpResponseForbidden()
                 return HttpResponseNotFound()
 
-            if user_perm.value >= minimum_permission.value:
+            if user_role.role >= minimum_role:
                 return func(*args, **kwargs)
             return HttpResponseForbidden()
 

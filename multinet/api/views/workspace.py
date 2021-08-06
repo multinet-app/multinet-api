@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     WorkspaceSerializer,
 )
 
-# from multinet.auth.decorators import require_workspace_permission
+from multinet.auth.decorators import require_workspace_permission
 
 from .common import MultinetPagination
 
@@ -73,7 +73,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.set_owner(request.user)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    # @require_workspace_permission(WorkspaceRoleChoice.OWNER)
+    @require_workspace_permission(WorkspaceRoleChoice.OWNER)
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -81,7 +81,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
     @swagger_auto_schema(responses={200: PermissionsReturnSerializer()})
     @action(detail=True, url_path='permissions')
-    # @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
+    @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
     def get_workspace_permissions(self, request, name: str):
         """
         Get workspace permission details for a workspace.
@@ -112,7 +112,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         request_body=PermissionsCreateSerializer(), responses={200: PermissionsReturnSerializer()}
     )
     @get_workspace_permissions.mapping.put
-    # @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
+    @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
     def put_workspace_permissions(self, request, name: str):
         """Update existing workspace permissions."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)

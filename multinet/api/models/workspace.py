@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Type
+from typing import Type, Union
 from uuid import uuid4
 
 from arango.database import StandardDatabase
@@ -92,9 +92,9 @@ class Workspace(TimeStampedModel):
             )
         ]
 
-    def get_user_role(self, user: User) -> WorkspaceRole:
+    def get_user_role(self, user: User) -> Union[WorkspaceRole | None]:
         """Get the WorkspaceRole for a given user on this workspace."""
-        return WorkspaceRole.objects.get(workspace=self.pk, user=user.pk)
+        return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
     def set_user_role(self, user: User, role: WorkspaceRoleChoice) -> bool:
         """
@@ -109,7 +109,7 @@ class Workspace(TimeStampedModel):
             current_role.role = role
             current_role.save()
 
-    def set_permissions(self, role: WorkspaceRoleChoice, new_users: list):
+    def set_role(self, role: WorkspaceRoleChoice, new_users: list):
         current_roles = WorkspaceRole.objects.filter(workspace=self.pk)
 
         for user in new_users:
@@ -138,13 +138,13 @@ class Workspace(TimeStampedModel):
         return old_owner, new_owner
 
     def set_maintainers(self, new_maintainers):
-        return self.set_permissions(WorkspaceRoleChoice.MAINTAINER, new_maintainers)
+        return self.set_role(WorkspaceRoleChoice.MAINTAINER, new_maintainers)
 
     def set_writers(self, new_writers):
-        return self.set_permissions(WorkspaceRoleChoice.WRITER, new_writers)
+        return self.set_role(WorkspaceRoleChoice.WRITER, new_writers)
 
     def set_readers(self, new_readers):
-        return self.set_permissions(WorkspaceRoleChoice.READER, new_readers)
+        return self.set_role(WorkspaceRoleChoice.READER, new_readers)
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)

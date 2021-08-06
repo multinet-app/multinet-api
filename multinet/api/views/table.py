@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     TableSerializer,
 )
 
-# from multinet.auth.decorators import require_workspace_permission
+from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     ARRAY_OF_OBJECTS_SCHEMA,
@@ -60,7 +60,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         request_body=TableCreateSerializer(),
         responses={200: TableReturnSerializer()},
     )
-    # @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         serializer = TableSerializer(
@@ -82,7 +82,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         return Response(TableReturnSerializer(table).data, status=status.HTTP_200_OK)
 
-    # @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -98,7 +98,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='rows')
-    # @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
     def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
 
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
@@ -123,7 +123,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: RowInsertResponseSerializer()},
     )
     @get_rows.mapping.put
-    # @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def put_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
@@ -139,7 +139,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         responses={200: RowDeleteResponseSerializer()},
     )
     @get_rows.mapping.delete
-    # @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def delete_rows(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)

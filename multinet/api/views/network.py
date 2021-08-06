@@ -19,7 +19,7 @@ from multinet.api.views.serializers import (
     NetworkSerializer,
 )
 
-# from multinet.auth.decorators import require_workspace_permission
+from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     LIMIT_OFFSET_QUERY_PARAMS,
@@ -98,7 +98,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         request_body=NetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
     )
-    # @require_workspace_permissWorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def create(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         edge_table: Table = get_object_or_404(
@@ -128,7 +128,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
-    # @require_workspace_permissWorkspaceRoleChoice.WRITER)
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def destroy(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
@@ -141,7 +141,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='nodes')
-    # @require_workspace_permissWorkspaceRoleChoice.READER, allow_public=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.nodes method, in order to do proper pagination.
 
@@ -159,7 +159,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='edges')
-    # @require_workspace_permissWorkspaceRoleChoice.READER, allow_public=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.edges method, in order to do proper pagination.
 
