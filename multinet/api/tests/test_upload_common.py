@@ -4,21 +4,24 @@ from rest_framework.response import Response
 from rest_framework.test import APIClient
 
 from multinet.api.models.upload import Upload
-from multinet.api.models.workspace import Workspace
+from multinet.api.models.workspace import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UploadFactory
 from multinet.api.tests.fuzzy import TIMESTAMP_RE, workspace_re
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+
+from .utils import ALL_ROLES
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', ALL_ROLES)
 def test_upload_rest_retrieve(
     workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
     """Test retrieval of an upload on a workspace for a user with read access."""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     upload: Upload = upload_factory(workspace=workspace, user=user)
     r: Response = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/uploads/{upload.pk}/'
@@ -77,14 +80,16 @@ def test_upload_rest_retrieve_private(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', ALL_ROLES)
 def test_upload_rest_list(
     workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
     """Test listing all uploads on a workspace for which the user has permission."""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     upload_ids = [upload_factory(workspace=workspace, user=user).pk for _ in range(3)]
     r: Response = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/uploads/')
     r_json = r.json()

@@ -7,6 +7,14 @@ from multinet.api.models import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UserFactory
 
 
+ALL_ROLES = [choice for choice in WorkspaceRoleChoice]
+AT_LEAST_WRITER = [
+    WorkspaceRoleChoice.WRITER,
+    WorkspaceRoleChoice.MAINTAINER,
+    WorkspaceRoleChoice.OWNER,
+]
+
+
 def create_users_with_permissions(user_factory: UserFactory, workspace: Workspace):
     for permission in [
         WorkspaceRoleChoice.READER,
