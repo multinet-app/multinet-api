@@ -124,8 +124,8 @@ class Workspace(TimeStampedModel):
         """
         Set owner for this workspace.
 
-        Removes current owner's owner permission as a side effect. This should be the only way
-        ownership for a workspace is set.
+        Removes current owner's owner permission as a side effect. This should be the only
+        way ownership for a workspace is set. Returns the tuple (old_owner, new_owner).
         """
         old_owner = self.owner
         if old_owner is not None:

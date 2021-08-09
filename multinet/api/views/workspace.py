@@ -104,7 +104,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """
         Build a list of user objects from an ordered dictionary of user data.
 
-        Accepts an unordered dictionary containing a list of validated user data, e.g.
+        Accepts an ordered dictionary containing a list of validated user data, e.g.
         as a result of validating a PermissionsSerializer with request data.
         Returns a list of user objects.
         """
@@ -115,7 +115,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         return user_list
 
     @swagger_auto_schema(
-        request_body=PermissionsSerializer(), responses={200: PermissionsSerializer()}
+        request_body=PermissionsSerializer(), responses={200: PermissionsReturnSerializer()}
     )
     @get_workspace_permissions.mapping.put
     @require_workspace_permission(WorkspacePermission.maintainer)
