@@ -62,3 +62,21 @@ def require_workspace_permission(
         return wrapper
 
     return require_permission_inner
+
+
+def require_workspace_ownership(func: Any) -> Any:
+    """Check a request for workspace ownership."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        workspace, user = _get_workspace_and_user(*args, **kwargs)
+
+        if workspace.owner == user:
+            return func(*args, **kwargs)
+
+        user_permission: WorkspaceRole = workspace.get_user_permission(user)
+        if user_permission is None:
+            return HttpResponseNotFound
+        return HttpResponseForbidden
+
+    return wrapper

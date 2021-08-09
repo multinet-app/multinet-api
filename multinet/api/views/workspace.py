@@ -1,4 +1,4 @@
-from typing import OrderedDict, Union
+from typing import OrderedDict
 
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -18,7 +18,7 @@ from multinet.api.views.serializers import (
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
 )
-from multinet.auth.decorators import require_workspace_permission
+from multinet.auth.decorators import require_workspace_ownership, require_workspace_permission
 
 from .common import MultinetPagination
 
@@ -48,8 +48,11 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         readable_private_workspaces = Q(
             workspacerole__in=WorkspaceRole.objects.filter(user__id=self.request.user.id)
         )
+        owned_workspaces = Q(owner__id=self.request.user.id)
         public_workspaces = Q(public=True)
-        return self.queryset.filter(public_workspaces | readable_private_workspaces)
+        return self.queryset.filter(
+            public_workspaces | readable_private_workspaces | owned_workspaces
+        )
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -62,17 +65,14 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         is_public = serializer.validated_data.get('public', False)
 
         workspace, created = Workspace.objects.get_or_create(
-            name=serializer.validated_data['name'],
-            public=is_public,
+            name=serializer.validated_data['name'], public=is_public, owner=request.user
         )
 
         if created:
             workspace.save()
-
-        workspace.set_owner(request.user)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @require_workspace_permission(WorkspaceRoleChoice.OWNER)
+    @require_workspace_ownership
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         workspace.delete()
@@ -132,15 +132,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         new_maintainers = self.build_user_list(validated_data['maintainers'])
         workspace.set_maintainers(new_maintainers)
 
-        # require ownership before editing owners list
-        request_user_permission: Union[WorkspaceRoleChoice, None] = WorkspaceRole.objects.filter(
-            workspace=workspace, user=request.user
-        ).first()
-
-        if (
-            request_user_permission is not None
-            and request_user_permission.role == WorkspaceRoleChoice.OWNER
-        ):
+        if workspace.owner == request.user:
             new_owner_name = validated_data['owner']['username']
             new_owner = get_object_or_404(User, username=new_owner_name)
             workspace.set_owner(new_owner)

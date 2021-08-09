@@ -83,6 +83,6 @@ class WorkspaceChildMixin(NestedViewSetMixin):
             workspace=workspace, user=self.request.user
         ).first()
 
-        if workspace_role is not None or workspace.public:
+        if workspace_role is not None or workspace.public or workspace.owner == self.request.user:
             return child_objects
         raise Http404
