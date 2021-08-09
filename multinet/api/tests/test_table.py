@@ -41,14 +41,14 @@ def test_table_rest_list(
 
 @pytest.mark.django_db
 def test_table_rest_list_public(
-    table_factory: TableFactory, public_workspace: Workspace, authenticated_api_client: APIClient
+    table_factory: TableFactory, public_workspace: Workspace, api_client: APIClient
 ):
     """Test whether a user can see all tables on a public workspace."""
     fake = Faker()
     table_names: List[str] = [
         table_factory(name=fake.pystr(), workspace=public_workspace).name for _ in range(3)
     ]
-    r = authenticated_api_client.get(f'/api/workspaces/{public_workspace.name}/tables/')
+    r = api_client.get(f'/api/workspaces/{public_workspace.name}/tables/')
     r_json = r.json()
 
     # Test that we get the expected results from both django and arango
@@ -170,14 +170,12 @@ def test_table_rest_retrieve(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_public(
-    public_workspace: Workspace, table_factory: TableFactory, authenticated_api_client: APIClient
+    public_workspace: Workspace, table_factory: TableFactory, api_client: APIClient
 ):
     """Test that a user can see a specific table on a public workspace."""
     table = table_factory(workspace=public_workspace)
 
-    assert authenticated_api_client.get(
-        f'/api/workspaces/{public_workspace.name}/tables/{table.name}/'
-    ).data == {
+    assert api_client.get(f'/api/workspaces/{public_workspace.name}/tables/{table.name}/').data == {
         'id': table.pk,
         'name': table.name,
         'edge': table.edge,

@@ -21,7 +21,6 @@ def create_users_with_permissions(user_factory: UserFactory, workspace: Workspac
 
 def get_field_value(data_file, s3ff_client):
 
-    field_value = ''
     with open(data_file) as file_stream:
         field_value = s3ff_client.upload_file(
             file_stream,  # This can be any file-like object

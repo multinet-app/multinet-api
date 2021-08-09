@@ -86,11 +86,11 @@ def test_workspace_rest_retrieve_owned(
 
 @pytest.mark.django_db
 def test_workspace_rest_retrieve_public(
-    public_workspace_factory: PublicWorkspaceFactory, authenticated_api_client: APIClient
+    public_workspace_factory: PublicWorkspaceFactory, api_client: APIClient
 ):
     fake = Faker()
     public_workspace: Workspace = public_workspace_factory(name=fake.pystr())
-    assert authenticated_api_client.get(f'/api/workspaces/{public_workspace.name}/').data == {
+    assert api_client.get(f'/api/workspaces/{public_workspace.name}/').data == {
         'id': public_workspace.pk,
         'name': public_workspace.name,
         'created': TIMESTAMP_RE,
@@ -178,6 +178,11 @@ def test_workspace_rest_get_permissions(
     permission: WorkspacePermission,
 ):
     workspace.set_user_permission(user, permission)
+
+    if permission == WorkspacePermission.maintainer:
+        current_owner = user_factory()
+        workspace.set_owner(current_owner)
+
     create_users_with_permissions(user_factory, workspace)
     maintainer_names = [maintainer.username for maintainer in workspace.maintainers]
     writer_names = [writer.username for writer in workspace.writers]
@@ -188,6 +193,11 @@ def test_workspace_rest_get_permissions(
 
     assert r.status_code == 200
     assert r_json['public'] == workspace.public
+
+    if permission == WorkspacePermission.owner:
+        assert r_json['owner']['username'] == workspace.owner.username
+    else:
+        assert r_json['owner']['username'] == workspace.owner.username
 
     for maintainer in r_json['maintainers']:
         assert maintainer['username'] in maintainer_names
@@ -313,6 +323,8 @@ def test_workspace_rest_put_permissions_forbidden(
     permission: WorkspacePermission,
 ):
     workspace.set_user_permission(user, permission)
+    current_owner = user_factory()
+    workspace.set_owner(current_owner)
     new_owner = user_factory()
     new_maintainers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
     public = not workspace.public
@@ -328,7 +340,7 @@ def test_workspace_rest_put_permissions_forbidden(
     )
 
     assert r.status_code == 403
-    assert workspace.owner is None
+    assert workspace.owner == current_owner
     assert len(list(workspace.maintainers)) == 0
 
 
@@ -336,6 +348,8 @@ def test_workspace_rest_put_permissions_forbidden(
 def test_workspace_rest_put_permissions_no_access(
     workspace: Workspace, user_factory: UserFactory, authenticated_api_client: APIClient
 ):
+    current_owner = user_factory()
+    workspace.set_owner(current_owner)
     request_data = {
         'public': not workspace.public,
         'owner': {'username': user_factory().username},
@@ -347,4 +361,4 @@ def test_workspace_rest_put_permissions_no_access(
         f'/api/workspaces/{workspace.name}/permissions/', request_data, format='json'
     )
     assert r.status_code == 404
-    assert workspace.owner is None
+    assert workspace.owner == current_owner

@@ -2,8 +2,6 @@ import itertools
 
 from django.contrib.auth.models import User
 from faker import Faker
-
-# from guardian.shortcuts import assign_perm
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
@@ -70,7 +68,7 @@ def populated_table(workspace: Workspace, edge: bool) -> Table:
     else:
         # create an edge table
         table: Table = Table.objects.create(name=Faker().pystr(), edge=True, workspace=workspace)
-        node_table = populated_table(workspace, False)
+        node_table = populated_table(workspace, False)  # recursion
         nodes = list(node_table.get_rows())
         edges = [{'_from': a['_id'], '_to': b['_id']} for a, b in itertools.combinations(nodes, 2)]
         table.put_rows(edges)
@@ -105,7 +103,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 register(UserFactory)
-register(PrivateWorkspaceFactory, _name='workspace')
+register(PrivateWorkspaceFactory)
 register(PublicWorkspaceFactory, _name='public_workspace')
 register(NetworkFactory)
 register(TableFactory)

@@ -46,7 +46,7 @@ def test_network_rest_list(
 def test_network_rest_list_public(
     network_factory: NetworkFactory,
     public_workspace_factory: PublicWorkspaceFactory,
-    authenticated_api_client: APIClient,
+    api_client: APIClient,
 ):
     """Test that an authenticated user can see networks on a public workspace."""
     fake = Faker()
@@ -54,7 +54,7 @@ def test_network_rest_list_public(
     network_names: List[str] = [
         network_factory(name=fake.pystr(), workspace=public_workspace).name for _ in range(3)
     ]
-    r = authenticated_api_client.get(f'/api/workspaces/{public_workspace.name}/networks/')
+    r = api_client.get(f'/api/workspaces/{public_workspace.name}/networks/')
     r_json = r.json()
 
     arango_db = public_workspace.get_arango_db()
@@ -129,6 +129,7 @@ def test_network_rest_create_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
+    """Assert that a workspace reader cannot create a network."""
     workspace.set_user_permission(user, WorkspacePermission.reader)
     edge_table = populated_table(workspace, True)
     network_name = 'network'
@@ -183,11 +184,9 @@ def test_network_rest_retrieve(
 
 
 @pytest.mark.django_db
-def test_network_rest_retrieve_public(
-    public_workspace: Workspace, authenticated_api_client: APIClient
-):
+def test_network_rest_retrieve_public(public_workspace: Workspace, api_client: APIClient):
     network = populated_network(public_workspace)
-    assert authenticated_api_client.get(
+    assert api_client.get(
         f'/api/workspaces/{public_workspace.name}/networks/{network.name}/'
     ).data == {
         'id': network.pk,
