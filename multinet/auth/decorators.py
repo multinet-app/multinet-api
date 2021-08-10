@@ -47,7 +47,7 @@ def require_workspace_permission(
             workspace, user = _get_workspace_and_user(*args, **kwargs)
             user_permission: WorkspaceRole = workspace.get_user_permission(user)
 
-            if workspace.public and allow_public:
+            if (workspace.public and allow_public) or workspace.owner == user:
                 return func(*args, **kwargs)
 
             if user_permission is None:
@@ -76,7 +76,7 @@ def require_workspace_ownership(func: Any) -> Any:
 
         user_permission: WorkspaceRole = workspace.get_user_permission(user)
         if user_permission is None:
-            return HttpResponseNotFound
-        return HttpResponseForbidden
+            return HttpResponseNotFound()
+        return HttpResponseForbidden()
 
     return wrapper

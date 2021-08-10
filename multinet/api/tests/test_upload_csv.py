@@ -4,12 +4,11 @@ from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
-from guardian.shortcuts import remove_perm
 import pytest
 from rest_framework.response import Response
 
 from multinet.api.models.upload import Upload
-from multinet.api.models.workspace import Workspace, WorkspaceRoleChoice
+from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.tasks.process.utils import str_to_number
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
@@ -20,21 +19,22 @@ from multinet.api.tests.fuzzy import (
 )
 from multinet.api.tests.utils import get_field_value
 
-from .utils import AT_LEAST_WRITER
-
 data_dir = pathlib.Path(__file__).parent / 'data'
 
 
 @pytest.fixture
-def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3ff_client) -> Dict:
-    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+def airports_csv(
+    unowned_workspace: Workspace, user: User, authenticated_api_client, s3ff_client
+) -> Dict:
+
+    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
 
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     # Model creation request
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/csv/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,
@@ -49,7 +49,7 @@ def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3f
         },
         format='json',
     )
-    remove_perm(WorkspaceRoleChoice.WRITER.name, user, workspace)
+    WorkspaceRole.objects.filter(workspace=unowned_workspace, user=user).delete()
     return {
         'response': r,
         'table_name': table_name,
@@ -58,19 +58,15 @@ def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3f
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
-def test_create_upload_model_csv(
-    workspace: Workspace, user: User, airports_csv, permission: WorkspaceRoleChoice
-):
+def test_create_upload_model_csv(unowned_workspace: Workspace, user: User, airports_csv):
     """Test just the response of the model creation, not the task itself."""
-    workspace.set_user_permission(user, permission)
     r = airports_csv['response']
     data_file = airports_csv['data_file']
 
     assert r.status_code == 200
     assert r.json() == {
         'id': INTEGER_ID_RE,
-        'workspace': workspace_re(workspace),
+        'workspace': workspace_re(unowned_workspace),
         'blob': s3_file_field_re(data_file.name),
         'user': user.username,
         'data_type': Upload.DataType.CSV,
@@ -105,15 +101,15 @@ def test_create_upload_model_invalid_columns(
 
 @pytest.mark.django_db
 def test_create_upload_model_csv_forbidden(
-    workspace: Workspace, user: User, authenticated_api_client, s3ff_client
+    unowned_workspace: Workspace, user: User, authenticated_api_client, s3ff_client
 ):
     """Test that a user with insufficient permissions is forbidden from a POST request."""
-    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/csv/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,
@@ -133,13 +129,13 @@ def test_create_upload_model_csv_forbidden(
 
 @pytest.mark.django_db
 def test_create_upload_model_csv_no_permission(
-    workspace: Workspace, authenticated_api_client, s3ff_client
+    unowned_workspace: Workspace, authenticated_api_client, s3ff_client
 ):
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/csv/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,

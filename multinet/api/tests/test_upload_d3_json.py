@@ -9,7 +9,14 @@ import pytest
 from rest_framework.response import Response
 from rest_framework.test import APIClient
 
-from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
+from multinet.api.models import (
+    Network,
+    Table,
+    Upload,
+    Workspace,
+    WorkspaceRoleChoice,
+    WorkspaceRole,
+)
 from multinet.api.tasks.process.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
@@ -19,8 +26,6 @@ from multinet.api.tests.fuzzy import (
     workspace_re,
 )
 from multinet.api.views.upload import InvalidFieldValueResponse
-
-from .utils import AT_LEAST_WRITER
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 miserables_json_file = data_dir / 'miserables.json'
@@ -40,23 +45,23 @@ def miserables_json_field_value(s3ff_client) -> str:
 
 @pytest.fixture
 def miserables_json(
-    workspace: Workspace,
+    unowned_workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ) -> Dict:
     # Model creation request
-    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
         },
         format='json',
     )
-
+    WorkspaceRole.objects.filter(workspace=unowned_workspace, user=user).delete()
     return {
         'response': r,
         'network_name': network_name,
@@ -64,18 +69,14 @@ def miserables_json(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
-def test_create_upload_model(
-    workspace: Workspace, user: User, miserables_json, permission: WorkspaceRoleChoice
-):
+def test_create_upload_model(unowned_workspace: Workspace, user: User, miserables_json):
     """Test just the response of the model creation, not the task itself."""
-    workspace.set_user_permission(user, permission)
     r = miserables_json['response']
 
     assert r.status_code == 200
     assert r.json() == {
         'id': INTEGER_ID_RE,
-        'workspace': workspace_re(workspace),
+        'workspace': workspace_re(unowned_workspace),
         'blob': s3_file_field_re(miserables_json_file.name),
         'user': user.username,
         'data_type': Upload.DataType.D3_JSON,
@@ -148,15 +149,15 @@ def test_create_upload_model_invalid_field_value(
 
 @pytest.mark.django_db
 def test_create_upload_model_forbidden(
-    workspace: Workspace,
+    unowned_workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ):
-    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
@@ -168,13 +169,13 @@ def test_create_upload_model_forbidden(
 
 @pytest.mark.django_db
 def test_create_upload_model_no_permission(
-    workspace: Workspace,
+    unowned_workspace: Workspace,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ):
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
@@ -190,6 +191,7 @@ def test_valid_d3_json_task_response(
 ):
     """Test just the response of the model creation, not the task itself."""
     # Get upload info
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r = miserables_json['response']
     network_name = miserables_json['network_name']
     node_table_name = f'{network_name}_nodes'
