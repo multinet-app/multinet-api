@@ -43,7 +43,6 @@ def users_search_view(request: Request) -> HttpResponseBase:
     username: str = request_serializer.validated_data['username']
 
     results = User.objects.filter(username__startswith=username).order_by('username')[:10]
-    dict_results = [{'admin': user.is_superuser, **model_to_dict(user)} for user in results]
 
-    response_serializer = UserDetailSerializer(dict_results, many=True)
+    response_serializer = UserDetailSerializer(results, many=True)
     return Response(response_serializer.data)

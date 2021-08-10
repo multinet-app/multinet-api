@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
@@ -10,11 +11,17 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField(validators=[UnicodeUsernameValidator()])
 
 
-class UserDetailSerializer(serializers.Serializer):
-    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    first_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    last_name = serializers.CharField(validators=[UnicodeUsernameValidator()])
-    admin = serializers.BooleanField()
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_superuser',
+        ]
 
 
 # TODO: Add WorkspaceCreateSerializer that this inherits from,
@@ -27,6 +34,7 @@ class WorkspaceCreateSerializer(serializers.ModelSerializer):
             'name',
             'created',
             'modified',
+            'public',
         ]
         read_only_fields = ['created']
 
@@ -38,6 +46,30 @@ class WorkspaceSerializer(serializers.ModelSerializer):
             'arango_db_name',
         ]
         read_only_fields = ['created']
+
+
+class PermissionsCreateSerializer(serializers.Serializer):
+    public = serializers.BooleanField()
+    owner = UserSerializer()
+    maintainers = UserSerializer(many=True)
+    writers = UserSerializer(many=True)
+    readers = UserSerializer(many=True)
+
+
+class PermissionsReturnSerializer(serializers.ModelSerializer):
+    owner = UserDetailSerializer()
+    maintainers = UserDetailSerializer(many=True)
+    writers = UserDetailSerializer(many=True)
+    readers = UserDetailSerializer(many=True)
+
+    class Meta:
+        model = Workspace
+        fields = WorkspaceCreateSerializer.Meta.fields + [
+            'owner',
+            'maintainers',
+            'writers',
+            'readers',
+        ]
 
 
 # The required fields for table creation
