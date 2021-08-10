@@ -79,10 +79,18 @@ class WorkspaceChildMixin(NestedViewSetMixin):
 
         parent_query_dict = self.get_parents_query_dict()
         workspace = get_object_or_404(Workspace, name=parent_query_dict['workspace__name'])
+
+        request_user = self.request.user
+        if request_user.id is None:  # anonymous user
+            if workspace.public:
+                return child_objects
+            raise Http404
+
         workspace_role = WorkspaceRole.objects.filter(
-            workspace=workspace, user=self.request.user
+            workspace=workspace, user=request_user
         ).first()
 
-        if workspace_role is not None or workspace.public or workspace.owner == self.request.user:
+        has_permission = (workspace_role is not None) or workspace.owner == request_user
+        if workspace.public or has_permission:
             return child_objects
         raise Http404
