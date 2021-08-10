@@ -14,8 +14,8 @@ from multinet.api.models import (
     Table,
     Upload,
     Workspace,
-    WorkspaceRoleChoice,
     WorkspaceRole,
+    WorkspaceRoleChoice,
 )
 from multinet.api.tasks.process.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
 from multinet.api.tests.fuzzy import (
