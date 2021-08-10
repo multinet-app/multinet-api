@@ -39,8 +39,8 @@ def test_workspace_rest_list(
         private_workspace_factory(name=fake.pystr()) for _ in range(3)
     ]
 
-    private_workspaces[0].set_readers([user])
-    private_workspaces[1].set_owner(user)
+    private_workspaces[0].set_user_permission(user, WorkspacePermission.reader)
+    private_workspaces[1].set_user_permission(user, WorkspacePermission.reader)
     accessible_workspace_names += [private_workspaces[0].name, private_workspaces[1].name]
 
     r = authenticated_api_client.get('/api/workspaces/')
@@ -180,8 +180,10 @@ def test_workspace_rest_get_permissions(
     workspace.set_user_permission(user, permission)
 
     if permission == WorkspacePermission.maintainer:
-        current_owner = user_factory()
-        workspace.set_owner(current_owner)
+        workspace.set_user_permission(user, permission)
+        workspace.set_owner(user_factory())
+    else:
+        workspace.set_owner(user)
 
     create_users_with_permissions(user_factory, workspace)
     maintainer_names = [maintainer.username for maintainer in workspace.maintainers]
@@ -193,11 +195,7 @@ def test_workspace_rest_get_permissions(
 
     assert r.status_code == 200
     assert r_json['public'] == workspace.public
-
-    if permission == WorkspacePermission.owner:
-        assert r_json['owner']['username'] == workspace.owner.username
-    else:
-        assert r_json['owner']['username'] == workspace.owner.username
+    assert r_json['owner']['username'] == workspace.owner.username
 
     for maintainer in r_json['maintainers']:
         assert maintainer['username'] in maintainer_names

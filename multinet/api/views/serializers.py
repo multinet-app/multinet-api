@@ -48,7 +48,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         read_only_fields = ['created']
 
 
-class PermissionsSerializer(serializers.Serializer):
+class PermissionsCreateSerializer(serializers.Serializer):
     public = serializers.BooleanField()
     owner = UserSerializer()
     maintainers = UserSerializer(many=True)
@@ -65,7 +65,6 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = WorkspaceCreateSerializer.Meta.fields + [
-            'public',
             'owner',
             'maintainers',
             'writers',

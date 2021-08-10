@@ -14,8 +14,8 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from multinet.api.models import Workspace
 from multinet.api.utils.workspace_permissions import WorkspacePermission
 from multinet.api.views.serializers import (
+    PermissionsCreateSerializer,
     PermissionsReturnSerializer,
-    PermissionsSerializer,
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
 )
@@ -115,14 +115,14 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         return user_list
 
     @swagger_auto_schema(
-        request_body=PermissionsSerializer(), responses={200: PermissionsReturnSerializer()}
+        request_body=PermissionsCreateSerializer(), responses={200: PermissionsReturnSerializer()}
     )
     @get_workspace_permissions.mapping.put
     @require_workspace_permission(WorkspacePermission.maintainer)
     def put_workspace_permissions(self, request, name: str):
         """Update existing workspace permissions."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
-        serializer = PermissionsSerializer(data=request.data)
+        serializer = PermissionsCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
