@@ -29,9 +29,7 @@ def _get_workspace_and_user(*args, **kwargs):
     return workspace, user
 
 
-def require_workspace_permission(
-    minimum_permission: WorkspaceRoleChoice, allow_public=False
-) -> Any:
+def require_workspace_permission(minimum_permission: WorkspaceRoleChoice) -> Any:
     """
     Check a request for proper workspace-level permissions.
 
@@ -47,7 +45,9 @@ def require_workspace_permission(
             workspace, user = _get_workspace_and_user(*args, **kwargs)
             user_permission: WorkspaceRole = workspace.get_user_permission(user)
 
-            if (workspace.public and allow_public) or workspace.owner == user:
+            if (
+                workspace.public and minimum_permission == WorkspaceRoleChoice.READER
+            ) or workspace.owner == user:
                 return func(*args, **kwargs)
 
             if user_permission is None:

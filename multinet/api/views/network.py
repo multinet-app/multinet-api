@@ -140,7 +140,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='nodes')
-    @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
     def nodes(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.nodes method, in order to do proper pagination.
 
@@ -158,7 +158,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         responses={200: PAGINATED_RESULTS_SCHEMA},
     )
     @action(detail=True, url_path='edges')
-    @require_workspace_permission(WorkspaceRoleChoice.READER, allow_public=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
     def edges(self, request, parent_lookup_workspace__name: str, name: str):
         # Doesn't use the Network.edges method, in order to do proper pagination.
 
