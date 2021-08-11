@@ -42,13 +42,6 @@ def s3ff_client(authenticated_api_client):
 
 
 @pytest.fixture
-def unowned_workspace(workspace: Workspace, user_factory: UserFactory) -> Workspace:
-    # Create a private workspace NOT owned by the `user` fixture
-    workspace.set_owner(user_factory())
-    return workspace
-
-
-@pytest.fixture
 def public_workspace(workspace: Workspace, user_factory: UserFactory) -> Workspace:
     workspace.public = True
     workspace.owner = user_factory()  # don't use set_owner to prevent extra DB call

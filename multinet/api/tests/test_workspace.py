@@ -101,16 +101,19 @@ def test_workspace_rest_retrieve_public(
 
 @pytest.mark.django_db
 def test_workspace_rest_retrieve_no_access(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, authenticated_api_client: APIClient
 ):
-    response = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/')
+    response = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/')
 
     # a user should not be able to know about a workspace they can't access
     assert response.status_code == 404
 
 
 @pytest.mark.django_db
-def test_workspace_rest_delete(workspace: Workspace, authenticated_api_client: APIClient):
+def test_workspace_rest_delete(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
+):
+    workspace.set_owner(user)
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
 
     assert r.status_code == 204
@@ -137,15 +140,17 @@ def test_workspace_rest_delete_unauthorized(
 
 @pytest.mark.django_db
 def test_workspace_rest_delete_forbidden(
-    unowned_workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
 ):
-    unowned_workspace.set_readers([user])
-    response = authenticated_api_client.delete(f'/api/workspaces/{unowned_workspace.name}/')
+    workspace.set_readers([user])
+    response = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
     assert response.status_code == 403
 
     # Assert relevant objects are not deleted
-    assert Workspace.objects.filter(name=unowned_workspace.name).exists()
-    assert arango_system_db().has_database(unowned_workspace.arango_db_name)
+    assert Workspace.objects.filter(name=workspace.name).exists()
+    assert arango_system_db().has_database(workspace.arango_db_name)
 
 
 @pytest.mark.django_db
@@ -170,24 +175,24 @@ def test_workspace_rest_delete_no_access(
 
 @pytest.mark.django_db
 def test_workspace_rest_get_permissions(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     user_factory: UserFactory,
     authenticated_api_client: APIClient,
 ):
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.MAINTAINER)
-    unowned_workspace.set_owner(user_factory())
-    create_users_with_permissions(user_factory, unowned_workspace)
-    maintainer_names = [maintainer.username for maintainer in unowned_workspace.maintainers]
-    writer_names = [writer.username for writer in unowned_workspace.writers]
-    reader_names = [reader.username for reader in unowned_workspace.readers]
+    workspace.set_user_permission(user, WorkspaceRoleChoice.MAINTAINER)
+    workspace.set_owner(user_factory())
+    create_users_with_permissions(user_factory, workspace)
+    maintainer_names = [maintainer.username for maintainer in workspace.maintainers]
+    writer_names = [writer.username for writer in workspace.writers]
+    reader_names = [reader.username for reader in workspace.readers]
 
-    r = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/permissions/')
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/permissions/')
     r_json = r.json()
 
     assert r.status_code == 200
-    assert r_json['public'] == unowned_workspace.public
-    assert r_json['owner']['username'] == unowned_workspace.owner.username
+    assert r_json['public'] == workspace.public
+    assert r_json['owner']['username'] == workspace.owner.username
 
     for maintainer in r_json['maintainers']:
         assert maintainer['username'] in maintainer_names
@@ -232,30 +237,32 @@ def test_workspace_rest_get_permissions_owner(
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', [WorkspaceRoleChoice.READER, WorkspaceRoleChoice.WRITER])
 def test_workspace_rest_get_permissions_forbidden(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
-    r = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/permissions/')
+    workspace.set_user_permission(user, permission)
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/permissions/')
     assert r.status_code == 403
 
 
 @pytest.mark.django_db
 def test_workspace_rest_get_permissions_no_access(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, authenticated_api_client: APIClient
 ):
-    r = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/permissions/')
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/permissions/')
     assert r.status_code == 404
 
 
 @pytest.mark.django_db
 def test_workspace_rest_put_permissions_owner(
     workspace: Workspace,
+    user: User,
     user_factory: UserFactory,
     authenticated_api_client: APIClient,
 ):
+    workspace.set_owner(user)
     new_owner = user_factory()
     new_maintainers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
     new_writers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
@@ -291,13 +298,13 @@ def test_workspace_rest_put_permissions_owner(
 
 @pytest.mark.django_db
 def test_workspace_rest_put_permissions_maintainer(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     user_factory: UserFactory,
     authenticated_api_client: APIClient,
 ):
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.MAINTAINER)
-    old_owner = unowned_workspace.owner
+    workspace.set_user_permission(user, WorkspaceRoleChoice.MAINTAINER)
+    old_owner = workspace.owner
     new_owner = user_factory()
     new_maintainers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
     new_writers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
@@ -310,40 +317,40 @@ def test_workspace_rest_put_permissions_maintainer(
         'readers': new_readers,
     }
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/permissions/', request_data, format='json'
+        f'/api/workspaces/{workspace.name}/permissions/', request_data, format='json'
     )
     r_json = r.json()
     assert r.status_code == 200
     assert r_json['public'] == request_data['public']
     # maintainers cannot set the owner of a workspace
-    assert unowned_workspace.owner == old_owner
+    assert workspace.owner == old_owner
 
     maintainers_names = [maintainer['username'] for maintainer in new_maintainers]
-    for maintainer in unowned_workspace.maintainers:
+    for maintainer in workspace.maintainers:
         assert maintainer.username in maintainers_names
 
     writers_names = [writer['username'] for writer in new_writers]
-    for writer in unowned_workspace.writers:
+    for writer in workspace.writers:
         assert writer.username in writers_names
 
     readers_names = [reader['username'] for reader in new_readers]
-    for reader in unowned_workspace.readers:
+    for reader in workspace.readers:
         assert reader.username in readers_names
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', [WorkspaceRoleChoice.READER, WorkspaceRoleChoice.WRITER])
 def test_workspace_rest_put_permissions_forbidden(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     user_factory: UserFactory,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
+    workspace.set_user_permission(user, permission)
     new_owner = user_factory()
     new_maintainers: List[Dict] = [{'username': user_factory().username} for _ in range(2)]
-    public = not unowned_workspace.public
+    public = not workspace.public
     request_data = {
         'public': public,
         'owner': {'username': new_owner.username},
@@ -352,29 +359,29 @@ def test_workspace_rest_put_permissions_forbidden(
         'readers': [],
     }
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/permissions/', request_data, format='json'
+        f'/api/workspaces/{workspace.name}/permissions/', request_data, format='json'
     )
 
     assert r.status_code == 403
-    assert unowned_workspace.owner != new_owner
-    assert len(list(unowned_workspace.maintainers)) == 0
+    assert workspace.owner != new_owner
+    assert len(list(workspace.maintainers)) == 0
 
 
 @pytest.mark.django_db
 def test_workspace_rest_put_permissions_no_access(
-    unowned_workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
     request_data = {
-        'public': not unowned_workspace.public,
+        'public': not workspace.public,
         'owner': {'username': user.username},
         'maintainers': [],
         'writers': [],
         'readers': [],
     }
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/permissions/', request_data, format='json'
+        f'/api/workspaces/{workspace.name}/permissions/', request_data, format='json'
     )
-    workspace = Workspace.objects.get(id=unowned_workspace.pk)
+    workspace = Workspace.objects.get(id=workspace.pk)
     assert r.status_code == 404
     assert workspace.public != request_data['public']
     assert workspace.owner != user

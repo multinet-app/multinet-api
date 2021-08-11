@@ -45,23 +45,23 @@ def miserables_json_field_value(s3ff_client) -> str:
 
 @pytest.fixture
 def miserables_json(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ) -> Dict:
     # Model creation request
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
         },
         format='json',
     )
-    WorkspaceRole.objects.filter(workspace=unowned_workspace, user=user).delete()
+    WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
     return {
         'response': r,
         'network_name': network_name,
@@ -69,14 +69,14 @@ def miserables_json(
 
 
 @pytest.mark.django_db
-def test_create_upload_model(unowned_workspace: Workspace, user: User, miserables_json):
+def test_create_upload_model(workspace: Workspace, user: User, miserables_json):
     """Test just the response of the model creation, not the task itself."""
     r = miserables_json['response']
 
     assert r.status_code == 200
     assert r.json() == {
         'id': INTEGER_ID_RE,
-        'workspace': workspace_re(unowned_workspace),
+        'workspace': workspace_re(workspace),
         'blob': s3_file_field_re(miserables_json_file.name),
         'user': user.username,
         'data_type': Upload.DataType.D3_JSON,
@@ -149,15 +149,15 @@ def test_create_upload_model_invalid_field_value(
 
 @pytest.mark.django_db
 def test_create_upload_model_forbidden(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ):
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
@@ -169,13 +169,13 @@ def test_create_upload_model_forbidden(
 
 @pytest.mark.django_db
 def test_create_upload_model_no_permission(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
 ):
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,

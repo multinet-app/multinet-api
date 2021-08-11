@@ -14,17 +14,17 @@ from .utils import ALL_ROLES
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', ALL_ROLES)
 def test_upload_rest_retrieve(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
     """Test retrieval of an upload on a workspace for a user with read access."""
-    unowned_workspace.set_user_permission(user, permission)
-    upload: Upload = upload_factory(workspace=unowned_workspace, user=user)
+    workspace.set_user_permission(user, permission)
+    upload: Upload = upload_factory(workspace=workspace, user=user)
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/{upload.pk}/'
+        f'/api/workspaces/{workspace.name}/uploads/{upload.pk}/'
     )
     assert r.status_code == 200
     assert r.data == {
@@ -36,7 +36,7 @@ def test_upload_rest_retrieve(
         'error_messages': upload.error_messages,
         'data_type': upload.data_type,
         'status': upload.status,
-        'workspace': workspace_re(unowned_workspace),
+        'workspace': workspace_re(workspace),
     }
 
 
@@ -47,7 +47,8 @@ def test_upload_rest_retrieve_owned(
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
 ):
-    """Test retrieval of an upload on a workspace for a user with read access."""
+    """Test retrieval of an upload on a workspace for the owner."""
+    workspace.set_owner(user)
     upload: Upload = upload_factory(workspace=workspace, user=user)
     r: Response = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/uploads/{upload.pk}/'
@@ -92,15 +93,15 @@ def test_upload_rest_retrieve_public(
 
 @pytest.mark.django_db
 def test_upload_rest_retrieve_private(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
 ):
     """Test retrieval of an upload on a workspace for which the user has no permission."""
-    upload = upload_factory(workspace=unowned_workspace, user=user)
+    upload = upload_factory(workspace=workspace, user=user)
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/{upload.pk}/'
+        f'/api/workspaces/{workspace.name}/uploads/{upload.pk}/'
     )
     assert r.status_code == 404
 
@@ -108,16 +109,16 @@ def test_upload_rest_retrieve_private(
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', ALL_ROLES)
 def test_upload_rest_list(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
     """Test listing all uploads on a workspace for which the user has permission."""
-    unowned_workspace.set_user_permission(user, permission)
-    upload_ids = [upload_factory(workspace=unowned_workspace, user=user).pk for _ in range(3)]
-    r: Response = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/uploads/')
+    workspace.set_user_permission(user, permission)
+    upload_ids = [upload_factory(workspace=workspace, user=user).pk for _ in range(3)]
+    r: Response = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/uploads/')
     r_json = r.json()
 
     assert r_json['count'] == len(upload_ids)
@@ -144,14 +145,14 @@ def test_upload_rest_list_public(
 
 @pytest.mark.django_db
 def test_upload_rest_list_private(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     upload_factory: UploadFactory,
     authenticated_api_client: APIClient,
 ):
     """Test listing all uploads on a private workspace for which the user has no permission."""
     for _ in range(3):
-        upload_factory(workspace=unowned_workspace, user=user)
-    r: Response = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/uploads/')
+        upload_factory(workspace=workspace, user=user)
+    r: Response = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/uploads/')
 
     assert r.status_code == 404

@@ -23,18 +23,16 @@ data_dir = pathlib.Path(__file__).parent / 'data'
 
 
 @pytest.fixture
-def airports_csv(
-    unowned_workspace: Workspace, user: User, authenticated_api_client, s3ff_client
-) -> Dict:
+def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3ff_client) -> Dict:
 
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
 
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     # Model creation request
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
+        f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,
@@ -49,7 +47,7 @@ def airports_csv(
         },
         format='json',
     )
-    WorkspaceRole.objects.filter(workspace=unowned_workspace, user=user).delete()
+    WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
     return {
         'response': r,
         'table_name': table_name,
@@ -58,7 +56,7 @@ def airports_csv(
 
 
 @pytest.mark.django_db
-def test_create_upload_model_csv(unowned_workspace: Workspace, user: User, airports_csv):
+def test_create_upload_model_csv(workspace: Workspace, user: User, airports_csv):
     """Test just the response of the model creation, not the task itself."""
     r = airports_csv['response']
     data_file = airports_csv['data_file']
@@ -66,7 +64,7 @@ def test_create_upload_model_csv(unowned_workspace: Workspace, user: User, airpo
     assert r.status_code == 200
     assert r.json() == {
         'id': INTEGER_ID_RE,
-        'workspace': workspace_re(unowned_workspace),
+        'workspace': workspace_re(workspace),
         'blob': s3_file_field_re(data_file.name),
         'user': user.username,
         'data_type': Upload.DataType.CSV,
@@ -101,15 +99,15 @@ def test_create_upload_model_invalid_columns(
 
 @pytest.mark.django_db
 def test_create_upload_model_csv_forbidden(
-    unowned_workspace: Workspace, user: User, authenticated_api_client, s3ff_client
+    workspace: Workspace, user: User, authenticated_api_client, s3ff_client
 ):
     """Test that a user with insufficient permissions is forbidden from a POST request."""
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
+        f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,
@@ -129,13 +127,13 @@ def test_create_upload_model_csv_forbidden(
 
 @pytest.mark.django_db
 def test_create_upload_model_csv_no_permission(
-    unowned_workspace: Workspace, authenticated_api_client, s3ff_client
+    workspace: Workspace, authenticated_api_client, s3ff_client
 ):
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/uploads/csv/',
+        f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
             'field_value': field_value,
             'edge': False,

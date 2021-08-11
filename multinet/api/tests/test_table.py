@@ -68,14 +68,14 @@ def test_table_rest_list_public(
 @pytest.mark.django_db
 def test_table_rest_list_private(
     table_factory: TableFactory,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     authenticated_api_client: APIClient,
 ):
     """Test that a user cannot see tables on private workspaces with no access."""
     for _ in range(3):
-        table_factory(workspace=unowned_workspace)
+        table_factory(workspace=workspace)
 
-    r = authenticated_api_client.get(f'/api/workspaces/{unowned_workspace.name}/tables/')
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/tables/')
     assert r.status_code == 404
 
 
@@ -124,16 +124,16 @@ def test_table_rest_create(
 @pytest.mark.django_db
 @pytest.mark.parametrize('edge', [True, False])
 def test_table_rest_create_forbidden(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     edge: bool,
 ):
     """Test creating a table on a workspace with insufficient permission."""
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/tables/',
+        f'/api/workspaces/{workspace.name}/tables/',
         {'name': table_name, 'edge': edge},
         format='json',
     )
@@ -143,12 +143,12 @@ def test_table_rest_create_forbidden(
 @pytest.mark.django_db
 @pytest.mark.parametrize('edge', [True, False])
 def test_table_rest_create_no_access(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient, edge: bool
+    workspace: Workspace, authenticated_api_client: APIClient, edge: bool
 ):
     """Test creating a table on a workspace with no permission."""
     table_name = Faker().pystr()
     r = authenticated_api_client.post(
-        f'/api/workspaces/{unowned_workspace.name}/tables/',
+        f'/api/workspaces/{workspace.name}/tables/',
         {'name': table_name, 'edge': edge},
         format='json',
     )
@@ -212,13 +212,11 @@ def test_table_rest_retrieve_public(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_no_access(
-    unowned_workspace: Workspace, table_factory: TableFactory, authenticated_api_client: APIClient
+    workspace: Workspace, table_factory: TableFactory, authenticated_api_client: APIClient
 ):
     """Test that a user gets a 404 for trying to view a specific table on a workspace."""
-    table = table_factory(workspace=unowned_workspace)
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/'
-    )
+    table = table_factory(workspace=workspace)
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
     assert r.status_code == 404
 
 
@@ -226,31 +224,31 @@ def test_table_rest_retrieve_no_access(
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_delete(
     table_factory: TableFactory,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
-    table: Table = table_factory(workspace=unowned_workspace)
+    workspace.set_user_permission(user, permission)
+    table: Table = table_factory(workspace=workspace)
 
-    r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/'
-    )
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
 
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
-    assert not Table.objects.filter(name=unowned_workspace.name).exists()
-    assert not unowned_workspace.get_arango_db().has_collection(table.name)
+    assert not Table.objects.filter(name=workspace.name).exists()
+    assert not workspace.get_arango_db().has_collection(table.name)
 
 
 @pytest.mark.django_db
 def test_table_rest_delete_owned(
     table_factory: TableFactory,
     workspace: Workspace,
+    user: User,
     authenticated_api_client: APIClient,
 ):
+    workspace.set_owner(user)
     table: Table = table_factory(workspace=workspace)
 
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
@@ -279,55 +277,51 @@ def test_table_rest_delete_unauthorized(
 
 @pytest.mark.django_db
 def test_table_rest_delete_forbidden(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     table_factory: TableFactory,
     authenticated_api_client: APIClient,
 ):
     # Create workspace this way, so the authenticated user doesn't have writer permission
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
-    table: Table = table_factory(workspace=unowned_workspace)
-    r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/'
-    )
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    table: Table = table_factory(workspace=workspace)
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
 
     assert r.status_code == 403
 
     # Assert relevant objects are not deleted
     assert Table.objects.filter(name=table.name).exists()
-    assert unowned_workspace.get_arango_db().has_collection(table.name)
+    assert workspace.get_arango_db().has_collection(table.name)
 
 
 @pytest.mark.django_db
 def test_table_rest_delete_no_access(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     table_factory: TableFactory,
     authenticated_api_client,
 ):
-    table: Table = table_factory(workspace=unowned_workspace)
-    r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/'
-    )
+    table: Table = table_factory(workspace=workspace)
+    r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/tables/{table.name}/')
 
     assert r.status_code == 404
     assert Table.objects.filter(name=table.name).exists()
-    assert unowned_workspace.get_arango_db().has_collection(table.name)
+    assert workspace.get_arango_db().has_collection(table.name)
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', ALL_ROLES)
 def test_table_rest_retrieve_rows(
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
-    node_table = populated_table(unowned_workspace, False)
+    workspace.set_user_permission(user, permission)
+    node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     assert_limit_offset_results(
         authenticated_api_client,
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         table_rows,
     )
 
@@ -413,12 +407,12 @@ def test_table_rest_retrieve_rows_public(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_rows_private(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, authenticated_api_client: APIClient
 ):
     """Test retrieving table rows for a private workspace."""
-    node_table = populated_table(unowned_workspace, False)
+    node_table = populated_table(workspace, False)
     r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         {'limit': 0, 'offset': 0},
     )
 
@@ -429,20 +423,20 @@ def test_table_rest_retrieve_rows_private(
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_insert_rows(
     table_factory: TableFactory,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
-    table: Table = table_factory(workspace=unowned_workspace)
+    workspace.set_user_permission(user, permission)
+    table: Table = table_factory(workspace=workspace)
 
     table_rows = generate_arango_documents(5)
     inserted_table_rows = list(map(dict_to_fuzzy_arango_doc, table_rows))
 
     # Test insert response
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -455,7 +449,7 @@ def test_table_rest_insert_rows(
 
     # Test that rows are populated after
     r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{table.name}/rows/',
     )
 
     assert r.status_code == 200
@@ -470,16 +464,16 @@ def test_table_rest_insert_rows(
 @pytest.mark.django_db
 def test_table_rest_insert_rows_forbidden(
     table_factory: TableFactory,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
 ):
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
-    table: Table = table_factory(workspace=unowned_workspace)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    table: Table = table_factory(workspace=workspace)
     table_rows = generate_arango_documents(5)
 
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -489,13 +483,13 @@ def test_table_rest_insert_rows_forbidden(
 
 @pytest.mark.django_db
 def test_table_rest_insert_rows_no_access(
-    table_factory: TableFactory, unowned_workspace: Workspace, authenticated_api_client: APIClient
+    table_factory: TableFactory, workspace: Workspace, authenticated_api_client: APIClient
 ):
-    table: Table = table_factory(workspace=unowned_workspace)
+    table: Table = table_factory(workspace=workspace)
     table_rows = generate_arango_documents(5)
 
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -507,12 +501,12 @@ def test_table_rest_insert_rows_no_access(
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_update_rows(
     populated_node_table: Table,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
+    workspace.set_user_permission(user, permission)
     # Assert table contents beforehand
     original_table_rows = list(populated_node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
@@ -520,7 +514,7 @@ def test_table_rest_update_rows(
 
     # Assert row update succeeded
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
         new_table_rows,
         format='json',
     )
@@ -534,7 +528,7 @@ def test_table_rest_update_rows(
 
     # Assert only existing rows were updated, and no new ones were added
     r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
     )
 
     r_json = r.json()
@@ -547,14 +541,14 @@ def test_table_rest_update_rows(
 
 @pytest.mark.django_db
 def test_table_rest_update_rows_no_access(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, authenticated_api_client: APIClient
 ):
-    node_table = populated_table(unowned_workspace, False)
+    node_table = populated_table(workspace, False)
     original_table_rows = list(node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
 
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         new_table_rows,
         format='json',
     )
@@ -563,15 +557,15 @@ def test_table_rest_update_rows_no_access(
 
 @pytest.mark.django_db
 def test_table_rest_update_rows_forbidden(
-    unowned_workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
-    node_table = populated_table(unowned_workspace, False)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    node_table = populated_table(workspace, False)
     original_table_rows = list(node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
 
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         new_table_rows,
         format='json',
     )
@@ -582,12 +576,12 @@ def test_table_rest_update_rows_forbidden(
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_upsert_rows(
     populated_node_table: Table,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
-    unowned_workspace.set_user_permission(user, permission)
+    workspace.set_user_permission(user, permission)
     # Create row lists
     original_table_rows = list(populated_node_table.get_rows())
     new_table_rows = generate_arango_documents(3)
@@ -602,7 +596,7 @@ def test_table_rest_upsert_rows(
 
     # Test combined row insert/update
     r = authenticated_api_client.put(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
         upsert_payload,
         format='json',
     )
@@ -615,7 +609,7 @@ def test_table_rest_upsert_rows(
 
     # Test row population after
     r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
     )
 
     r_json = r.json()
@@ -629,15 +623,15 @@ def test_table_rest_upsert_rows(
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_delete_rows(
     populated_node_table: Table,
-    unowned_workspace: Workspace,
+    workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: AT_LEAST_WRITER,
 ):
-    unowned_workspace.set_user_permission(user, permission)
+    workspace.set_user_permission(user, permission)
     table_rows = list(populated_node_table.get_rows())
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -649,7 +643,7 @@ def test_table_rest_delete_rows(
     }
 
     r = authenticated_api_client.get(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{populated_node_table.name}/rows/'
+        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/'
     )
 
     assert r.status_code == 200
@@ -663,14 +657,14 @@ def test_table_rest_delete_rows(
 
 @pytest.mark.django_db
 def test_table_rest_delete_rows_forbidden(
-    unowned_workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
     """Test deleting rows with insufficient workspace permission."""
-    unowned_workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
-    node_table = populated_table(unowned_workspace, False)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -679,13 +673,13 @@ def test_table_rest_delete_rows_forbidden(
 
 @pytest.mark.django_db
 def test_table_rest_delete_rows_no_access(
-    unowned_workspace: Workspace, authenticated_api_client: APIClient
+    workspace: Workspace, authenticated_api_client: APIClient
 ):
     """Test deleting rows with no workspace permission."""
-    node_table = populated_table(unowned_workspace, False)
+    node_table = populated_table(workspace, False)
     table_rows = list(node_table.get_rows())
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{unowned_workspace.name}/tables/{node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         table_rows,
         format='json',
     )
