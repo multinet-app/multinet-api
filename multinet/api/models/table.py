@@ -36,6 +36,7 @@ class Table(TimeStampedModel):
     name = models.CharField(max_length=300)
     edge = models.BooleanField(default=False)
     workspace = models.ForeignKey(Workspace, related_name='tables', on_delete=models.CASCADE)
+    metadata = models.JSONField(null=True)
 
     class Meta:
         unique_together = ('workspace', 'name')

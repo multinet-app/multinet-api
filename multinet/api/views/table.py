@@ -148,3 +148,39 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: TableReturnSerializer(show_metadata=True)})
+    @action(detail=True, url_path='metadata')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def get_metadata(self, request, parent_lookup_workspace__name: str, name: str):
+        """Get the arbitrary JSON metadata for a table."""
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        return Response(
+            TableReturnSerializer(table, show_metadata=True).data, status=status.HTTP_200_OK
+        )
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            title='metadata',
+            description='arbitrary JSON to be stored as metadata on a table',
+            type=openapi.TYPE_OBJECT,
+            properties={},
+        ),
+        responses={200: TableReturnSerializer(show_metadata=True)},
+    )
+    @get_metadata.mapping.put
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def put_metadata(self, request, parent_lookup_workspace__name: str, name: str):
+        """Replace JSON metadata for a table."""
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        new_metadata = request.data
+        table.metadata = new_metadata
+        table.save()
+
+        return Response(
+            TableReturnSerializer(table, show_metadata=True).data, status=status.HTTP_200_OK
+        )

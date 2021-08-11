@@ -92,13 +92,40 @@ class TableSerializer(TableCreateSerializer):
             'created',
             'modified',
             'workspace',
+            'metadata',
         ]
         read_only_fields = ['created']
 
 
 # Used for serializing Tables as responses
 class TableReturnSerializer(TableSerializer):
+    def __init__(self, *args, **kwargs):
+
+        if 'show_metadata' not in kwargs.keys():
+            super().__init__(*args, **kwargs)
+            self.fields.pop('metadata')
+        else:
+            show_metadata = kwargs.pop('show_metadata')
+            super().__init__(*args, **kwargs)
+            if not show_metadata:
+                self.fields.pop('show_metadata')
+
     workspace = WorkspaceSerializer()
+
+
+class ColumnTypeField(serializers.Field):
+    """Column types are serialized to their value"""
+
+    def to_representation(self, value):
+        return value.value
+
+    def to_internal_value(self, data):
+        return ColumnTypeEnum(data)
+
+
+class ColumnTypeSerializer(serializers.Serializer):
+    key: serializers.CharField()
+    type: ColumnTypeField()
 
 
 class NetworkCreateSerializer(serializers.ModelSerializer):
