@@ -49,16 +49,6 @@ def public_workspace(workspace: Workspace, user_factory: UserFactory) -> Workspa
     return workspace
 
 
-@pytest.fixture
-def populated_node_table(workspace: Workspace) -> Table:
-    table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=workspace)
-
-    nodes = generate_arango_documents(5)
-    table.put_rows(nodes)
-
-    return table
-
-
 def populated_table(workspace: Workspace, edge: bool) -> Table:
     if not edge:
         # create a node table

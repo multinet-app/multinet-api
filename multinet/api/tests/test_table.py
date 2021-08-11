@@ -328,15 +328,15 @@ def test_table_rest_retrieve_rows(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_rows_filter_invalid(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
 ):
     """Test that the use of an invalid filter param returns the expected error."""
     workspace.set_owner(user)
+    node_table = populated_table(workspace, False)
     r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         {'filter': 'foobar'},  # Should be a JSON string, not 'foobar'
     )
 
@@ -346,13 +346,13 @@ def test_table_rest_retrieve_rows_filter_invalid(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_rows_filter_one(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
 ):
     workspace.set_owner(user)
-    table_rows: List[Dict] = list(populated_node_table.get_rows())
+    node_table = populated_table(workspace, False)
+    table_rows: List[Dict] = list(node_table.get_rows())
     filter_doc = dict(table_rows[0])
     filter_doc.pop('_key')
     filter_doc.pop('_id')
@@ -360,7 +360,7 @@ def test_table_rest_retrieve_rows_filter_one(
 
     assert_limit_offset_results(
         authenticated_api_client,
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         result=[table_rows[0]],
         params={'filter': json.dumps(filter_doc)},
     )
@@ -368,23 +368,23 @@ def test_table_rest_retrieve_rows_filter_one(
 
 @pytest.mark.django_db
 def test_table_rest_retrieve_rows_filter_many(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
 ):
     workspace.set_owner(user)
+    node_table = populated_table(workspace, False)
     # Create extra documents and insert common field
     docs = generate_arango_documents(5)
     for doc in docs:
         doc['extra_field'] = 'value'
-    populated_node_table.put_rows(docs)
-    docs = [doc for doc in populated_node_table.get_rows() if 'extra_field' in doc]
+    node_table.put_rows(docs)
+    docs = [doc for doc in node_table.get_rows() if 'extra_field' in doc]
 
     filter_dict = {'extra_field': 'value'}
     assert_limit_offset_results(
         authenticated_api_client,
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         result=docs,
         params={'filter': json.dumps(filter_dict)},
     )
@@ -500,21 +500,21 @@ def test_table_rest_insert_rows_no_access(
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_update_rows(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
     workspace.set_user_permission(user, permission)
+    node_table = populated_table(workspace, False)
     # Assert table contents beforehand
-    original_table_rows = list(populated_node_table.get_rows())
+    original_table_rows = list(node_table.get_rows())
     new_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows]
     inserted_new_table_rows = list(map(dict_to_fuzzy_arango_doc, new_table_rows))
 
     # Assert row update succeeded
     r = authenticated_api_client.put(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         new_table_rows,
         format='json',
     )
@@ -528,7 +528,7 @@ def test_table_rest_update_rows(
 
     # Assert only existing rows were updated, and no new ones were added
     r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
     )
 
     r_json = r.json()
@@ -575,15 +575,15 @@ def test_table_rest_update_rows_forbidden(
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_upsert_rows(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
 ):
     workspace.set_user_permission(user, permission)
+    node_table = populated_table(workspace, False)
     # Create row lists
-    original_table_rows = list(populated_node_table.get_rows())
+    original_table_rows = list(node_table.get_rows())
     new_table_rows = generate_arango_documents(3)
     partially_updated_table_rows = [{**d, 'extra': 'field'} for d in original_table_rows[:2]]
     upsert_payload = [*partially_updated_table_rows, *new_table_rows]
@@ -596,7 +596,7 @@ def test_table_rest_upsert_rows(
 
     # Test combined row insert/update
     r = authenticated_api_client.put(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         upsert_payload,
         format='json',
     )
@@ -609,7 +609,7 @@ def test_table_rest_upsert_rows(
 
     # Test row population after
     r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
     )
 
     r_json = r.json()
@@ -622,16 +622,16 @@ def test_table_rest_upsert_rows(
 @pytest.mark.django_db
 @pytest.mark.parametrize('permission', AT_LEAST_WRITER)
 def test_table_rest_delete_rows(
-    populated_node_table: Table,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     permission: AT_LEAST_WRITER,
 ):
     workspace.set_user_permission(user, permission)
-    table_rows = list(populated_node_table.get_rows())
+    node_table = populated_table(workspace, False)
+    table_rows = list(node_table.get_rows())
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/',
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
         table_rows,
         format='json',
     )
@@ -643,7 +643,7 @@ def test_table_rest_delete_rows(
     }
 
     r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/tables/{populated_node_table.name}/rows/'
+        f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/'
     )
 
     assert r.status_code == 200
