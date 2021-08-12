@@ -144,7 +144,7 @@ def test_workspace_rest_delete_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    workspace.set_readers([user])
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     response = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
     assert response.status_code == 403
 
@@ -157,12 +157,9 @@ def test_workspace_rest_delete_forbidden(
 def test_workspace_rest_delete_no_access(
     private_workspace_factory: PrivateWorkspaceFactory,
     authenticated_api_client: APIClient,
-    user_factory: UserFactory,
 ):
     # Create workspace this way, so the authenticated user has no access
     workspace: Workspace = private_workspace_factory()
-    new_owner = user_factory()
-    workspace.set_owner(new_owner)
     r = authenticated_api_client.delete(f'/api/workspaces/{workspace.name}/')
 
     # Without any access, don't reveal that this workspace exists at all
@@ -194,14 +191,9 @@ def test_workspace_rest_get_permissions(
     assert r_json['public'] == workspace.public
     assert r_json['owner']['username'] == workspace.owner.username
 
-    for maintainer in r_json['maintainers']:
-        assert maintainer['username'] in maintainer_names
-
-    for writer in r_json['writers']:
-        assert writer['username'] in writer_names
-
-    for reader in r_json['readers']:
-        assert reader['username'] in reader_names
+    assert all(maintainer['username'] in maintainer_names for maintainer in r_json['maintainers'])
+    assert all(writer['username'] in writer_names for writer in r_json['writers'])
+    assert all(reader['username'] in reader_names for reader in r_json['readers'])
 
 
 @pytest.mark.django_db
@@ -224,14 +216,9 @@ def test_workspace_rest_get_permissions_owner(
     assert r_json['public'] == workspace.public
     assert r_json['owner']['username'] == workspace.owner.username
 
-    for maintainer in r_json['maintainers']:
-        assert maintainer['username'] in maintainer_names
-
-    for writer in r_json['writers']:
-        assert writer['username'] in writer_names
-
-    for reader in r_json['readers']:
-        assert reader['username'] in reader_names
+    assert all(maintainer['username'] in maintainer_names for maintainer in r_json['maintainers'])
+    assert all(writer['username'] in writer_names for writer in r_json['writers'])
+    assert all(reader['username'] in reader_names for reader in r_json['readers'])
 
 
 @pytest.mark.django_db
@@ -283,17 +270,12 @@ def test_workspace_rest_put_permissions_owner(
     assert workspace.public == request_data['public']
     assert workspace.owner == new_owner
 
-    maintainers_names = [maintainer['username'] for maintainer in new_maintainers]
-    for maintainer in workspace.maintainers:
-        assert maintainer.username in maintainers_names
-
-    writers_names = [writer['username'] for writer in new_writers]
-    for writer in workspace.writers:
-        assert writer.username in writers_names
-
     readers_names = [reader['username'] for reader in new_readers]
-    for reader in workspace.readers:
-        assert reader.username in readers_names
+    writers_names = [writer['username'] for writer in new_writers]
+    maintainers_names = [maintainer['username'] for maintainer in new_maintainers]
+    assert all([reader.username in readers_names for reader in workspace.readers])
+    assert all([writer.username in writers_names for writer in workspace.writers])
+    assert all([maintainer.username in maintainers_names for maintainer in workspace.maintainers])
 
 
 @pytest.mark.django_db
@@ -325,17 +307,12 @@ def test_workspace_rest_put_permissions_maintainer(
     # maintainers cannot set the owner of a workspace
     assert workspace.owner == old_owner
 
-    maintainers_names = [maintainer['username'] for maintainer in new_maintainers]
-    for maintainer in workspace.maintainers:
-        assert maintainer.username in maintainers_names
-
-    writers_names = [writer['username'] for writer in new_writers]
-    for writer in workspace.writers:
-        assert writer.username in writers_names
-
     readers_names = [reader['username'] for reader in new_readers]
-    for reader in workspace.readers:
-        assert reader.username in readers_names
+    writers_names = [writer['username'] for writer in new_writers]
+    maintainers_names = [maintainer['username'] for maintainer in new_maintainers]
+    assert all([reader.username in readers_names for reader in workspace.readers])
+    assert all([writer.username in writers_names for writer in workspace.writers])
+    assert all([maintainer.username in maintainers_names for maintainer in workspace.maintainers])
 
 
 @pytest.mark.django_db

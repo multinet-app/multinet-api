@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Type, Union
+from typing import List, Optional, Type
 from uuid import uuid4
 
 from arango.database import StandardDatabase
@@ -40,8 +40,7 @@ class WorkspaceRole(TimeStampedModel):
 class Workspace(TimeStampedModel):
     name = models.CharField(max_length=300, unique=True)
     public = models.BooleanField(default=False)
-    # What should happen to a workspace when the owner is deleted?
-    owner = models.ForeignKey(User, on_delete=models.PROTECT)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = models.CharField(
@@ -55,7 +54,7 @@ class Workspace(TimeStampedModel):
     def maintainers(self):
         return [
             role.user
-            for role in WorkspaceRole.objects.filter(
+            for role in WorkspaceRole.objects.select_related('user').filter(
                 workspace=self.pk, role=WorkspaceRoleChoice.MAINTAINER
             )
         ]
@@ -64,7 +63,7 @@ class Workspace(TimeStampedModel):
     def writers(self):
         return [
             role.user
-            for role in WorkspaceRole.objects.filter(
+            for role in WorkspaceRole.objects.select_related('user').filter(
                 workspace=self.pk, role=WorkspaceRoleChoice.WRITER
             )
         ]
@@ -73,12 +72,12 @@ class Workspace(TimeStampedModel):
     def readers(self):
         return [
             role.user
-            for role in WorkspaceRole.objects.filter(
+            for role in WorkspaceRole.objects.select_related('user').filter(
                 workspace=self.pk, role=WorkspaceRoleChoice.READER
             )
         ]
 
-    def get_user_permission(self, user: User) -> Union[WorkspaceRole | None]:
+    def get_user_permission(self, user: User) -> Optional[WorkspaceRole]:
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
@@ -95,44 +94,42 @@ class Workspace(TimeStampedModel):
             current_role.role = permission
             current_role.save()
 
-    def set_permission(self, permission: WorkspaceRoleChoice, new_users: list):
-        current_roles = WorkspaceRole.objects.filter(workspace=self)
-
-        for role in current_roles:
-            user = role.user
-            current_permission = role.role
-            if user in new_users:
-                if role.role != permission:
-                    role.role = permission
-                    role.save()
-                new_users.remove(user)
-            elif current_permission == permission:
-                role.delete()
-
-        for user in new_users:
-            WorkspaceRole.objects.create(workspace=self, user=user, role=permission)
-
     def set_owner(self, new_owner):
         """
-        Set owner for this workspace.
+        Set owner for this workspace, replacing the current owner.
 
-        Removes current owner's owner permission as a side effect. This should be the only
-        way ownership for a workspace is set. Returns the tuple (old_owner, new_owner).
+        If the new owner has some other permission for the workspace, e.g.
+        writer, the corresponding WorkspaceRole object is deleted, as ownership
+        encompasses all other roles.
         """
+        # Delete existing WorkspaceRole for the new owner, if it exists
         WorkspaceRole.objects.filter(workspace=self.pk, user=new_owner).delete()
-        old_owner = self.owner
         self.owner = new_owner
         self.save()
-        return old_owner, new_owner
 
-    def set_maintainers(self, new_maintainers):
-        return self.set_permission(WorkspaceRoleChoice.MAINTAINER, new_maintainers)
+    def set_user_permissions_bulk(
+        self, readers: List[User], writers: List[User], maintainers: List[User]
+    ):
+        """Replace all existing permissions on this workspace."""
+        WorkspaceRole.objects.filter(workspace=self).delete()
 
-    def set_writers(self, new_writers):
-        return self.set_permission(WorkspaceRoleChoice.WRITER, new_writers)
+        new_reader_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.READER)
+            for user in readers
+        ]
+        new_writer_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.WRITER)
+            for user in writers
+        ]
+        new_maintainer_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.MAINTAINER)
+            for user in maintainers
+        ]
 
-    def set_readers(self, new_readers):
-        return self.set_permission(WorkspaceRoleChoice.READER, new_readers)
+        # Create all new WorkspaceRole objects in one go
+        WorkspaceRole.objects.bulk_create(
+            [*new_reader_roles, *new_writer_roles, *new_maintainer_roles]
+        )
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)

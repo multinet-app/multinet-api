@@ -8,11 +8,11 @@ from multinet.api.models.workspace import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UploadFactory
 from multinet.api.tests.fuzzy import TIMESTAMP_RE, workspace_re
 
-from .utils import ALL_ROLES
+from .utils import workspace_role_range
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_upload_rest_retrieve(
     workspace: Workspace,
     user: User,
@@ -107,7 +107,7 @@ def test_upload_rest_retrieve_private(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_upload_rest_list(
     workspace: Workspace,
     user: User,

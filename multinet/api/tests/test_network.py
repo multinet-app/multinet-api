@@ -15,11 +15,11 @@ from multinet.api.tests.utils import assert_limit_offset_results
 
 from .conftest import populated_network, populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
-from .utils import ALL_ROLES, AT_LEAST_WRITER
+from .utils import workspace_role_range
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_list(
     network_factory: NetworkFactory,
     workspace: Workspace,
@@ -85,7 +85,7 @@ def test_network_rest_list_private(
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     'permission',
-    AT_LEAST_WRITER,
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
 )
 def test_network_rest_create(
     workspace: Workspace,
@@ -163,7 +163,7 @@ def test_network_rest_create_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve(
     workspace: Workspace,
     user: User,
@@ -226,7 +226,7 @@ def test_network_rest_retrieve_no_access(workspace: Workspace, authenticated_api
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     'permission',
-    AT_LEAST_WRITER,
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
 )
 def test_network_rest_delete(
     workspace: Workspace,
@@ -320,7 +320,7 @@ def test_network_rest_delete_no_access(workspace: Workspace, authenticated_api_c
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve_nodes(
     workspace: Workspace,
     user: User,
@@ -365,7 +365,7 @@ def test_network_rest_retrieve_nodes_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve_edges(
     workspace: Workspace,
     user: User,

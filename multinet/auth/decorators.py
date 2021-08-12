@@ -23,7 +23,7 @@ def _get_workspace_and_user(*args, **kwargs):
     elif 'name' in kwargs:
         workspace_name = kwargs['name']
 
-    workspace = get_object_or_404(Workspace, name=workspace_name)
+    workspace = get_object_or_404(Workspace.objects.select_related('owner'), name=workspace_name)
     user = args[1].user
 
     return workspace, user
@@ -44,20 +44,21 @@ def require_workspace_permission(minimum_permission: WorkspaceRoleChoice) -> Any
         def wrapper(*args, **kwargs) -> Any:
             workspace, user = _get_workspace_and_user(*args, **kwargs)
             user_permission: WorkspaceRole = workspace.get_user_permission(user)
+            allow_public = workspace.public and minimum_permission == WorkspaceRoleChoice.READER
+            has_minimum_permission = (
+                user_permission is not None and user_permission.role >= minimum_permission
+            )
 
-            if (
-                workspace.public and minimum_permission == WorkspaceRoleChoice.READER
-            ) or workspace.owner == user:
+            if allow_public or workspace.owner == user or has_minimum_permission:
                 return func(*args, **kwargs)
 
-            if user_permission is None:
-                if workspace.public:
-                    return HttpResponseForbidden()
-                return HttpResponseNotFound()
+            if workspace.public:
+                return HttpResponseForbidden()
 
-            if user_permission.role >= minimum_permission:
-                return func(*args, **kwargs)
-            return HttpResponseForbidden()
+            # Private workspace
+            if user_permission is not None:
+                return HttpResponseForbidden()
+            return HttpResponseNotFound()
 
         return wrapper
 

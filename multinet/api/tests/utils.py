@@ -6,20 +6,20 @@ from rest_framework.test import APIClient
 from multinet.api.models import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UserFactory
 
-ALL_ROLES = [choice for choice in WorkspaceRoleChoice]
-AT_LEAST_WRITER = [
-    WorkspaceRoleChoice.WRITER,
-    WorkspaceRoleChoice.MAINTAINER,
-]
+
+def workspace_role_range(
+    min_role=WorkspaceRoleChoice.READER, max_role=WorkspaceRoleChoice.MAINTAINER
+):
+    return [choice for choice in WorkspaceRoleChoice if min_role <= choice <= max_role]
 
 
-def create_users_with_permissions(user_factory: UserFactory, workspace: Workspace, _num=3):
+def create_users_with_permissions(user_factory: UserFactory, workspace: Workspace, num_users=3):
     for permission in [
         WorkspaceRoleChoice.READER,
         WorkspaceRoleChoice.WRITER,
         WorkspaceRoleChoice.MAINTAINER,
     ]:
-        user_list: List[User] = [user_factory() for _ in range(_num)]
+        user_list: List[User] = [user_factory() for _ in range(num_users)]
         for user in user_list:
             workspace.set_user_permission(user, permission)
 

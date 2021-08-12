@@ -24,7 +24,7 @@ from .common import MultinetPagination
 
 
 class WorkspaceViewSet(ReadOnlyModelViewSet):
-    queryset = Workspace.objects.all()
+    queryset = Workspace.objects.select_related('owner').all()
     lookup_field = 'name'
 
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -124,13 +124,11 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.save()
 
         new_readers = self.build_user_list(validated_data['readers'])
-        workspace.set_readers(new_readers)
-
         new_writers = self.build_user_list(validated_data['writers'])
-        workspace.set_writers(new_writers)
-
         new_maintainers = self.build_user_list(validated_data['maintainers'])
-        workspace.set_maintainers(new_maintainers)
+        workspace.set_user_permissions_bulk(
+            readers=new_readers, writers=new_writers, maintainers=new_maintainers
+        )
 
         if workspace.owner == request.user:
             new_owner_name = validated_data['owner']['username']

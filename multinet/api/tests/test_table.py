@@ -11,16 +11,11 @@ from multinet.api.tests.factories import TableFactory
 
 from .conftest import populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE, arango_doc_to_fuzzy_rev, dict_to_fuzzy_arango_doc
-from .utils import (
-    ALL_ROLES,
-    AT_LEAST_WRITER,
-    assert_limit_offset_results,
-    generate_arango_documents,
-)
+from .utils import assert_limit_offset_results, generate_arango_documents, workspace_role_range
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_table_rest_list(
     table_factory: TableFactory,
     workspace: Workspace,
@@ -81,7 +76,7 @@ def test_table_rest_list_private(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('edge', [True, False])
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_create(
     workspace: Workspace,
     user: User,
@@ -156,7 +151,7 @@ def test_table_rest_create_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_table_rest_retrieve(
     workspace: Workspace,
     table_factory: TableFactory,
@@ -221,7 +216,7 @@ def test_table_rest_retrieve_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_delete(
     table_factory: TableFactory,
     workspace: Workspace,
@@ -309,7 +304,7 @@ def test_table_rest_delete_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', ALL_ROLES)
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_table_rest_retrieve_rows(
     workspace: Workspace,
     user: User,
@@ -420,7 +415,7 @@ def test_table_rest_retrieve_rows_private(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_insert_rows(
     table_factory: TableFactory,
     workspace: Workspace,
@@ -498,7 +493,7 @@ def test_table_rest_insert_rows_no_access(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_update_rows(
     workspace: Workspace,
     user: User,
@@ -573,7 +568,7 @@ def test_table_rest_update_rows_forbidden(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_upsert_rows(
     workspace: Workspace,
     user: User,
@@ -620,12 +615,12 @@ def test_table_rest_upsert_rows(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('permission', AT_LEAST_WRITER)
+@pytest.mark.parametrize('permission', workspace_role_range(min_role=WorkspaceRoleChoice.WRITER))
 def test_table_rest_delete_rows(
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
-    permission: AT_LEAST_WRITER,
+    permission: workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
 ):
     workspace.set_user_permission(user, permission)
     node_table = populated_table(workspace, False)

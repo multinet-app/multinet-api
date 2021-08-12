@@ -24,7 +24,6 @@ data_dir = pathlib.Path(__file__).parent / 'data'
 
 @pytest.fixture
 def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3ff_client) -> Dict:
-
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
 
     data_file = data_dir / 'airports.csv'
@@ -79,7 +78,7 @@ def test_create_upload_model_csv(workspace: Workspace, user: User, airports_csv)
 def test_create_upload_model_invalid_columns(
     workspace: Workspace, user: User, authenticated_api_client
 ):
-    workspace.set_owner(user)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
@@ -175,7 +174,6 @@ def test_upload_valid_csv_task_response(
     workspace: Workspace, user: User, authenticated_api_client, airports_csv
 ):
     """Test just the response of the model creation, not the task itself."""
-    workspace.set_owner(user)
     # Get upload info
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r = airports_csv['response']
