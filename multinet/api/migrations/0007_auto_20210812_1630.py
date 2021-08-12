@@ -21,22 +21,56 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='workspace',
             name='owner',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='auth.user'),
+            field=models.ForeignKey(
+                default=1, on_delete=django.db.models.deletion.CASCADE, to='auth.user'
+            ),
             preserve_default=False,
         ),
         migrations.CreateModel(
             name='WorkspaceRole',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', django_extensions.db.fields.CreationDateTimeField(auto_now_add=True, verbose_name='created')),
-                ('modified', django_extensions.db.fields.ModificationDateTimeField(auto_now=True, verbose_name='modified')),
-                ('role', models.PositiveSmallIntegerField(choices=[(1, 'Reader'), (2, 'Writer'), (3, 'Maintainer')])),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.workspace')),
+                (
+                    'id',
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
+                (
+                    'created',
+                    django_extensions.db.fields.CreationDateTimeField(
+                        auto_now_add=True, verbose_name='created'
+                    ),
+                ),
+                (
+                    'modified',
+                    django_extensions.db.fields.ModificationDateTimeField(
+                        auto_now=True, verbose_name='modified'
+                    ),
+                ),
+                (
+                    'role',
+                    models.PositiveSmallIntegerField(
+                        choices=[(1, 'Reader'), (2, 'Writer'), (3, 'Maintainer')]
+                    ),
+                ),
+                (
+                    'user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
+                (
+                    'workspace',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to='api.workspace'
+                    ),
+                ),
             ],
         ),
         migrations.AddConstraint(
             model_name='workspacerole',
-            constraint=models.UniqueConstraint(fields=('workspace', 'user'), name='unique_workspace_permission'),
+            constraint=models.UniqueConstraint(
+                fields=('workspace', 'user'), name='unique_workspace_permission'
+            ),
         ),
     ]
