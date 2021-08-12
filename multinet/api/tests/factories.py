@@ -21,6 +21,7 @@ class PrivateWorkspaceFactory(factory.django.DjangoModelFactory):
         model = Workspace
 
     name = factory.fuzzy.FuzzyText()
+    owner = factory.LazyAttribute(lambda _: UserFactory())
 
 
 class PublicWorkspaceFactory(factory.django.DjangoModelFactory):
@@ -28,6 +29,7 @@ class PublicWorkspaceFactory(factory.django.DjangoModelFactory):
         model = Workspace
 
     name = factory.fuzzy.FuzzyText()
+    owner = factory.LazyAttribute(lambda _: UserFactory())
     public = True
 
 

@@ -42,20 +42,11 @@ def s3ff_client(authenticated_api_client):
 
 
 @pytest.fixture
-def public_workspace(workspace: Workspace) -> Workspace:
+def public_workspace(workspace: Workspace, user_factory: UserFactory) -> Workspace:
     workspace.public = True
+    workspace.owner = user_factory()  # don't use set_owner to prevent extra DB call
     workspace.save()
     return workspace
-
-
-@pytest.fixture
-def populated_node_table(workspace: Workspace) -> Table:
-    table: Table = Table.objects.create(name=Faker().pystr(), edge=False, workspace=workspace)
-
-    nodes = generate_arango_documents(5)
-    table.put_rows(nodes)
-
-    return table
 
 
 def populated_table(workspace: Workspace, edge: bool) -> Table:

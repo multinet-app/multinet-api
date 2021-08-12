@@ -4,12 +4,11 @@ from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
-from guardian.shortcuts import remove_perm
 import pytest
 from rest_framework.response import Response
 
 from multinet.api.models.upload import Upload
-from multinet.api.models.workspace import Workspace
+from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.tasks.process.utils import str_to_number
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
@@ -19,14 +18,13 @@ from multinet.api.tests.fuzzy import (
     workspace_re,
 )
 from multinet.api.tests.utils import get_field_value
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 
 
 @pytest.fixture
 def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3ff_client) -> Dict:
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
 
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
@@ -48,7 +46,7 @@ def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3f
         },
         format='json',
     )
-    remove_perm(WorkspacePermission.writer.name, user, workspace)
+    WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
     return {
         'response': r,
         'table_name': table_name,
@@ -59,7 +57,6 @@ def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3f
 @pytest.mark.django_db
 def test_create_upload_model_csv(workspace: Workspace, user: User, airports_csv):
     """Test just the response of the model creation, not the task itself."""
-    workspace.set_user_permission(user, WorkspacePermission.writer)
     r = airports_csv['response']
     data_file = airports_csv['data_file']
 
@@ -81,7 +78,7 @@ def test_create_upload_model_csv(workspace: Workspace, user: User, airports_csv)
 def test_create_upload_model_invalid_columns(
     workspace: Workspace, user: User, authenticated_api_client
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
@@ -104,7 +101,7 @@ def test_create_upload_model_csv_forbidden(
     workspace: Workspace, user: User, authenticated_api_client, s3ff_client
 ):
     """Test that a user with insufficient permissions is forbidden from a POST request."""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
@@ -157,7 +154,7 @@ def test_create_upload_model_csv_no_permission(
 def test_create_upload_model_invalid_field_value(
     workspace: Workspace, user: User, authenticated_api_client
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
@@ -178,7 +175,7 @@ def test_upload_valid_csv_task_response(
 ):
     """Test just the response of the model creation, not the task itself."""
     # Get upload info
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r = airports_csv['response']
     data_file = airports_csv['data_file']
     table_name = airports_csv['table_name']

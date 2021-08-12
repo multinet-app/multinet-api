@@ -5,8 +5,7 @@ from django.http import HttpResponseForbidden
 from django.http.response import HttpResponseNotFound
 from django.shortcuts import get_object_or_404
 
-from multinet.api.models import Workspace
-from multinet.api.utils.workspace_permissions import WorkspacePermission
+from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 
 
 def _get_workspace_and_user(*args, **kwargs):
@@ -24,13 +23,13 @@ def _get_workspace_and_user(*args, **kwargs):
     elif 'name' in kwargs:
         workspace_name = kwargs['name']
 
-    workspace = get_object_or_404(Workspace, name=workspace_name)
+    workspace = get_object_or_404(Workspace.objects.select_related('owner'), name=workspace_name)
     user = args[1].user
 
     return workspace, user
 
 
-def require_workspace_permission(minimum_permission: WorkspacePermission) -> Any:
+def require_workspace_permission(minimum_permission: WorkspaceRoleChoice) -> Any:
     """
     Check a request for proper workspace-level permissions.
 
@@ -44,19 +43,41 @@ def require_workspace_permission(minimum_permission: WorkspacePermission) -> Any
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             workspace, user = _get_workspace_and_user(*args, **kwargs)
-            user_perm = workspace.get_user_permission(user)
-            if workspace.public and minimum_permission == WorkspacePermission.reader:
+            user_permission: WorkspaceRole = workspace.get_user_permission(user)
+            allow_public = workspace.public and minimum_permission == WorkspaceRoleChoice.READER
+            has_minimum_permission = (
+                user_permission is not None and user_permission.role >= minimum_permission
+            )
+
+            if allow_public or workspace.owner == user or has_minimum_permission:
                 return func(*args, **kwargs)
 
-            if user_perm is None:
-                if workspace.public:
-                    return HttpResponseForbidden()
-                return HttpResponseNotFound()
+            if workspace.public:
+                return HttpResponseForbidden()
 
-            if user_perm.value >= minimum_permission.value:
-                return func(*args, **kwargs)
-            return HttpResponseForbidden()
+            # Private workspace
+            if user_permission is not None:
+                return HttpResponseForbidden()
+            return HttpResponseNotFound()
 
         return wrapper
 
     return require_permission_inner
+
+
+def require_workspace_ownership(func: Any) -> Any:
+    """Check a request for workspace ownership."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        workspace, user = _get_workspace_and_user(*args, **kwargs)
+
+        if workspace.owner == user:
+            return func(*args, **kwargs)
+
+        user_permission: WorkspaceRole = workspace.get_user_permission(user)
+        if user_permission is None:
+            return HttpResponseNotFound()
+        return HttpResponseForbidden()
+
+    return wrapper

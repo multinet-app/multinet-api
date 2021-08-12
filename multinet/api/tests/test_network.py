@@ -5,27 +5,29 @@ from faker import Faker
 import pytest
 from rest_framework.test import APIClient
 
-from multinet.api.models import Network, Table, Workspace
+from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import (
     NetworkFactory,
     PrivateWorkspaceFactory,
     PublicWorkspaceFactory,
 )
 from multinet.api.tests.utils import assert_limit_offset_results
-from multinet.api.utils.workspace_permissions import WorkspacePermission
 
 from .conftest import populated_network, populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
+from .utils import workspace_role_range
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_list(
     network_factory: NetworkFactory,
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     fake = Faker()
     network_names: List[str] = [
         network_factory(name=fake.pystr(), workspace=workspace).name for _ in range(3)
@@ -81,12 +83,17 @@ def test_network_rest_list_private(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission',
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
+)
 def test_network_rest_create(
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+    workspace.set_user_permission(user, permission)
 
     edge_table = populated_table(workspace, True)
     node_table_name = list(edge_table.find_referenced_node_tables().keys())[0]
@@ -129,8 +136,7 @@ def test_network_rest_create_forbidden(
     user: User,
     authenticated_api_client: APIClient,
 ):
-    """Assert that a workspace reader cannot create a network."""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     edge_table = populated_table(workspace, True)
     network_name = 'network'
     r = authenticated_api_client.post(
@@ -157,10 +163,14 @@ def test_network_rest_create_no_access(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve(
-    workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     network = populated_network(workspace)
 
     assert authenticated_api_client.get(
@@ -214,9 +224,39 @@ def test_network_rest_retrieve_no_access(workspace: Workspace, authenticated_api
 
 
 @pytest.mark.django_db
-def test_network_rest_delete(workspace: Workspace, user: User, authenticated_api_client: APIClient):
-    """Tests deleting a network on a workspace for which the user is a writer."""
-    workspace.set_user_permission(user, WorkspacePermission.writer)
+@pytest.mark.parametrize(
+    'permission',
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
+)
+def test_network_rest_delete(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+):
+    """Tests deleting a network on a workspace for which the user is at least a writer."""
+    workspace.set_user_permission(user, permission)
+    network = populated_network(workspace)
+
+    r = authenticated_api_client.delete(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
+    )
+
+    assert r.status_code == 204
+
+    # Assert relevant objects are deleted
+    assert not Network.objects.filter(name=workspace.name).exists()
+    assert not workspace.get_arango_db().has_graph(network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_delete_owned(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+):
+    """Tests deleting a network on a workspace for which the user is the owner."""
+    workspace.set_owner(user)
     network = populated_network(workspace)
 
     r = authenticated_api_client.delete(
@@ -252,7 +292,7 @@ def test_network_rest_delete_forbidden(
     authenticated_api_client: APIClient,
 ):
     """Tests deleting a network on a workspace without sufficient permissions."""
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     network: Table = network_factory(workspace=workspace)
     r = authenticated_api_client.delete(
         f'/api/workspaces/{workspace.name}/networks/{network.name}/'
@@ -280,10 +320,14 @@ def test_network_rest_delete_no_access(workspace: Workspace, authenticated_api_c
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve_nodes(
-    workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     network = populated_network(workspace)
     nodes = list(network.nodes())
 
@@ -321,10 +365,14 @@ def test_network_rest_retrieve_nodes_no_access(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve_edges(
-    workspace: Workspace, user: User, authenticated_api_client: APIClient
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace.set_user_permission(user, WorkspacePermission.reader)
+    workspace.set_user_permission(user, permission)
     network = populated_network(workspace)
     edges = list(network.edges())
 
