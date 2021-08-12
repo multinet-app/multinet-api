@@ -53,7 +53,7 @@ but allows developers to run Python code on their native system.
 4. Select `Public` for the Client Type field
 5. Select `Authorization Code` for the Authorization Grant Type field
 6. Delete everything in the Client Secret field, leaving it blank
-7. Enter "Multinet GUI" or something similar for the Name field
+7. Enter "Multinet GUI" for the Name field
 8. Copy the value in the Client ID field, but don't modify it
 9. In the bottom right, click Save
 
@@ -64,7 +64,7 @@ but allows developers to run Python code on their native system.
 4. Save the file
 5. Restart your local dev server
 
-After these steps, you should be able to login to the API from the client now.
+After these steps, you should be able to login to the API from the client.
 
 ## Remap Service Ports (optional)
 Attached services may be exposed to the host system via alternative ports. Developers who work
