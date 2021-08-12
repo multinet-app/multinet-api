@@ -45,6 +45,27 @@ but allows developers to run Python code on their native system.
    2. `celery --app multinet.celery worker --loglevel INFO --without-heartbeat`
 4. When finished, run `docker-compose stop`
 
+## Setup OAuth login
+### API
+1. Navigate to the http://localhost:8000/admin, logging in with your admin user if you're not already logged in
+2. Under the `DJANGO OAUTH TOOLKIT` section click the `Add` in the `Applications` row. This will bring you to the creation dialog for an (oauth) application.
+3. In the redirect uris field, enter `http://localhost:8080/`
+4. Select `Public` for the Client Type field
+5. Select `Authorization Code` for the Authorization Grant Type field
+6. Delete everything in the Client Secret field, leaving it blank
+7. Enter "Multinet GUI" or something similar for the Name field
+8. Copy the value in the Client ID field, but don't modify it
+9. In the bottom right, click Save
+
+### Client
+1. If you haven't already, copy the `.env.default` file to `.env`
+2. Ensure there's a line that reads `VUE_APP_OAUTH_API_ROOT=http://localhost:8000/oauth/`
+3. Ensure there's a line that reads `VUE_APP_OAUTH_CLIENT_ID=<the client id you copied above>`
+4. Save the file
+5. Restart your local dev server
+
+After these steps, you should be able to login to the API from the client now.
+
 ## Remap Service Ports (optional)
 Attached services may be exposed to the host system via alternative ports. Developers who work
 on multiple software projects concurrently may find this helpful to avoid port conflicts.
