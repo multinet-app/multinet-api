@@ -38,7 +38,7 @@ class NetworkFactory(factory.django.DjangoModelFactory):
         model = Network
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(PrivateWorkspaceFactory)
+    workspace = factory.LazyAttribute(lambda _: PrivateWorkspaceFactory())
 
 
 class EdgeTableFactory(factory.django.DjangoModelFactory):
@@ -46,7 +46,7 @@ class EdgeTableFactory(factory.django.DjangoModelFactory):
         model = Table
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(PrivateWorkspaceFactory)
+    workspace = factory.LazyAttribute(lambda _: PrivateWorkspaceFactory())
     edge = True
 
 
@@ -55,7 +55,7 @@ class NodeTableFactory(factory.django.DjangoModelFactory):
         model = Table
 
     name = factory.fuzzy.FuzzyText()
-    workspace = factory.SubFactory(PrivateWorkspaceFactory)
+    workspace = factory.LazyAttribute(lambda _: PrivateWorkspaceFactory())
 
 
 # Default table to node table
@@ -67,5 +67,5 @@ class UploadFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Upload
 
-    workspace = factory.SubFactory(PrivateWorkspaceFactory)
-    user = factory.SubFactory(UserFactory)
+    workspace = factory.LazyAttribute(lambda _: PrivateWorkspaceFactory())
+    user = factory.LazyAttribute(lambda _: UserFactory())
