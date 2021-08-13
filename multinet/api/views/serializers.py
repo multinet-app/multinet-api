@@ -113,21 +113,6 @@ class TableReturnSerializer(TableSerializer):
     workspace = WorkspaceSerializer()
 
 
-class ColumnTypeField(serializers.Field):
-    """Column types are serialized to their value"""
-
-    def to_representation(self, value):
-        return value.value
-
-    def to_internal_value(self, data):
-        return ColumnTypeEnum(data)
-
-
-class ColumnTypeSerializer(serializers.Serializer):
-    key: serializers.CharField()
-    type: ColumnTypeField()
-
-
 class NetworkCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Network
