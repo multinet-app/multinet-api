@@ -77,7 +77,7 @@ def test_workspace_rest_create(authenticated_api_client: APIClient):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "permission,is_owner,status_code,success",
+    'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 200, True),
@@ -132,7 +132,7 @@ def test_workspace_rest_retrieve_public(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "permission,is_owner,status_code,success",
+    'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 403, False),
@@ -185,7 +185,7 @@ def test_workspace_rest_delete_unauthorized(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "permission,is_owner,status_code,success",
+    'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 403, False),
@@ -231,7 +231,7 @@ def test_workspace_rest_get_permissions(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "permission,is_owner,status_code,success",
+    'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 403, False),

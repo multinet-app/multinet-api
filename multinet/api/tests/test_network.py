@@ -6,10 +6,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
-from multinet.api.tests.factories import (
-    NetworkFactory,
-    PublicWorkspaceFactory,
-)
+from multinet.api.tests.factories import NetworkFactory, PublicWorkspaceFactory
 from multinet.api.tests.utils import assert_limit_offset_results
 
 from .conftest import populated_network, populated_table
