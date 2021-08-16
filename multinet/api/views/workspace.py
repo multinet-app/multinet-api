@@ -98,9 +98,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @action(detail=True, url_path='permissions/me')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def get_current_user_workspace_permissions(self, request, name: str):
-        """
-        Get the workspace permission for the user of the request.
-        """
+        """Get the workspace permission for the user of the request."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         user = request.user
         role: WorkspaceRole = WorkspaceRole.objects.filter(workspace=workspace, user=user).first()
