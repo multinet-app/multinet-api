@@ -54,6 +54,8 @@ def test_upload_rest_retrieve(
             'status': upload.status,
             'workspace': workspace_re(workspace),
         }
+    else:
+        assert r.data == {'detail': 'Not found.'}
 
 
 @pytest.mark.django_db
@@ -116,6 +118,8 @@ def test_upload_rest_list(
         assert r_json['count'] == len(upload_ids)
         for upload in r_json['results']:
             assert upload['id'] in upload_ids
+    else:
+        assert r.data == {'detail': 'Not found.'}
 
 
 @pytest.mark.django_db
