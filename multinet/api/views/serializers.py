@@ -72,6 +72,12 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserPermissionSerializer(serializers.Serializer):
+    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
+    workspace = serializers.CharField()
+    permission = serializers.CharField()
+
+
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
     class Meta:

@@ -23,6 +23,14 @@ class WorkspaceRoleChoice(models.IntegerChoices):
     WRITER = 2
     MAINTAINER = 3
 
+    def get_client_name(self):
+        if self.value == 1:
+            return 'reader'
+        elif self.value == 2:
+            return 'writer'
+        elif self.value == 3:
+            return 'maintainer'
+
 
 class WorkspaceRole(TimeStampedModel):
     workspace = models.ForeignKey('api.Workspace', on_delete=models.CASCADE)
