@@ -7,12 +7,6 @@ from multinet.api.models import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UserFactory
 
 
-def workspace_role_range(
-    min_role=WorkspaceRoleChoice.READER, max_role=WorkspaceRoleChoice.MAINTAINER
-):
-    return [choice for choice in WorkspaceRoleChoice if min_role <= choice <= max_role]
-
-
 def create_users_with_permissions(user_factory: UserFactory, workspace: Workspace, num_users=3):
     for permission in [
         WorkspaceRoleChoice.READER,
