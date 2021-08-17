@@ -30,6 +30,12 @@ class WorkspaceCreateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created']
 
+class WorkspaceRenameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Workspace
+        fields = [
+            'name',
+        ]
 
 class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:

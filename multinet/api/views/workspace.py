@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace
-from multinet.api.views.serializers import WorkspaceCreateSerializer, WorkspaceSerializer
+from multinet.api.views.serializers import WorkspaceCreateSerializer, WorkspaceRenameSerializer, WorkspaceSerializer
 
 from .common import MultinetPagination
 
