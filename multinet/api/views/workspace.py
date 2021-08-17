@@ -105,7 +105,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         if workspace.owner == user:
             permission = 'owner'
         elif role is not None:
-            permission = role.role.get_client_name()
+            permission = WorkspaceRoleChoice(role.role).get_client_name()
         elif workspace.public:
             permission = WorkspaceRoleChoice.READER.get_client_name()
         else:
