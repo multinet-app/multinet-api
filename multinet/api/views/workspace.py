@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -173,3 +174,17 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             workspace.set_owner(new_owner)
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(manual_parameters=[openapi.Parameter('query', 'query', type='string')])
+    @action(detail=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def aql(self, request, name: str):
+        """Execute AQL in a workspace."""
+        query = request.query_params.get('query')
+        if query is None:
+            return Response(None)
+
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+
+        # FIX
+        return Response(None, status=status.HTTP_200_OK)

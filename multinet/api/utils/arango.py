@@ -23,8 +23,10 @@ def arango_client():
     return ArangoClient(hosts=settings.MULTINET_ARANGO_URL, http_client=NoTimeoutHttpClient())
 
 
-def db(name: str):
-    return arango_client().db(name, username='root', password=settings.MULTINET_ARANGO_PASSWORD)
+def db(name: str, username: Optional[str] = None, password: Optional[str] = None):
+    username = username or 'root'
+    password = password or settings.MULTINET_ARANGO_PASSWORD
+    return arango_client().db(name, username=username, password=password)
 
 
 @lru_cache()
@@ -57,6 +59,8 @@ class ArangoQuery:
         db: StandardDatabase,
         query_str: Optional[str] = None,
         bind_vars: Optional[Dict[str, str]] = None,
+        time_limit_secs: int = 30,
+        memory_limit_mb: int = 200,
     ) -> None:
         self.db = db
         self.query_str = query_str
