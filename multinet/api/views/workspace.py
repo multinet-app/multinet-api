@@ -77,7 +77,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         request_body=WorkspaceRenameSerializer(),
         responses={200: WorkspaceSerializer()},
     )
-    @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
+    @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
     def update(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         serializer = WorkspaceRenameSerializer(data=request.data)
