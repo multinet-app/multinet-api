@@ -49,6 +49,21 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         assign_perm('owner', request.user, workspace)
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        request_body=WorkspaceRenameSerializer(),
+        responses={200: WorkspaceSerializer()},
+    )
+    @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
+    def update(self, request, name):
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+        serializer = WorkspaceRenameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        workspace.name = serializer.validated_data['name']
+        workspace.save()
+
+        return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
+
     @method_decorator(permission_required_or_403('owner', (Workspace, 'name', 'name')))
     def destroy(self, request, name):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
