@@ -22,13 +22,13 @@ class RowModifyError:
 
 @dataclass
 class RowInsertionResponse:
-    inserted: List[Dict]
+    inserted: int
     errors: List[RowModifyError]
 
 
 @dataclass
 class RowDeletionResponse:
-    deleted: List[Dict]
+    deleted: int
     errors: List[RowModifyError]
 
 
@@ -58,32 +58,26 @@ class Table(TimeStampedModel):
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().insert_many(rows, overwrite=True, return_new=True)
+        res = self.get_arango_collection().insert_many(rows, overwrite=True)
+        errors = [
+            RowModifyError(index=i, message=doc.error_message)
+            for i, doc in enumerate(res)
+            if isinstance(doc, DocumentInsertError)
+        ]
 
-        inserted = []
-        errors = []
-
-        for i, doc in enumerate(res):
-            if isinstance(doc, DocumentInsertError):
-                errors.append(RowModifyError(index=i, message=doc.error_message))
-            else:
-                inserted.append(doc['new'])
-
+        inserted = len(rows) - len(errors)
         return RowInsertionResponse(inserted=inserted, errors=errors)
 
     def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().delete_many(rows, return_old=True)
+        res = self.get_arango_collection().delete_many(rows)
+        errors = [
+            RowModifyError(index=i, message=doc.error_message)
+            for i, doc in enumerate(res)
+            if isinstance(doc, DocumentDeleteError)
+        ]
 
-        deleted = []
-        errors = []
-
-        for i, doc in enumerate(res):
-            if isinstance(doc, DocumentDeleteError):
-                errors.append(RowModifyError(index=i, message=doc.error_message))
-            else:
-                deleted.append(doc['old'])
-
+        deleted = len(rows) - len(errors)
         return RowDeletionResponse(deleted=deleted, errors=errors)
 
     def find_referenced_node_tables(self) -> Optional[Dict[str, Set[str]]]:

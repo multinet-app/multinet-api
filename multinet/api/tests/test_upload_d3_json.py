@@ -7,8 +7,16 @@ import uuid
 from django.contrib.auth.models import User
 import pytest
 from rest_framework.response import Response
+from rest_framework.test import APIClient
 
-from multinet.api.models import Network, Table, Upload, Workspace
+from multinet.api.models import (
+    Network,
+    Table,
+    Upload,
+    Workspace,
+    WorkspaceRole,
+    WorkspaceRoleChoice,
+)
 from multinet.api.tasks.process.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
@@ -37,19 +45,23 @@ def miserables_json_field_value(s3ff_client) -> str:
 
 @pytest.fixture
 def miserables_json(
-    owned_workspace: Workspace, authenticated_api_client, miserables_json_field_value
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    miserables_json_field_value,
 ) -> Dict:
     # Model creation request
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{owned_workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
             'network_name': network_name,
         },
         format='json',
     )
-
+    WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
     return {
         'response': r,
         'network_name': network_name,
@@ -57,14 +69,14 @@ def miserables_json(
 
 
 @pytest.mark.django_db
-def test_create_upload_model(owned_workspace: Workspace, user: User, miserables_json):
+def test_create_upload_model(workspace: Workspace, user: User, miserables_json):
     """Test just the response of the model creation, not the task itself."""
     r = miserables_json['response']
 
     assert r.status_code == 200
     assert r.json() == {
         'id': INTEGER_ID_RE,
-        'workspace': workspace_re(owned_workspace),
+        'workspace': workspace_re(workspace),
         'blob': s3_file_field_re(miserables_json_file.name),
         'user': user.username,
         'data_type': Upload.DataType.D3_JSON,
@@ -77,14 +89,18 @@ def test_create_upload_model(owned_workspace: Workspace, user: User, miserables_
 
 @pytest.mark.django_db
 def test_create_upload_model_duplicate_names(
-    owned_workspace: Workspace, user: User, authenticated_api_client, miserables_json_field_value
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    miserables_json_field_value,
 ):
     """Test that attempting to create a network with names that are already taken, fails."""
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     network_name = f't{uuid.uuid4().hex}'
 
     def assert_response():
         r: Response = authenticated_api_client.post(
-            f'/api/workspaces/{owned_workspace.name}/uploads/d3_json/',
+            f'/api/workspaces/{workspace.name}/uploads/d3_json/',
             {
                 'field_value': miserables_json_field_value,
                 'network_name': network_name,
@@ -97,30 +113,29 @@ def test_create_upload_model_duplicate_names(
 
     # Try with just node table
     node_table: Table = Table.objects.create(
-        name=f'{network_name}_nodes', workspace=owned_workspace, edge=False
+        name=f'{network_name}_nodes', workspace=workspace, edge=False
     )
     assert_response()
 
     # Add edge table
     edge_table: Table = Table.objects.create(
-        name=f'{network_name}_edges', workspace=owned_workspace, edge=True
+        name=f'{network_name}_edges', workspace=workspace, edge=True
     )
     assert_response()
 
     # Add network
-    Network.create_with_edge_definition(
-        network_name, owned_workspace, edge_table.name, [node_table.name]
-    )
+    Network.create_with_edge_definition(network_name, workspace, edge_table.name, [node_table.name])
     assert_response()
 
 
 @pytest.mark.django_db
 def test_create_upload_model_invalid_field_value(
-    owned_workspace: Workspace, authenticated_api_client
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
 ):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{owned_workspace.name}/uploads/d3_json/',
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': 'field_value',
             'network_name': network_name,
@@ -133,11 +148,50 @@ def test_create_upload_model_invalid_field_value(
 
 
 @pytest.mark.django_db
+def test_create_upload_model_forbidden(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    miserables_json_field_value,
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    network_name = f't{uuid.uuid4().hex}'
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        {
+            'field_value': miserables_json_field_value,
+            'network_name': network_name,
+        },
+        format='json',
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_create_upload_model_no_permission(
+    workspace: Workspace,
+    authenticated_api_client: APIClient,
+    miserables_json_field_value,
+):
+    network_name = f't{uuid.uuid4().hex}'
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        {
+            'field_value': miserables_json_field_value,
+            'network_name': network_name,
+        },
+        format='json',
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.django_db
 def test_valid_d3_json_task_response(
-    owned_workspace: Workspace, authenticated_api_client, miserables_json
+    workspace: Workspace, user: User, authenticated_api_client: APIClient, miserables_json
 ):
     """Test just the response of the model creation, not the task itself."""
     # Get upload info
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r = miserables_json['response']
     network_name = miserables_json['network_name']
     node_table_name = f'{network_name}_nodes'
@@ -145,7 +199,7 @@ def test_valid_d3_json_task_response(
 
     # Since we're running with celery_task_always_eager=True, this job is finished
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/uploads/{r.json()["id"]}/'
+        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'
     )
 
     r_json = r.json()
@@ -156,13 +210,13 @@ def test_valid_d3_json_task_response(
     # Check that tables are created
     for table_name in (node_table_name, edge_table_name):
         r: Response = authenticated_api_client.get(
-            f'/api/workspaces/{owned_workspace.name}/tables/{table_name}/'
+            f'/api/workspaces/{workspace.name}/tables/{table_name}/'
         )
         assert r.status_code == 200
 
     # Check that network was created
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/networks/{network_name}/'
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/'
     )
     assert r.status_code == 200
 
@@ -183,7 +237,7 @@ def test_valid_d3_json_task_response(
 
     # Check that nodes were ingested correctly
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/networks/{network_name}/nodes/'
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/nodes/'
     )
 
     r_json = r.json()
@@ -196,7 +250,7 @@ def test_valid_d3_json_task_response(
 
     # Check that links were ingested correctly
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{owned_workspace.name}/networks/{network_name}/edges/'
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/edges/'
     )
 
     r_json = r.json()

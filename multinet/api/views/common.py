@@ -1,10 +1,14 @@
 from typing import Dict, List
 
 from arango.cursor import Cursor
+from django.http.response import Http404
+from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
+from rest_framework_extensions.mixins import NestedViewSetMixin
 
+from multinet.api.models import Workspace, WorkspaceRole
 from multinet.api.utils.arango import ArangoQuery
 
 
@@ -58,3 +62,42 @@ class ArangoPagination(LimitOffsetPagination):
         self.count = cur.statistics()['fullCount']
         self._set_post_query_params()
         return list(cur)
+
+
+class WorkspaceChildMixin(NestedViewSetMixin):
+    def get_queryset(self):
+        """
+        Get the queryset for workspace child enpoints.
+
+        Check that the requeting user has appropriate permissions for the associated workspace.
+        """
+        child_objects = super().get_queryset()
+
+        # prevent warning for schema generation incompatibility
+        if getattr(self, 'swagger_fake_view', False):
+            return child_objects.none()
+
+        parent_query_dict = self.get_parents_query_dict()
+        workspace = get_object_or_404(
+            Workspace.objects.select_related('owner'), name=parent_query_dict['workspace__name']
+        )
+
+        # No user or user permission required for public workspaces
+        if workspace.public:
+            return child_objects
+
+        # Private workspace
+        request_user = self.request.user
+        if not request_user.is_authenticated:  # anonymous user
+            raise Http404
+
+        workspace_role = WorkspaceRole.objects.filter(
+            workspace=workspace, user=request_user
+        ).first()
+
+        # If the user is at least a reader or the owner, grant access
+        if workspace_role is not None or workspace.owner == request_user:
+            return child_objects
+
+        # Read access denied
+        raise Http404

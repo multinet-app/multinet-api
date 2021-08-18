@@ -36,6 +36,7 @@ workspaces_routes.register(
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
+
 # OpenAPI generation
 schema_view = get_schema_view(
     openapi.Info(title='multinet', default_version='v1'),

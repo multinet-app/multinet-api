@@ -1,30 +1,43 @@
 from typing import List
 
+from django.contrib.auth.models import User
 from faker import Faker
 import pytest
 from rest_framework.test import APIClient
 
-from multinet.api.models import Network, Table, Workspace
-from multinet.api.tests.factories import NetworkFactory, WorkspaceFactory
+from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
+from multinet.api.tests.factories import (
+    NetworkFactory,
+    PrivateWorkspaceFactory,
+    PublicWorkspaceFactory,
+)
 from multinet.api.tests.utils import assert_limit_offset_results
 
+from .conftest import populated_network, populated_table
 from .fuzzy import INTEGER_ID_RE, TIMESTAMP_RE
+from .utils import workspace_role_range
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_list(
-    network_factory: NetworkFactory, owned_workspace: Workspace, authenticated_api_client: APIClient
+    network_factory: NetworkFactory,
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
+    workspace.set_user_permission(user, permission)
     fake = Faker()
     network_names: List[str] = [
-        network_factory(name=fake.pystr(), workspace=owned_workspace).name for _ in range(3)
+        network_factory(name=fake.pystr(), workspace=workspace).name for _ in range(3)
     ]
 
-    r = authenticated_api_client.get(f'/api/workspaces/{owned_workspace.name}/networks/')
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/networks/')
     r_json = r.json()
 
     # Test that we get the expected results from both django and arango
-    arango_db = owned_workspace.get_arango_db()
+    arango_db = workspace.get_arango_db()
     assert r_json['count'] == len(network_names)
     for network in r_json['results']:
         assert network['name'] in network_names
@@ -32,53 +45,72 @@ def test_network_rest_list(
 
 
 @pytest.mark.django_db
-def test_network_rest_create(
-    owned_workspace: Workspace,
-    populated_edge_table: Table,
-    populated_node_table: Table,
+def test_network_rest_list_public(
+    network_factory: NetworkFactory,
+    public_workspace_factory: PublicWorkspaceFactory,
+    api_client: APIClient,
+):
+    """Test that an authenticated user can see networks on a public workspace."""
+    fake = Faker()
+    public_workspace: Workspace = public_workspace_factory()
+    network_names: List[str] = [
+        network_factory(name=fake.pystr(), workspace=public_workspace).name for _ in range(3)
+    ]
+    r = api_client.get(f'/api/workspaces/{public_workspace.name}/networks/')
+    r_json = r.json()
+
+    arango_db = public_workspace.get_arango_db()
+    assert r_json['count'] == len(network_names)
+    for network in r_json['results']:
+        assert network['name'] in network_names
+        assert arango_db.has_graph(network['name'])
+
+
+@pytest.mark.django_db
+def test_network_rest_list_private(
+    network_factory: NetworkFactory,
+    private_workspace_factory: PrivateWorkspaceFactory,
     authenticated_api_client: APIClient,
 ):
+    """Test that an authenticated user can not see networks on a private workspace."""
+    fake = Faker()
+    private_workspace: Workspace = private_workspace_factory()
+    for _ in range(3):
+        network_factory(name=fake.pystr(), workspace=private_workspace)
+
+    r = authenticated_api_client.get(f'/api/workspaces/{private_workspace.name}/networks/')
+    assert r.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission',
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
+)
+def test_network_rest_create(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+):
+    workspace.set_user_permission(user, permission)
+
+    edge_table = populated_table(workspace, True)
+    node_table_name = list(edge_table.find_referenced_node_tables().keys())[0]
+    node_table = Table.objects.get(name=node_table_name)
     network_name = 'network'
+
     r = authenticated_api_client.post(
-        f'/api/workspaces/{owned_workspace.name}/networks/',
-        {'name': network_name, 'edge_table': populated_edge_table.name},
+        f'/api/workspaces/{workspace.name}/networks/',
+        {'name': network_name, 'edge_table': edge_table.name},
         format='json',
     )
 
     assert r.json() == {
         'name': network_name,
-        'node_count': len(populated_node_table.get_rows()),
-        'edge_count': len(populated_edge_table.get_rows()),
+        'node_count': len(node_table.get_rows()),
+        'edge_count': len(edge_table.get_rows()),
         'id': INTEGER_ID_RE,
-        'created': TIMESTAMP_RE,
-        'modified': TIMESTAMP_RE,
-        'workspace': {
-            'id': owned_workspace.pk,
-            'name': owned_workspace.name,
-            'created': TIMESTAMP_RE,
-            'modified': TIMESTAMP_RE,
-            'arango_db_name': owned_workspace.arango_db_name,
-        },
-    }
-
-    # Django will raise an exception if this fails, implicitly validating that the object exists
-    network: Network = Network.objects.get(name=network_name)
-
-    # Assert that object was created in arango
-    assert owned_workspace.get_arango_db().has_graph(network.name)
-
-
-@pytest.mark.django_db
-def test_network_rest_retrieve(populated_network: Network, authenticated_api_client: APIClient):
-    workspace = populated_network.workspace
-
-    assert authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/'
-    ).data == {
-        'id': populated_network.pk,
-        'name': populated_network.name,
-        'node_count': populated_network.node_count,
-        'edge_count': populated_network.edge_count,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
         'workspace': {
@@ -87,47 +119,180 @@ def test_network_rest_retrieve(populated_network: Network, authenticated_api_cli
             'created': TIMESTAMP_RE,
             'modified': TIMESTAMP_RE,
             'arango_db_name': workspace.arango_db_name,
+            'public': False,
+        },
+    }
+
+    # Django will raise an exception if this fails, implicitly validating that the object exists
+    network: Network = Network.objects.get(name=network_name)
+
+    # Assert that object was created in arango
+    assert workspace.get_arango_db().has_graph(network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_create_forbidden(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    edge_table = populated_table(workspace, True)
+    network_name = 'network'
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/networks/',
+        {'name': network_name, 'edge_table': edge_table.name},
+        format='json',
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_network_rest_create_no_access(
+    workspace: Workspace,
+    authenticated_api_client: APIClient,
+):
+    network_name = 'network'
+    edge_table = populated_table(workspace, True)
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/networks/',
+        {'name': network_name, 'edge_table': edge_table.name},
+        format='json',
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
+def test_network_rest_retrieve(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+):
+    workspace.set_user_permission(user, permission)
+    network = populated_network(workspace)
+
+    assert authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
+    ).data == {
+        'id': network.pk,
+        'name': network.name,
+        'node_count': network.node_count,
+        'edge_count': network.edge_count,
+        'created': TIMESTAMP_RE,
+        'modified': TIMESTAMP_RE,
+        'workspace': {
+            'id': workspace.pk,
+            'name': workspace.name,
+            'created': TIMESTAMP_RE,
+            'modified': TIMESTAMP_RE,
+            'arango_db_name': workspace.arango_db_name,
+            'public': False,
         },
     }
 
 
 @pytest.mark.django_db
-def test_network_rest_delete(populated_network: Network, authenticated_api_client: APIClient):
-    workspace: Workspace = populated_network.workspace
+def test_network_rest_retrieve_public(public_workspace: Workspace, api_client: APIClient):
+    network = populated_network(public_workspace)
+    assert api_client.get(
+        f'/api/workspaces/{public_workspace.name}/networks/{network.name}/'
+    ).data == {
+        'id': network.pk,
+        'name': network.name,
+        'node_count': network.node_count,
+        'edge_count': network.edge_count,
+        'created': TIMESTAMP_RE,
+        'modified': TIMESTAMP_RE,
+        'workspace': {
+            'id': public_workspace.pk,
+            'name': public_workspace.name,
+            'created': TIMESTAMP_RE,
+            'modified': TIMESTAMP_RE,
+            'arango_db_name': public_workspace.arango_db_name,
+            'public': True,
+        },
+    }
+
+
+@pytest.mark.django_db
+def test_network_rest_retrieve_no_access(workspace: Workspace, authenticated_api_client: APIClient):
+    network = populated_network(workspace)
+    r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/networks/{network.name}/')
+    assert r.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission',
+    workspace_role_range(min_role=WorkspaceRoleChoice.WRITER),
+)
+def test_network_rest_delete(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+):
+    """Tests deleting a network on a workspace for which the user is at least a writer."""
+    workspace.set_user_permission(user, permission)
+    network = populated_network(workspace)
 
     r = authenticated_api_client.delete(
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/'
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
     )
 
     assert r.status_code == 204
 
     # Assert relevant objects are deleted
     assert not Network.objects.filter(name=workspace.name).exists()
-    assert not workspace.get_arango_db().has_graph(populated_network.name)
+    assert not workspace.get_arango_db().has_graph(network.name)
 
 
 @pytest.mark.django_db
-def test_network_rest_delete_unauthorized(populated_network: Network, api_client: APIClient):
-    workspace: Workspace = populated_network.workspace
+def test_network_rest_delete_owned(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+):
+    """Tests deleting a network on a workspace for which the user is the owner."""
+    workspace.set_owner(user)
+    network = populated_network(workspace)
 
-    r = api_client.delete(f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/')
+    r = authenticated_api_client.delete(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
+    )
+
+    assert r.status_code == 204
+
+    # Assert relevant objects are deleted
+    assert not Network.objects.filter(name=workspace.name).exists()
+    assert not workspace.get_arango_db().has_graph(network.name)
+
+
+@pytest.mark.django_db
+def test_network_rest_delete_unauthorized(workspace: Workspace, api_client: APIClient):
+    """Tests deleting a network from a workspace with an unauthorized request."""
+    network = populated_network(workspace)
+
+    r = api_client.delete(f'/api/workspaces/{workspace.name}/networks/{network.name}/')
 
     assert r.status_code == 401
 
     # Assert relevant objects are not deleted
-    assert Network.objects.filter(name=populated_network.name).exists()
-    assert workspace.get_arango_db().has_graph(populated_network.name)
+    assert Network.objects.filter(name=network.name).exists()
+    assert workspace.get_arango_db().has_graph(network.name)
 
 
 @pytest.mark.django_db
 def test_network_rest_delete_forbidden(
-    workspace_factory: WorkspaceFactory,
+    workspace: Workspace,
+    user: User,
     network_factory: NetworkFactory,
     authenticated_api_client: APIClient,
 ):
-
-    # Create workspace this way, so the authenticated user isn't an owner
-    workspace: Workspace = workspace_factory()
+    """Tests deleting a network on a workspace without sufficient permissions."""
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     network: Table = network_factory(workspace=workspace)
     r = authenticated_api_client.delete(
         f'/api/workspaces/{workspace.name}/networks/{network.name}/'
@@ -141,28 +306,104 @@ def test_network_rest_delete_forbidden(
 
 
 @pytest.mark.django_db
+def test_network_rest_delete_no_access(workspace: Workspace, authenticated_api_client: APIClient):
+    """Test deleting a network from a workspace for which the user has no access at all."""
+    network = populated_network(workspace)
+    r = authenticated_api_client.delete(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/'
+    )
+    assert r.status_code == 404
+
+    # Assert relevant objects are not deleted
+    assert Network.objects.filter(name=network.name).exists()
+    assert workspace.get_arango_db().has_graph(network.name)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
 def test_network_rest_retrieve_nodes(
-    populated_network: Network, authenticated_api_client: APIClient
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
 ):
-    workspace: Workspace = populated_network.workspace
-    nodes = list(populated_network.nodes())
+    workspace.set_user_permission(user, permission)
+    network = populated_network(workspace)
+    nodes = list(network.nodes())
 
     assert_limit_offset_results(
         authenticated_api_client,
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/nodes/',
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/nodes/',
         nodes,
     )
 
 
 @pytest.mark.django_db
-def test_network_rest_retrieve_edges(
-    populated_network: Network, authenticated_api_client: APIClient
+def test_network_rest_retrieve_nodes_public(
+    public_workspace: Workspace, authenticated_api_client: APIClient
 ):
-    workspace: Workspace = populated_network.workspace
-    edges = list(populated_network.edges())
+    network = populated_network(public_workspace)
+    nodes = list(network.nodes())
 
     assert_limit_offset_results(
         authenticated_api_client,
-        f'/api/workspaces/{workspace.name}/networks/{populated_network.name}/edges/',
+        f'/api/workspaces/{public_workspace.name}/networks/{network.name}/nodes/',
+        nodes,
+    )
+
+
+@pytest.mark.django_db
+def test_network_rest_retrieve_nodes_no_access(
+    workspace: Workspace, authenticated_api_client: APIClient
+):
+    network = populated_network(workspace)
+    r = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/nodes/',
+        {'limit': 0, 'offset': 0},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('permission', workspace_role_range())
+def test_network_rest_retrieve_edges(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+):
+    workspace.set_user_permission(user, permission)
+    network = populated_network(workspace)
+    edges = list(network.edges())
+
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/edges/',
         edges,
     )
+
+
+@pytest.mark.django_db
+def test_network_rest_retrieve_edges_public(
+    public_workspace: Workspace, authenticated_api_client: APIClient
+):
+    network = populated_network(public_workspace)
+    edges = list(network.edges())
+
+    assert_limit_offset_results(
+        authenticated_api_client,
+        f'/api/workspaces/{public_workspace.name}/networks/{network.name}/edges/',
+        edges,
+    )
+
+
+@pytest.mark.django_db
+def test_network_rest_retrieve_edges_no_access(
+    workspace: Workspace, authenticated_api_client: APIClient
+):
+    network = populated_network(workspace)
+    r = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/edges/',
+        {'limit': 0, 'offset': 0},
+    )
+    assert r.status_code == 404

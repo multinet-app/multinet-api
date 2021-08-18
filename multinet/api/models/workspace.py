@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Type
+from typing import List, Optional, Type
 from uuid import uuid4
 
 from arango.database import StandardDatabase
-from django.db.models import CharField
+from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
-from guardian.shortcuts import assign_perm, get_users_with_perms, remove_perm
 
 from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
 
@@ -18,50 +18,118 @@ def create_default_arango_db_name():
     return f'w-{uuid4().hex}'
 
 
+class WorkspaceRoleChoice(models.IntegerChoices):
+    READER = 1
+    WRITER = 2
+    MAINTAINER = 3
+
+
+class WorkspaceRole(TimeStampedModel):
+    workspace = models.ForeignKey('api.Workspace', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.PositiveSmallIntegerField(choices=WorkspaceRoleChoice.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['workspace', 'user'], name='unique_workspace_permission'
+            ),
+        ]
+
+
 class Workspace(TimeStampedModel):
-    name = CharField(max_length=300, unique=True)
+    name = models.CharField(max_length=300, unique=True)
+    public = models.BooleanField(default=False)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
-    arango_db_name = CharField(max_length=34, unique=True, default=create_default_arango_db_name)
+    arango_db_name = models.CharField(
+        max_length=34, unique=True, default=create_default_arango_db_name
+    )
 
     class Meta:
         ordering = ['id']
-        permissions = [('owner', 'Owns the workspace')]
 
     @property
-    def owners(self):
-        return get_users_with_perms(self, only_with_perms_in=['owner'])
+    def maintainers(self):
+        return [
+            role.user
+            for role in WorkspaceRole.objects.select_related('user').filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.MAINTAINER
+            )
+        ]
 
-    def set_owners(self, new_owners):
-        old_owners = get_users_with_perms(self, only_with_perms_in=['owner'])
+    @property
+    def writers(self):
+        return [
+            role.user
+            for role in WorkspaceRole.objects.select_related('user').filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.WRITER
+            )
+        ]
 
-        removed_owners = []
-        added_owners = []
+    @property
+    def readers(self):
+        return [
+            role.user
+            for role in WorkspaceRole.objects.select_related('user').filter(
+                workspace=self.pk, role=WorkspaceRoleChoice.READER
+            )
+        ]
 
-        # Remove old owners
-        for old_owner in old_owners:
-            if old_owner not in new_owners:
-                remove_perm('owner', old_owner, self)
-                removed_owners.append(old_owner)
+    def get_user_permission(self, user: User) -> Optional[WorkspaceRole]:
+        """Get the WorkspaceRole for a given user on this workspace."""
+        return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
-        # Add new owners
-        for new_owner in new_owners:
-            if new_owner not in old_owners:
-                assign_perm('owner', new_owner, self)
-                added_owners.append(new_owner)
+    def set_user_permission(self, user: User, permission: WorkspaceRoleChoice) -> bool:
+        """
+        Set a user role for this workspace.
 
-        # Return the owners added/removed so they can be emailed
-        return removed_owners, added_owners
+        This should be the only way object roles are set.
+        """
+        current_role = WorkspaceRole.objects.filter(workspace=self, user=user).first()
+        if current_role is None:
+            WorkspaceRole.objects.create(workspace=self, user=user, role=permission)
+        else:
+            current_role.role = permission
+            current_role.save()
 
-    def add_owner(self, new_owner):
-        old_owners = get_users_with_perms(self, only_with_perms_in=['owner'])
-        if new_owner not in old_owners:
-            assign_perm('owner', new_owner, self)
+    def set_owner(self, new_owner):
+        """
+        Set owner for this workspace, replacing the current owner.
 
-    def remove_owner(self, owner):
-        owners = get_users_with_perms(self, only_with_perms_in=['owner'])
-        if owner in owners:
-            remove_perm('owner', owner, self)
+        If the new owner has some other permission for the workspace, e.g.
+        writer, the corresponding WorkspaceRole object is deleted, as ownership
+        encompasses all other roles.
+        """
+        # Delete existing WorkspaceRole for the new owner, if it exists
+        WorkspaceRole.objects.filter(workspace=self.pk, user=new_owner).delete()
+        self.owner = new_owner
+        self.save()
+
+    def set_user_permissions_bulk(
+        self, readers: List[User], writers: List[User], maintainers: List[User]
+    ):
+        """Replace all existing permissions on this workspace."""
+        WorkspaceRole.objects.filter(workspace=self).delete()
+
+        new_reader_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.READER)
+            for user in readers
+        ]
+        new_writer_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.WRITER)
+            for user in writers
+        ]
+        new_maintainer_roles = [
+            WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.MAINTAINER)
+            for user in maintainers
+        ]
+
+        # Create all new WorkspaceRole objects in one go
+        WorkspaceRole.objects.bulk_create(
+            [*new_reader_roles, *new_writer_roles, *new_maintainer_roles]
+        )
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)
