@@ -317,12 +317,8 @@ def test_workspace_rest_get_user_permission(
 ):
     if permission is not None:
         workspace.set_user_permission(user, permission)
-        expected_role = WorkspaceRoleChoice(permission).get_client_name()
     elif is_owner:
         workspace.set_owner(user)
-        expected_role = 'owner'
-    else:
-        expected_role = ''
 
     r = authenticated_api_client.get(f'/api/workspaces/{workspace.name}/permissions/me/')
     assert r.status_code == status_code
@@ -331,7 +327,7 @@ def test_workspace_rest_get_user_permission(
         assert r.data == {
             'username': user.username,
             'workspace': workspace.name,
-            'permission': expected_role,
+            'permission': workspace.get_user_permission_string(user),
         }
 
 
@@ -340,11 +336,10 @@ def test_workspace_rest_get_user_permission_public(
     public_workspace_factory: PublicWorkspaceFactory, api_client: APIClient
 ):
     workspace = public_workspace_factory()
-    expected_role = WorkspaceRoleChoice.READER.get_client_name()
     r = api_client.get(f'/api/workspaces/{workspace.name}/permissions/me/')
     assert r.status_code == 200
     assert r.data == {
         'username': '',  # anonymous user
         'workspace': workspace.name,
-        'permission': expected_role,
+        'permission': WorkspaceRoleChoice.READER.get_client_name(),
     }
