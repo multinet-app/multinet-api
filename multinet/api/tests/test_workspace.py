@@ -104,6 +104,29 @@ def test_workspace_rest_create(authenticated_api_client: APIClient):
     'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
+        (WorkspaceRoleChoice.READER, False, 403, False),
+        (WorkspaceRoleChoice.WRITER, False, 403, False),
+        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
+        (None, True, 200, True),
+    ],
+)
+def test_workspace_rest_rename(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+    is_owner: bool,
+    status_code: int,
+    success: bool,
+):
+    pass
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission,is_owner,status_code,success',
+    [
+        (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 200, True),
         (WorkspaceRoleChoice.WRITER, False, 200, True),
         (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
