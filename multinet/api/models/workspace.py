@@ -108,19 +108,27 @@ class Workspace(TimeStampedModel):
         self.save()
 
     def set_user_permissions_bulk(
-        self, readers: List[User], writers: List[User], maintainers: List[User]
+        self,
+        readers: Optional[List[User]] = None,
+        writers: Optional[List[User]] = None,
+        maintainers: Optional[List[User]] = None,
     ):
         """Replace all existing permissions on this workspace."""
         WorkspaceRole.objects.filter(workspace=self).delete()
 
+        readers = readers or []
         new_reader_roles = [
             WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.READER)
             for user in readers
         ]
+
+        writers = writers or []
         new_writer_roles = [
             WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.WRITER)
             for user in writers
         ]
+
+        maintainers = maintainers or []
         new_maintainer_roles = [
             WorkspaceRole(workspace=self, user=user, role=WorkspaceRoleChoice.MAINTAINER)
             for user in maintainers
