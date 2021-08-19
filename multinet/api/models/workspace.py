@@ -24,11 +24,11 @@ class WorkspaceRoleChoice(models.IntegerChoices):
     MAINTAINER = 3
 
     def get_client_name(self):
-        if self.value == 1:
+        if self.value == self.READER:
             return 'reader'
-        elif self.value == 2:
+        elif self.value == self.WRITER:
             return 'writer'
-        elif self.value == 3:
+        elif self.value == self.MAINTAINER:
             return 'maintainer'
 
 
