@@ -73,7 +73,7 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
 
 
 class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
-    # anonymous user is a reader for public workspaces
+    # Allow empty username since anonymous user is a reader for public workspaces
     username = serializers.CharField(validators=[UnicodeUsernameValidator()], allow_blank=True)
     workspace = serializers.CharField()
     permission = serializers.CharField()
