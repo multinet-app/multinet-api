@@ -15,7 +15,7 @@ from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
-    UserPermissionSerializer,
+    SingleUserWorkspacePermissionSerializer,
     WorkspaceCreateSerializer,
     WorkspaceSerializer,
 )
@@ -53,7 +53,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         public_workspaces = Q(public=True)
         return self.queryset.filter(
             public_workspaces | readable_private_workspaces | owned_workspaces
-        )
+        ).distinct()
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
@@ -94,25 +94,17 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         serializer = PermissionsReturnSerializer(workspace)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(responses={200: UserPermissionSerializer()})
+    @swagger_auto_schema(responses={200: SingleUserWorkspacePermissionSerializer()})
     @action(detail=True, url_path='permissions/me')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def get_current_user_workspace_permissions(self, request, name: str):
         """Get the workspace permission for the user of the request."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         user = request.user
-        role: WorkspaceRole = WorkspaceRole.objects.filter(workspace=workspace, user=user).first()
-        if workspace.owner == user:
-            permission = 'owner'
-        elif role is not None:
-            permission = WorkspaceRoleChoice(role.role).get_client_name()
-        elif workspace.public:
-            permission = WorkspaceRoleChoice.READER.get_client_name()
-        else:
-            permission = ''
+        permission = workspace.get_user_permission_string(user)
 
         data = {'username': user.username, 'workspace': name, 'permission': permission}
-        serializer = UserPermissionSerializer(data=data)
+        serializer = SingleUserWorkspacePermissionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

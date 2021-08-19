@@ -89,6 +89,19 @@ class Workspace(TimeStampedModel):
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
+    def get_user_permission_string(self, user: User) -> str:
+        """Get a string representation of a user's workspace role."""
+        if self.owner == user:
+            return 'owner'
+
+        workspace_role = self.get_user_permission(user)
+        if workspace_role is None:
+            if self.public:
+                return 'reader'
+            return ''
+        else:
+            return WorkspaceRoleChoice(workspace_role.role).get_client_name()
+
     def set_user_permission(self, user: User, permission: WorkspaceRoleChoice) -> bool:
         """
         Set a user role for this workspace.

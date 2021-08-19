@@ -72,8 +72,9 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
         ]
 
 
-class UserPermissionSerializer(serializers.Serializer):
-    username = serializers.CharField(validators=[UnicodeUsernameValidator()])
+class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
+    # anonymous user is a reader for public workspaces
+    username = serializers.CharField(validators=[UnicodeUsernameValidator()], allow_blank=True)
     workspace = serializers.CharField()
     permission = serializers.CharField()
 
