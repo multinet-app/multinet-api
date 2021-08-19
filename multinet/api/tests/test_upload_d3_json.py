@@ -148,13 +148,18 @@ def test_create_upload_model_invalid_field_value(
 
 
 @pytest.mark.django_db
-def test_create_upload_model_forbidden(
+@pytest.mark.parametrize('permission,status_code', [(None, 404), (WorkspaceRoleChoice.READER, 403)])
+def test_create_upload_model_invalid_permissions(
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
     miserables_json_field_value,
+    permission: WorkspaceRoleChoice,
+    status_code: int,
 ):
-    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    if permission is not None:
+        workspace.set_user_permission(user, permission)
+
     network_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/d3_json/',
@@ -164,25 +169,7 @@ def test_create_upload_model_forbidden(
         },
         format='json',
     )
-    assert r.status_code == 403
-
-
-@pytest.mark.django_db
-def test_create_upload_model_no_permission(
-    workspace: Workspace,
-    authenticated_api_client: APIClient,
-    miserables_json_field_value,
-):
-    network_name = f't{uuid.uuid4().hex}'
-    r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
-        {
-            'field_value': miserables_json_field_value,
-            'network_name': network_name,
-        },
-        format='json',
-    )
-    assert r.status_code == 404
+    assert r.status_code == status_code
 
 
 @pytest.mark.django_db

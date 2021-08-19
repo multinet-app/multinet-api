@@ -97,11 +97,18 @@ def test_create_upload_model_invalid_columns(
 
 
 @pytest.mark.django_db
-def test_create_upload_model_csv_forbidden(
-    workspace: Workspace, user: User, authenticated_api_client, s3ff_client
+@pytest.mark.parametrize('permission,status_code', [(None, 404), (WorkspaceRoleChoice.READER, 403)])
+def test_create_upload_model_csv_invalid_permissions(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client,
+    s3ff_client,
+    permission: WorkspaceRoleChoice,
+    status_code: int,
 ):
     """Test that a user with insufficient permissions is forbidden from a POST request."""
-    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    if permission is not None:
+        workspace.set_user_permission(user, permission)
     data_file = data_dir / 'airports.csv'
     field_value = get_field_value(data_file, s3ff_client)
     table_name = f't{uuid.uuid4().hex}'
@@ -121,33 +128,7 @@ def test_create_upload_model_csv_forbidden(
         },
         format='json',
     )
-    assert r.status_code == 403
-
-
-@pytest.mark.django_db
-def test_create_upload_model_csv_no_permission(
-    workspace: Workspace, authenticated_api_client, s3ff_client
-):
-    data_file = data_dir / 'airports.csv'
-    field_value = get_field_value(data_file, s3ff_client)
-    table_name = f't{uuid.uuid4().hex}'
-    r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/csv/',
-        {
-            'field_value': field_value,
-            'edge': False,
-            'table_name': table_name,
-            'columns': {
-                'latitude': 'number',
-                'longitude': 'number',
-                'altitude': 'number',
-                'timezone': 'number',
-                'year built': 'number',
-            },
-        },
-        format='json',
-    )
-    assert r.status_code == 404
+    assert r.status_code == status_code
 
 
 @pytest.mark.django_db
