@@ -52,7 +52,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         public_workspaces = Q(public=True)
         return self.queryset.filter(
             public_workspaces | readable_private_workspaces | owned_workspaces
-        )
+        ).distinct()
 
     @swagger_auto_schema(
         request_body=WorkspaceCreateSerializer(),
