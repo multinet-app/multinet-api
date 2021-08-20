@@ -134,9 +134,11 @@ def test_table_rest_create(
 
         # Django will raise an exception if this fails, implicitly validating that the object exists
         table: Table = Table.objects.get(name=table_name)
-
         # Assert that object was created in arango
         assert workspace.get_arango_db().has_collection(table.name)
+    else:
+        assert not Table.objects.filter(name=table_name).exists()
+        assert not workspace.get_arango_db().has_collection(table_name)
 
 
 @pytest.mark.django_db
@@ -186,6 +188,8 @@ def test_table_rest_retrieve(
                 'public': False,
             },
         }
+    else:
+        assert r.data == {'detail': 'Not found.'}
 
 
 @pytest.mark.django_db
@@ -270,13 +274,13 @@ def test_table_rest_delete_unauthorized(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    'permission,is_owner,status_code,success',
+    'permission,is_owner,success',
     [
-        (None, False, 404, False),
-        (WorkspaceRoleChoice.READER, False, 200, True),
-        (WorkspaceRoleChoice.WRITER, False, 200, True),
-        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
-        (None, True, 200, True),
+        (None, False, False),
+        (WorkspaceRoleChoice.READER, False, True),
+        (WorkspaceRoleChoice.WRITER, False, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, True),
+        (None, True, True),
     ],
 )
 def test_table_rest_retrieve_rows(
@@ -285,7 +289,6 @@ def test_table_rest_retrieve_rows(
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
     is_owner: bool,
-    status_code: int,
     success: bool,
 ):
     if permission is not None:
@@ -306,7 +309,7 @@ def test_table_rest_retrieve_rows(
             f'/api/workspaces/{workspace.name}/tables/{node_table.name}/rows/',
             {'limit': 0, 'offset': 0},
         )
-        assert r.status_code == status_code
+        assert r.status_code == 404
 
 
 @pytest.mark.django_db
@@ -434,7 +437,6 @@ def test_table_rest_insert_rows(
         r = authenticated_api_client.get(
             f'/api/workspaces/{workspace.name}/tables/{table.name}/rows/',
         )
-
         assert r.status_code == 200
         assert r.json() == {
             'count': len(table_rows),
@@ -442,6 +444,9 @@ def test_table_rest_insert_rows(
             'previous': None,
             'results': inserted_table_rows,
         }
+    else:
+        table: Table = Table.objects.get(name=table.name)
+        assert table.get_rows().count() == 0
 
 
 @pytest.mark.django_db
@@ -501,6 +506,12 @@ def test_table_rest_update_rows(
         for i, row in enumerate(r_json['results']):
             assert row == inserted_new_table_rows[i]
             assert row['_id'] == original_table_rows[i]['_id']
+    else:
+        table: Table = Table.objects.get(name=node_table.name)
+        current_rows = table.get_rows()
+        for row in current_rows:
+            assert row in original_table_rows
+            assert row not in new_table_rows
 
 
 @pytest.mark.django_db
@@ -599,3 +610,6 @@ def test_table_rest_delete_rows(
             'previous': None,
             'results': [],
         }
+    else:
+        table: Table = Table.objects.get(name=node_table.name)
+        assert table.get_rows().count() == len(table_rows)

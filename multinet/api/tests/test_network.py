@@ -136,9 +136,11 @@ def test_network_rest_create(
 
         # Django will raise an exception if this fails, implicitly validating that the object exists
         network: Network = Network.objects.get(name=network_name)
-
         # Assert that object was created in arango
         assert workspace.get_arango_db().has_graph(network.name)
+    else:
+        assert not Network.objects.filter(name=network_name).exists()
+        assert not workspace.get_arango_db().has_graph(network_name)
 
 
 @pytest.mark.django_db
@@ -187,6 +189,8 @@ def test_network_rest_retrieve(
                 'public': False,
             },
         }
+    else:
+        assert r.data == {'detail': 'Not found.'}
 
 
 @pytest.mark.django_db
@@ -270,13 +274,13 @@ def test_network_rest_delete_unauthorized(workspace: Workspace, api_client: APIC
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    'permission,is_owner,status_code,success',
+    'permission,is_owner,success',
     [
-        (None, False, 404, False),
-        (WorkspaceRoleChoice.READER, False, 200, True),
-        (WorkspaceRoleChoice.WRITER, False, 200, True),
-        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
-        (None, True, 200, True),
+        (None, False, False),
+        (WorkspaceRoleChoice.READER, False, True),
+        (WorkspaceRoleChoice.WRITER, False, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, True),
+        (None, True, True),
     ],
 )
 def test_network_rest_retrieve_nodes(
@@ -285,7 +289,6 @@ def test_network_rest_retrieve_nodes(
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
     is_owner: bool,
-    status_code: int,
     success: bool,
 ):
     if permission is not None:
@@ -302,11 +305,11 @@ def test_network_rest_retrieve_nodes(
             nodes,
         )
     else:
-        r = r = authenticated_api_client.get(
+        r = authenticated_api_client.get(
             f'/api/workspaces/{workspace.name}/networks/{network.name}/nodes/',
             {'limit': 0, 'offset': 0},
         )
-        assert r.status_code == status_code
+        assert r.status_code == 404
 
 
 @pytest.mark.django_db
@@ -323,13 +326,13 @@ def test_network_rest_retrieve_nodes_public(public_workspace: Workspace, api_cli
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    'permission,is_owner,status_code,success',
+    'permission,is_owner,success',
     [
-        (None, False, 404, False),
-        (WorkspaceRoleChoice.READER, False, 200, True),
-        (WorkspaceRoleChoice.WRITER, False, 200, True),
-        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
-        (None, True, 200, True),
+        (None, False, False),
+        (WorkspaceRoleChoice.READER, False, True),
+        (WorkspaceRoleChoice.WRITER, False, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, True),
+        (None, True, True),
     ],
 )
 def test_network_rest_retrieve_edges(
@@ -338,7 +341,6 @@ def test_network_rest_retrieve_edges(
     authenticated_api_client: APIClient,
     permission: WorkspaceRoleChoice,
     is_owner: bool,
-    status_code: int,
     success: bool,
 ):
     if permission is not None:

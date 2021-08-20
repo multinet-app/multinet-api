@@ -14,7 +14,7 @@ from multinet.api.tests.factories import (
 from multinet.api.tests.utils import create_users_with_permissions
 from multinet.api.utils.arango import arango_system_db
 
-from .fuzzy import TIMESTAMP_RE
+from .fuzzy import TIMESTAMP_RE, workspace_re
 
 
 @pytest.mark.django_db
@@ -58,6 +58,30 @@ def test_workspace_rest_list(
     for workspace in r_json['results']:
         assert workspace['name'] in accessible_workspace_names
         assert sysdb.has_database(workspace['arango_db_name'])
+
+
+@pytest.mark.django_db
+def test_workspace_rest_list_no_duplicates(
+    workspace: Workspace,
+    user_factory: UserFactory,
+    user: User,
+    authenticated_api_client: APIClient,
+):
+    """Test that multiple roles on a workspace results in no duplicates."""
+    # Set authenticated user as owner
+    workspace.set_owner(user)
+
+    # Give multiple users permissions on the workspace
+    workspace.set_user_permissions_bulk(readers=[user_factory() for _ in range(5)])
+
+    # Test that there's only one copy of this workspace returned
+    r = authenticated_api_client.get('/api/workspaces/')
+    assert r.json() == {
+        'count': 1,
+        'next': None,
+        'previous': None,
+        'results': [workspace_re(workspace)],
+    }
 
 
 @pytest.mark.django_db
