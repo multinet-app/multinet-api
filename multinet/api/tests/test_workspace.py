@@ -125,22 +125,23 @@ def test_workspace_rest_rename(
         workspace.set_owner(user)
 
     old_name = workspace.name
-    fake = Faker()
-    new_name = fake.pystr()
-
-    request_data = {
-        'name': new_name,
-    }
+    new_name = Faker().pystr()
 
     r = authenticated_api_client.put(
         f'/api/workspaces/{workspace.name}/',
-        request_data,
+        {
+            'name': new_name,
+        },
+        format='json',
     )
     assert r.status_code == status_code
 
+    # Retrieve workspace to ensure it's up to date
     workspace = Workspace.objects.get(id=workspace.pk)
-    assert success == (workspace.name == new_name)
-    assert success != (workspace.name == old_name)
+
+    # Assert name is as expected
+    expected_name = new_name if success else old_name
+    assert workspace.name == expected_name
 
 
 @pytest.mark.django_db
