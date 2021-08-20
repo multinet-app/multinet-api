@@ -101,7 +101,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """Get the workspace permission for the user of the request."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         user = request.user
-        permission = workspace.get_user_permission_string(user)
+        permission = workspace.get_user_permission_level(user)
 
         data = {'username': user.username, 'workspace': name, 'permission': permission}
         serializer = SingleUserWorkspacePermissionSerializer(data=data)

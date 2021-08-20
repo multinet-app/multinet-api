@@ -351,7 +351,7 @@ def test_workspace_rest_get_user_permission(
         assert r.data == {
             'username': user.username,
             'workspace': workspace.name,
-            'permission': workspace.get_user_permission_string(user),
+            'permission': workspace.get_user_permission_level(user),
         }
 
 
@@ -365,5 +365,5 @@ def test_workspace_rest_get_user_permission_public(
     assert r.data == {
         'username': '',  # anonymous user
         'workspace': workspace.name,
-        'permission': WorkspaceRoleChoice.READER.get_client_name(),
+        'permission': WorkspaceRoleChoice.READER.label,
     }

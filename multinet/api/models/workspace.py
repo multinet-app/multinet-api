@@ -19,17 +19,9 @@ def create_default_arango_db_name():
 
 
 class WorkspaceRoleChoice(models.IntegerChoices):
-    READER = 1
-    WRITER = 2
-    MAINTAINER = 3
-
-    def get_client_name(self):
-        if self.value == self.READER:
-            return 'reader'
-        elif self.value == self.WRITER:
-            return 'writer'
-        elif self.value == self.MAINTAINER:
-            return 'maintainer'
+    READER = 1, 'reader'
+    WRITER = 2, 'writer'
+    MAINTAINER = 3, 'maintainer'
 
 
 class WorkspaceRole(TimeStampedModel):
@@ -89,8 +81,21 @@ class Workspace(TimeStampedModel):
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
-    def get_user_permission_string(self, user: User) -> str:
-        """Get a string representation of a user's workspace role."""
+    def get_user_permission_level(self, user: User) -> Optional[str]:
+        """
+        Get a the string label of a user's workspace role, or None.
+
+        This function differs from Workspace::get_user_permisssion. Whereas that
+        function returns a WorkspaceRole object describing a user's permission for
+        a particular workspace, this function returns a human-readable representation
+        of that permission level. Since ownership of a workspace is modeled by a property
+        on that workspace, this function takes that into account, and returns 'owner' if
+        the given user is the owner of this workspace. Moreover, even if a user does not
+        have explicit permission via the ownersip relationship or a WorkspaceRole object,
+        they are still considered a reader if this workspace is public. Therefore, if this
+        workspace is public and the user passed in has no explicit permission, 'reader' will
+        be returned.
+        """
         if self.owner == user:
             return 'owner'
 
@@ -98,9 +103,9 @@ class Workspace(TimeStampedModel):
         if workspace_role is None:
             if self.public:
                 return 'reader'
-            return ''
+            return None
         else:
-            return WorkspaceRoleChoice(workspace_role.role).get_client_name()
+            return WorkspaceRoleChoice(workspace_role.role).label
 
     def set_user_permission(self, user: User, permission: WorkspaceRoleChoice) -> bool:
         """
