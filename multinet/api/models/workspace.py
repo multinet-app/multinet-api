@@ -81,7 +81,7 @@ class Workspace(TimeStampedModel):
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
-    def get_user_permission_level(self, user: User) -> Optional[str]:
+    def get_user_permission_label(self, user: User) -> Optional[str]:
         """
         Get a the string label of a user's workspace role, or None.
 

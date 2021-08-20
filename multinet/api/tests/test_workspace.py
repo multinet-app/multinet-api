@@ -351,7 +351,7 @@ def test_workspace_rest_get_user_permission(
         assert r.data == {
             'username': user.username,
             'workspace': workspace.name,
-            'permission': workspace.get_user_permission_level(user),
+            'permission': workspace.get_user_permission_label(user),
         }
 
 
