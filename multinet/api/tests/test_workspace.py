@@ -104,6 +104,51 @@ def test_workspace_rest_create(authenticated_api_client: APIClient):
     'permission,is_owner,status_code,success',
     [
         (None, False, 404, False),
+        (WorkspaceRoleChoice.READER, False, 403, False),
+        (WorkspaceRoleChoice.WRITER, False, 403, False),
+        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
+        (None, True, 200, True),
+    ],
+)
+def test_workspace_rest_rename(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+    is_owner: bool,
+    status_code: int,
+    success: bool,
+):
+    if permission is not None:
+        workspace.set_user_permission(user, permission)
+    elif is_owner:
+        workspace.set_owner(user)
+
+    old_name = workspace.name
+    new_name = Faker().pystr()
+
+    r = authenticated_api_client.put(
+        f'/api/workspaces/{workspace.name}/',
+        {
+            'name': new_name,
+        },
+        format='json',
+    )
+    assert r.status_code == status_code
+
+    # Retrieve workspace to ensure it's up to date
+    workspace = Workspace.objects.get(id=workspace.pk)
+
+    # Assert name is as expected
+    expected_name = new_name if success else old_name
+    assert workspace.name == expected_name
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission,is_owner,status_code,success',
+    [
+        (None, False, 404, False),
         (WorkspaceRoleChoice.READER, False, 200, True),
         (WorkspaceRoleChoice.WRITER, False, 200, True),
         (WorkspaceRoleChoice.MAINTAINER, False, 200, True),

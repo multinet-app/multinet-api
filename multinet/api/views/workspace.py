@@ -16,6 +16,7 @@ from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
     WorkspaceCreateSerializer,
+    WorkspaceRenameSerializer,
     WorkspaceSerializer,
 )
 from multinet.auth.decorators import require_workspace_ownership, require_workspace_permission
@@ -70,6 +71,21 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         if created:
             workspace.save()
+        return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=WorkspaceRenameSerializer(),
+        responses={200: WorkspaceSerializer()},
+    )
+    @require_workspace_permission(WorkspaceRoleChoice.MAINTAINER)
+    def update(self, request, name):
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+        serializer = WorkspaceRenameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        workspace.name = serializer.validated_data['name']
+        workspace.save()
+
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
 
     @require_workspace_ownership
