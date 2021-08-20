@@ -15,6 +15,7 @@ from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
+    SingleUserWorkspacePermissionSerializer,
     WorkspaceCreateSerializer,
     WorkspaceRenameSerializer,
     WorkspaceSerializer,
@@ -107,6 +108,20 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         serializer = PermissionsReturnSerializer(workspace)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(responses={200: SingleUserWorkspacePermissionSerializer()})
+    @action(detail=True, url_path='permissions/me')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def get_current_user_workspace_permissions(self, request, name: str):
+        """Get the workspace permission for the user of the request."""
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+        user = request.user
+        permission = workspace.get_user_permission_label(user)
+
+        data = {'username': user.username, 'workspace': name, 'permission': permission}
+        serializer = SingleUserWorkspacePermissionSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def build_user_list(self, validated_data: OrderedDict) -> list:

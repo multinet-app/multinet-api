@@ -80,6 +80,13 @@ class PermissionsReturnSerializer(serializers.ModelSerializer):
         ]
 
 
+class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
+    # Allow empty username since anonymous user is a reader for public workspaces
+    username = serializers.CharField(validators=[UnicodeUsernameValidator()], allow_blank=True)
+    workspace = serializers.CharField()
+    permission = serializers.CharField(allow_blank=True, allow_null=True)
+
+
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
     class Meta:
