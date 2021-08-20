@@ -102,7 +102,7 @@ class Workspace(TimeStampedModel):
         workspace_role = self.get_user_permission(user)
         if workspace_role is None:
             if self.public:
-                return 'reader'
+                return WorkspaceRoleChoice.READER.label
             return None
         else:
             return WorkspaceRoleChoice(workspace_role.role).label
