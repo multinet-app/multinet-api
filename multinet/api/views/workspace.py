@@ -132,9 +132,14 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """Get the workspace permission for the user of the request."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         user = request.user
-        permission = workspace.get_user_permission_label(user)
+        permission, permission_label = workspace.get_user_permission_tuple(user)
+        data = {
+            'username': user.username,
+            'workspace': name,
+            'permission': permission,
+            'permission_label': permission_label,
+        }
 
-        data = {'username': user.username, 'workspace': name, 'permission': permission}
         serializer = SingleUserWorkspacePermissionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

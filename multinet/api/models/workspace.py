@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Type
+from typing import List, Optional, Tuple, Type, Union
 from uuid import uuid4
 
 from arango.database import StandardDatabase
@@ -81,31 +81,31 @@ class Workspace(TimeStampedModel):
         """Get the WorkspaceRole for a given user on this workspace."""
         return WorkspaceRole.objects.filter(workspace=self.pk, user=user.pk).first()
 
-    def get_user_permission_label(self, user: User) -> Optional[str]:
+    def get_user_permission_tuple(self, user: User) -> Union[Tuple[int, str], Tuple[None, None]]:
         """
-        Get a the string label of a user's workspace role, or None.
+        Return a tuple of the user's permission level and string label, or (None, None).
 
-        This function differs from Workspace::get_user_permisssion. Whereas that
-        function returns a WorkspaceRole object describing a user's permission for
-        a particular workspace, this function returns a human-readable representation
-        of that permission level. Since ownership of a workspace is modeled by a property
-        on that workspace, this function takes that into account, and returns 'owner' if
-        the given user is the owner of this workspace. Moreover, even if a user does not
-        have explicit permission via the ownersip relationship or a WorkspaceRole object,
-        they are still considered a reader if this workspace is public. Therefore, if this
-        workspace is public and the user passed in has no explicit permission, 'reader' will
-        be returned.
+        This function differs from Workspace().get_user_permission, as that function returns a
+        WorkspaceRole object from the database, and this function returns a tuple of the level and
+        label corresponding to the 'role' field of that object. Since ownership of a workspace is
+        modeled by a field on that workspace, get_user_permission doesn't address ownership at all,
+        whereas this function returns the artificail tuple (4, 'owner') if the given user is the
+        owner of this workspace. Moreover, if a user has no permission on this workspace, or is the
+        anonymous user (not logged in), but the workspace is public, the reader tuple is returned.
         """
         if self.owner == user:
-            return 'owner'
+            return 4, 'owner'
 
         workspace_role = self.get_user_permission(user)
         if workspace_role is None:
             if self.public:
-                return WorkspaceRoleChoice.READER.label
-            return None
+                return WorkspaceRoleChoice.READER.value, WorkspaceRoleChoice.READER.label
+            return None, None
         else:
-            return WorkspaceRoleChoice(workspace_role.role).label
+            return (
+                WorkspaceRoleChoice(workspace_role.role).value,
+                WorkspaceRoleChoice(workspace_role.role).label,
+            )
 
     def set_user_permission(self, user: User, permission: WorkspaceRoleChoice) -> bool:
         """
