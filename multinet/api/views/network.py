@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin
 
+from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
@@ -18,7 +19,6 @@ from multinet.api.views.serializers import (
     NetworkReturnSerializer,
     NetworkSerializer,
 )
-from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     LIMIT_OFFSET_QUERY_PARAMS,

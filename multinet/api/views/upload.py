@@ -9,9 +9,9 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
 from multinet.api.tasks.process import process_csv, process_d3_json
-from multinet.auth.decorators import require_workspace_permission
 
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (

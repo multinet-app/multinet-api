@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from multinet.api.auth.decorators import require_workspace_ownership, require_workspace_permission
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
@@ -20,7 +21,6 @@ from multinet.api.views.serializers import (
     WorkspaceRenameSerializer,
     WorkspaceSerializer,
 )
-from multinet.auth.decorators import require_workspace_ownership, require_workspace_permission
 
 from .common import MultinetPagination
 
