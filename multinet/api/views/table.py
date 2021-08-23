@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Table, Workspace, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
@@ -18,7 +19,6 @@ from multinet.api.views.serializers import (
     TableReturnSerializer,
     TableSerializer,
 )
-from multinet.auth.decorators import require_workspace_permission
 
 from .common import (
     ARRAY_OF_OBJECTS_SCHEMA,
