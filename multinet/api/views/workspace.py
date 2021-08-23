@@ -25,6 +25,21 @@ from multinet.auth.decorators import require_workspace_ownership, require_worksp
 from .common import MultinetPagination
 
 
+def build_user_list(validated_data: OrderedDict) -> list:
+    """
+    Build a list of user objects from an ordered dictionary of user data.
+
+    Accepts an ordered dictionary containing a list of validated user data, e.g.
+    as a result of validating a PermissionsSerializer with request data.
+    Returns a list of user objects.
+    """
+    user_list = []
+    for valid_user in validated_data:
+        user_object = get_object_or_404(User, username=valid_user['username'])
+        user_list.append(user_object)
+    return user_list
+
+
 class WorkspaceViewSet(ReadOnlyModelViewSet):
     queryset = Workspace.objects.select_related('owner').all()
     lookup_field = 'name'
@@ -117,26 +132,17 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """Get the workspace permission for the user of the request."""
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         user = request.user
-        permission = workspace.get_user_permission_label(user)
+        permission, permission_label = workspace.get_user_permission_tuple(user)
+        data = {
+            'username': user.username,
+            'workspace': name,
+            'permission': permission,
+            'permission_label': permission_label,
+        }
 
-        data = {'username': user.username, 'workspace': name, 'permission': permission}
         serializer = SingleUserWorkspacePermissionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def build_user_list(self, validated_data: OrderedDict) -> list:
-        """
-        Build a list of user objects from an ordered dictionary of user data.
-
-        Accepts an ordered dictionary containing a list of validated user data, e.g.
-        as a result of validating a PermissionsSerializer with request data.
-        Returns a list of user objects.
-        """
-        user_list = []
-        for valid_user in validated_data:
-            user_object = get_object_or_404(User, username=valid_user['username'])
-            user_list.append(user_object)
-        return user_list
 
     @swagger_auto_schema(
         request_body=PermissionsCreateSerializer(), responses={200: PermissionsReturnSerializer()}
@@ -154,9 +160,9 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace.public = validated_data['public']
         workspace.save()
 
-        new_readers = self.build_user_list(validated_data['readers'])
-        new_writers = self.build_user_list(validated_data['writers'])
-        new_maintainers = self.build_user_list(validated_data['maintainers'])
+        new_readers = build_user_list(validated_data['readers'])
+        new_writers = build_user_list(validated_data['writers'])
+        new_maintainers = build_user_list(validated_data['maintainers'])
         workspace.set_user_permissions_bulk(
             readers=new_readers, writers=new_writers, maintainers=new_maintainers
         )

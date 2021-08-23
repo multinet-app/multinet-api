@@ -393,10 +393,12 @@ def test_workspace_rest_get_user_permission(
     assert r.status_code == status_code
 
     if success:
+        permission, permission_label = workspace.get_user_permission_tuple(user)
         assert r.data == {
             'username': user.username,
             'workspace': workspace.name,
-            'permission': workspace.get_user_permission_label(user),
+            'permission': permission,
+            'permission_label': permission_label,
         }
 
 
@@ -410,5 +412,6 @@ def test_workspace_rest_get_user_permission_public(
     assert r.data == {
         'username': '',  # anonymous user
         'workspace': workspace.name,
-        'permission': WorkspaceRoleChoice.READER.label,
+        'permission': WorkspaceRoleChoice.READER.value,
+        'permission_label': WorkspaceRoleChoice.READER.label,
     }
