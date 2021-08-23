@@ -10,7 +10,12 @@ from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
 
-from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, get_or_create_db
+from multinet.api.utils.arango import (
+    ensure_db_created,
+    ensure_db_deleted,
+    get_or_create_db,
+    get_or_create_db_readonly,
+)
 
 
 def create_default_arango_db_name():
@@ -167,6 +172,9 @@ class Workspace(TimeStampedModel):
 
     def get_arango_db(self) -> StandardDatabase:
         return get_or_create_db(self.arango_db_name)
+
+    def get_arango_db_readonly(self) -> StandardDatabase:
+        return get_or_create_db_readonly(self.arango_db_name)
 
     def __str__(self) -> str:
         return self.name

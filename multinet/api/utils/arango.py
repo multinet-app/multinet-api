@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 import uuid
+import json
 
 from arango import ArangoClient
 from arango.cursor import Cursor
@@ -51,6 +52,21 @@ def get_or_create_db(name: str) -> StandardDatabase:
     return db(name)
 
 
+def get_or_create_db_readonly(name: str) -> StandardDatabase:
+    ensure_db_created(name)
+    return db(name, 'readonly', settings.MULTINET_ARANGO_READONLY_PASSWORD)
+
+
+def generate_query_result(cursor: Cursor) -> Generator:
+
+    # comma = ""
+    for row in cursor:
+        # yield f"{comma}{json.dumps(row)}"
+        print(type(row))
+        yield f'{json.dumps(row)}'
+        # comma = ","
+
+
 class ArangoQuery:
     """A class to represent an AQL query."""
 
@@ -60,11 +76,13 @@ class ArangoQuery:
         query_str: Optional[str] = None,
         bind_vars: Optional[Dict[str, str]] = None,
         time_limit_secs: int = 30,
-        memory_limit_mb: int = 200,
+        memory_limit_bytes: int = 20000000,  # 20MB
     ) -> None:
         self.db = db
         self.query_str = query_str
         self.bind_vars = bind_vars
+        self.time_limit_secs = time_limit_secs
+        self.memory_limit_bytes = memory_limit_bytes
 
     @staticmethod
     def from_collections(db: StandardDatabase, collections: List[str]) -> ArangoQuery:
@@ -136,4 +154,12 @@ class ArangoQuery:
 
         Accepts the same keyword arguments as `arango.database.StandardDatabase.aql.execute`.
         """
+
+        # Use time and memory limit of the query object unless different values
+        # are explicitly passed.
+        if 'max_runtime' not in kwargs:
+            kwargs['max_runtime'] = self.time_limit_secs
+        if 'memory_limit' not in kwargs:
+            kwargs['memory_limit'] = self.memory_limit_bytes
+
         return self.db.aql.execute(query=self.query_str, bind_vars=self.bind_vars, **kwargs)

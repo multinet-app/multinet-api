@@ -1,5 +1,7 @@
 from typing import OrderedDict
+import json
 
+from arango.cursor import Cursor
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -13,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
+from multinet.api.utils.arango import ArangoQuery, generate_query_result
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
@@ -180,11 +183,17 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def aql(self, request, name: str):
         """Execute AQL in a workspace."""
-        query = request.query_params.get('query')
-        if query is None:
+        query_str = request.query_params.get('query')
+        if query_str is None:
             return Response(None)
 
         workspace: Workspace = get_object_or_404(Workspace, name=name)
+        database = workspace.get_arango_db_readonly()
+        query = ArangoQuery(database, query_str)
+        cursor: Cursor = query.execute()
 
-        # FIX
-        return Response(None, status=status.HTTP_200_OK)
+        return Response(
+            json.dumps(generate_query_result(cursor)),
+            content_type='application/json',
+            status=status.HTTP_200_OK,
+        )
