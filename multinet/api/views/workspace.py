@@ -1,4 +1,5 @@
 from typing import OrderedDict
+import json
 
 from arango.cursor import Cursor
 from arango.exceptions import AQLQueryExecuteError, ArangoServerError
@@ -15,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.utils.arango import ArangoQuery
+from multinet.api.utils.arango import ArangoQuery, QueryStream
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
@@ -193,8 +194,9 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         try:
             cursor: Cursor = query.execute()
+            stream: QueryStream = QueryStream(cursor)
             return Response(
-                cursor,
+                json.dumps(stream),
                 content_type='application/json',
                 status=status.HTTP_200_OK,
             )

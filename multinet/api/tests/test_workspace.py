@@ -1,4 +1,6 @@
 from typing import Dict, List
+import json
+from arango.cursor import Cursor
 
 from django.contrib.auth.models import User
 from faker import Faker
@@ -14,6 +16,7 @@ from multinet.api.tests.factories import (
 from multinet.api.tests.utils import create_users_with_permissions
 from multinet.api.utils.arango import arango_system_db
 
+from .conftest import populated_table
 from .fuzzy import TIMESTAMP_RE, workspace_re
 
 
@@ -415,3 +418,50 @@ def test_workspace_rest_get_user_permission_public(
         'permission': WorkspaceRoleChoice.READER.value,
         'permission_label': WorkspaceRoleChoice.READER.label,
     }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission,is_owner,status_code,success',
+    [
+        (None, False, 404, False),
+        (WorkspaceRoleChoice.READER, False, 200, True),
+        (WorkspaceRoleChoice.WRITER, False, 200, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
+        (None, True, 200, True),
+    ],
+)
+def test_workspace_rest_aql(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+    is_owner: bool,
+    status_code: int,
+    success: bool,
+):
+    if permission is not None:
+        workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    elif is_owner:
+        workspace.set_owner(user)
+
+    # get some data going to test
+    node_table = populated_table(workspace, False)
+    nodes: Cursor = node_table.get_rows()
+    nodes_list = []
+    while not nodes.empty():
+        nodes_list.append(nodes.next())
+    # try and execute a valid non-mutating query on the data
+    query = f'FOR document IN {node_table.name} RETURN document'
+    r = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/aql/', data={'query': query}
+    )
+    assert r.status_code == status_code
+
+    if success:
+        results = json.loads(r.data)
+        for node in nodes_list:
+            assert node in results
+
+
+# test invalid query
