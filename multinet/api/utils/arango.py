@@ -143,7 +143,6 @@ class ArangoQuery:
 
         Accepts the same keyword arguments as `arango.database.StandardDatabase.aql.execute`.
         """
-
         # Use time and memory limit of the query object unless different values
         # are explicitly passed.
         if 'max_runtime' not in kwargs:
