@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.utils.arango import ArangoQuery, QueryStream
+from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
@@ -190,10 +190,9 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         database = workspace.get_arango_db_readonly()
         query = ArangoQuery(database, query_str)
         cursor: Cursor = query.execute()
-        query_stream = QueryStream(cursor)
 
         return Response(
-            query_stream,
+            cursor,
             content_type='application/json',
             status=status.HTTP_200_OK,
         )
