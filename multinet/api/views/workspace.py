@@ -1,7 +1,7 @@
 from typing import OrderedDict
 
 from arango.cursor import Cursor
-from arango.exceptions import AQLQueryExecuteError
+from arango.exceptions import AQLQueryExecuteError, ArangoServerError
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -198,8 +198,15 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
                 content_type='application/json',
                 status=status.HTTP_200_OK,
             )
-        except AQLQueryExecuteError:
+        except AQLQueryExecuteError as err:
+            # Invalid query, too much memory, invalid permissions
             return Response(
-                'Cannot perform and invalid or mutating AQL query',
+                err.error_message,
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ArangoServerError as err:
+            # Arango server errors unrelated to the client's query
+            return Response(
+                err.error_message,
+                status=err.http_code,
             )
