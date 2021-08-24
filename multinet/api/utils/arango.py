@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Dict, Generator, List, Optional
+from typing import Dict, List, Optional
 import uuid
-import json
 
 from arango import ArangoClient
 from arango.cursor import Cursor
@@ -57,14 +56,16 @@ def get_or_create_db_readonly(name: str) -> StandardDatabase:
     return db(name, 'readonly', settings.MULTINET_ARANGO_READONLY_PASSWORD)
 
 
-def generate_query_result(cursor: Cursor) -> Generator:
+class QueryStream:
+    def __init__(self, cursor: Cursor):
+        self.cursor = cursor
 
-    # comma = ""
-    for row in cursor:
-        # yield f"{comma}{json.dumps(row)}"
-        print(type(row))
-        yield f'{json.dumps(row)}'
-        # comma = ","
+    def __iter__(self):
+        for row in self.cursor:
+            yield row
+
+    def __len__(self):
+        self.cursor.count()
 
 
 class ArangoQuery:

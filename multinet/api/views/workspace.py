@@ -1,5 +1,4 @@
 from typing import OrderedDict
-import json
 
 from arango.cursor import Cursor
 from django.contrib.auth.models import User
@@ -15,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.utils.arango import ArangoQuery, generate_query_result
+from multinet.api.utils.arango import ArangoQuery, QueryStream
 from multinet.api.views.serializers import (
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
@@ -191,9 +190,10 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         database = workspace.get_arango_db_readonly()
         query = ArangoQuery(database, query_str)
         cursor: Cursor = query.execute()
+        query_stream = QueryStream(cursor)
 
         return Response(
-            json.dumps(generate_query_result(cursor)),
+            query_stream,
             content_type='application/json',
             status=status.HTTP_200_OK,
         )
