@@ -1,6 +1,7 @@
 from typing import OrderedDict
 
 from arango.cursor import Cursor
+from arango.exceptions import AQLQueryExecuteError
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -189,10 +190,16 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         database = workspace.get_arango_db_readonly()
         query = ArangoQuery(database, query_str)
-        cursor: Cursor = query.execute()
 
-        return Response(
-            cursor,
-            content_type='application/json',
-            status=status.HTTP_200_OK,
-        )
+        try:
+            cursor: Cursor = query.execute()
+            return Response(
+                cursor,
+                content_type='application/json',
+                status=status.HTTP_200_OK,
+            )
+        except AQLQueryExecuteError:
+            return Response(
+                'Cannot perform and invalid or mutating AQL query',
+                status=status.HTTP_400_BAD_REQUEST,
+            )
