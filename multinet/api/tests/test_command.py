@@ -1,5 +1,6 @@
-from multinet.api.management.commands.createarangoreadonlyuser import READONLY_USERNAME
 from django.core.management import call_command
+
+from multinet.api.management.commands.createarangoreadonlyuser import READONLY_USERNAME
 from multinet.api.utils.arango import arango_system_db
 
 

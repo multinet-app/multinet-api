@@ -22,14 +22,14 @@ class Command(BaseCommand):
                     READONLY_USERNAME, settings.MULTINET_ARANGO_READONLY_PASSWORD, active=True
                 )
                 self.stdout.write(
-                    self.style.SUCCESS(f'Successfully created user: \'{READONLY_USERNAME}\'')
+                    self.style.SUCCESS(f'Successfully created user: {READONLY_USERNAME}')
                 )
 
             system_db.update_permission(username=READONLY_USERNAME, permission='ro', database='*')
             self.stdout.write(
                 self.style.SUCCESS(
                     'Successfully set universal read-only permission for user: '
-                    f'\'{READONLY_USERNAME}\''
+                    f'{READONLY_USERNAME}'
                 )
             )
         except ArangoError:

@@ -1,6 +1,6 @@
 from typing import Dict, List
-from arango.cursor import Cursor
 
+from arango.cursor import Cursor
 from django.contrib.auth.models import User
 from faker import Faker
 import pytest
@@ -446,9 +446,7 @@ def test_workspace_rest_aql(
 
     node_table = populated_table(workspace, False)
     nodes: Cursor = node_table.get_rows()
-    nodes_list = []
-    while not nodes.empty():
-        nodes_list.append(nodes.next())
+    nodes_list = list(nodes)
     # try and execute a valid non-mutating query on the data
     query = f'FOR document IN {node_table.name} RETURN document'
     r = authenticated_api_client.get(
@@ -471,7 +469,7 @@ def test_workspace_rest_aql_mutating_query(
 
     node_table = populated_table(workspace, False)
     # Mutating query
-    query = f'INSERT {{ \'name\': {fake.pystr()} }} INTO {node_table.name}'
+    query = f"INSERT {{ 'name': {fake.pystr()} }} INTO {node_table.name}"
     r = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/aql/', data={'query': query}
     )
