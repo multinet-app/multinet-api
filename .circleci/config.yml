@@ -15,12 +15,19 @@ jobs:
           MINIO_SECRET_KEY: minioSecretKey
       - image: arangodb/arangodb:3.5.6
         environment:
-          ARANGO_ROOT_PASSWORD=letmein
+          ARANGO_ROOT_PASSWORD: letmein
     steps:
       - checkout
       - run:
           name: Install tox
           command: sudo pip install tox
+      - run:
+          name: Create readonly Arango user
+          command: python3 ./manage.py createarangoreadonlyuser
+          environment:
+            DJANGO_MULTINET_ARANGO_URL: http://localhost:8529
+            DJANGO_MULTINET_ARANGO_PASSWORD: letmein
+            DJANGO_MULTINET_ARANGO_READONLY_PASSWORD: letmein
       - run:
           name: Run tests
           command: tox
@@ -31,6 +38,7 @@ jobs:
             DJANGO_MINIO_STORAGE_SECRET_KEY: minioSecretKey
             DJANGO_MULTINET_ARANGO_URL: http://localhost:8529
             DJANGO_MULTINET_ARANGO_PASSWORD: letmein
+            DJANGO_MULTINET_ARANGO_READONLY_PASSWORD: letmein
 workflows:
   version: 2
   ci:
