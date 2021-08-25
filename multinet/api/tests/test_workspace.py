@@ -445,7 +445,6 @@ def test_workspace_rest_aql(
     elif is_owner:
         workspace.set_owner(user)
 
-    # get some data going to test
     node_table = populated_table(workspace, False)
     nodes: Cursor = node_table.get_rows()
     nodes_list = []
@@ -464,4 +463,17 @@ def test_workspace_rest_aql(
             assert node in results
 
 
-# test invalid query
+@pytest.mark.django_db
+def test_workspace_rest_aql_mutating_query(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    fake = Faker()
+
+    node_table = populated_table(workspace, False)
+    # Mutating query
+    query = f'INSERT {{ \'name\': {fake.pystr()} }} INTO {node_table.name}'
+    r = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/aql/', data={'query': query}
+    )
+    assert r.status_code == 400
