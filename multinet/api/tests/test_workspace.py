@@ -1,5 +1,4 @@
 from typing import Dict, List
-import json
 from arango.cursor import Cursor
 
 from django.contrib.auth.models import User
@@ -458,7 +457,7 @@ def test_workspace_rest_aql(
     assert r.status_code == status_code
 
     if success:
-        results = json.loads(r.data)
+        results = r.json()
         for node in nodes_list:
             assert node in results
 

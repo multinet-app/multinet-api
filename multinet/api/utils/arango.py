@@ -56,18 +56,6 @@ def get_or_create_db_readonly(name: str) -> StandardDatabase:
     return db(name, 'readonly', settings.MULTINET_ARANGO_READONLY_PASSWORD)
 
 
-class QueryStream(list):
-    def __init__(self, cursor: Cursor):
-        self.cursor = cursor
-
-    def __iter__(self):
-        for row in self.cursor:
-            yield row
-
-    def __len__(self):
-        return self.cursor.count()
-
-
 class ArangoQuery:
     """A class to represent an AQL query."""
 
