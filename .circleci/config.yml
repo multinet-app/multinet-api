@@ -23,7 +23,7 @@ jobs:
           command: sudo pip install tox
       - run:
           name: Create readonly Arango user
-          command: docker-compose run --rm ./manage.py createarangoreadonlyuser
+          command: ./manage.py createarangoreadonlyuser
           environment:
             DJANGO_MULTINET_ARANGO_URL: http://localhost:8529
             DJANGO_MULTINET_ARANGO_PASSWORD: letmein
