@@ -1,9 +1,8 @@
-from arango import ArangoClient
-from arango.database import StandardDatabase
 from arango.exceptions import ArangoError
-from arango.http import DefaultHTTPClient
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
+from multinet.api.utils.arango import arango_system_db
 
 READONLY_USERNAME = 'readonly'
 
@@ -15,16 +14,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         try:
-            arango_client: ArangoClient = ArangoClient(
-                hosts=settings.MULTINET_ARANGO_URL, http_client=DefaultHTTPClient()
-            )
-            system_db: StandardDatabase = arango_client.db(
-                password=settings.MULTINET_ARANGO_PASSWORD
-            )
+            system_db = arango_system_db()
             readonly_user_exists = system_db.has_user(READONLY_USERNAME)
 
             if not readonly_user_exists:
-                system_db.create_user(READONLY_USERNAME, settings.MULTINET_ARANGO_READONLY_PASSWORD)
+                system_db.create_user(
+                    READONLY_USERNAME, settings.MULTINET_ARANGO_READONLY_PASSWORD, active=True
+                )
                 self.stdout.write(
                     self.style.SUCCESS(f'Successfully created user: \'{READONLY_USERNAME}\'')
                 )
