@@ -198,14 +198,12 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
                 status=status.HTTP_200_OK,
             )
         except AQLQueryExecuteError as err:
-            # Invalid query, too much memory, invalid permissions
+            # Invalid query, time/memory limit reached, or
+            # attempt to run a mutating query as the readonly user
             return Response(
                 err.error_message,
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except ArangoServerError as err:
             # Arango server errors unrelated to the client's query
-            return Response(
-                err.error_message,
-                status=err.http_code,
-            )
+            return Response(err.error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
