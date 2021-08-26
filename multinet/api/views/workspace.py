@@ -193,7 +193,6 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         try:
             cursor: Cursor = query.execute()
-            # stream: QueryStream = QueryStream(cursor)
             return Response(
                 cursor,
                 status=status.HTTP_200_OK,
