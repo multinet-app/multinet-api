@@ -155,3 +155,28 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         paginated_query = pagination.paginate_queryset(query, request)
 
         return pagination.get_paginated_response(paginated_query)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('type', 'query', type='string', enum=['node', 'edge'], required=False)
+        ],
+        responses={200: TableReturnSerializer(many=True)},
+    )
+    @action(detail=True, url_path='tables')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def tables(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        table_type = request.query_params.get('type')
+        if table_type == 'node':
+            table_names = network.node_tables()
+        elif table_type == 'edge':
+            table_names = network.edge_tables()
+        else:
+            table_names = network.node_tables() + network.edge_tables()
+
+        network_tables = Table.objects.filter(name__in=table_names)
+        serializer = TableReturnSerializer(network_tables, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
