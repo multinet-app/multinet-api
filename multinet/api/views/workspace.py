@@ -185,7 +185,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """Execute AQL in a workspace."""
         query_str = request.query_params.get('query')
         if query_str is None:
-            return Response(None)
+            return Response('No query provided', status=status.HTTP_400_BAD_REQUEST)
 
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         database = workspace.get_arango_db_readonly()
