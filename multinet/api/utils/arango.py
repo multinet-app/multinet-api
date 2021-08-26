@@ -23,9 +23,13 @@ def arango_client():
     return ArangoClient(hosts=settings.MULTINET_ARANGO_URL, http_client=NoTimeoutHttpClient())
 
 
-def db(name: str, username: Optional[str] = None, password: Optional[str] = None):
-    username = username or 'root'
-    password = password or settings.MULTINET_ARANGO_PASSWORD
+def db(name: str, readonly=False):
+    username = 'readonly' if readonly else 'root'
+    password = (
+        settings.MULTINET_ARANGO_READONLY_PASSWORD
+        if readonly
+        else settings.MULTINET_ARANGO_PASSWORD
+    )
     return arango_client().db(name, username=username, password=password)
 
 
@@ -46,14 +50,9 @@ def ensure_db_deleted(name: str) -> None:
         sysdb.delete_database(name)
 
 
-def get_or_create_db(name: str) -> StandardDatabase:
+def get_or_create_db(name: str, readonly=True) -> StandardDatabase:
     ensure_db_created(name)
-    return db(name)
-
-
-def get_or_create_db_readonly(name: str) -> StandardDatabase:
-    ensure_db_created(name)
-    return db(name, 'readonly', settings.MULTINET_ARANGO_READONLY_PASSWORD)
+    return db(name, readonly=readonly)
 
 
 class ArangoQuery:

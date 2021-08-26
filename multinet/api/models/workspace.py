@@ -14,7 +14,6 @@ from multinet.api.utils.arango import (
     ensure_db_created,
     ensure_db_deleted,
     get_or_create_db,
-    get_or_create_db_readonly,
 )
 
 
@@ -170,11 +169,8 @@ class Workspace(TimeStampedModel):
             [*new_reader_roles, *new_writer_roles, *new_maintainer_roles]
         )
 
-    def get_arango_db(self) -> StandardDatabase:
-        return get_or_create_db(self.arango_db_name)
-
-    def get_arango_db_readonly(self) -> StandardDatabase:
-        return get_or_create_db_readonly(self.arango_db_name)
+    def get_arango_db(self, readonly=True) -> StandardDatabase:
+        return get_or_create_db(self.arango_db_name, readonly)
 
     def __str__(self) -> str:
         return self.name
