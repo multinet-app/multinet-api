@@ -374,3 +374,73 @@ def test_network_rest_retrieve_edges_public(public_workspace: Workspace, api_cli
         f'/api/workspaces/{public_workspace.name}/networks/{network.name}/edges/',
         edges,
     )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission,is_owner,success',
+    [
+        (None, False, False),
+        (WorkspaceRoleChoice.READER, False, True),
+        (WorkspaceRoleChoice.WRITER, False, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, True),
+        (None, True, True),
+    ],
+)
+def test_network_rest_retrieve_tables_all(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    permission: WorkspaceRoleChoice,
+    is_owner: bool,
+    success: bool,
+):
+    if permission is not None:
+        workspace.set_user_permission(user, permission)
+    elif is_owner:
+        workspace.set_owner(user)
+
+    edge_table = populated_table(workspace, edge=True)
+    network = populated_network(workspace, edge_table=edge_table)
+    node_tables = list(edge_table.find_referenced_node_tables().keys())
+    table_names = node_tables + [edge_table.name]
+
+    response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/tables/'
+    )
+
+    if success:
+        assert response.status_code == 200
+        assert len(response.data) == len(table_names)
+        for table in response.data:
+            assert table['name'] in table_names
+    else:
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('type', ['node', 'edge'])
+def test_network_rest_retrieve_tables_type(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient, type: str
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+
+    edge_table = populated_table(workspace, edge=True)
+    network = populated_network(workspace, edge_table=edge_table)
+    node_tables = list(edge_table.find_referenced_node_tables().keys())
+
+    response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network.name}/tables/', data={'type': type}
+    )
+    assert response.status_code == 200
+
+    if type == 'node':
+        assert len(response.data) == len(node_tables)
+        for table in response.data:
+            assert not table['edge']
+            assert table['name'] in node_tables
+    else:  # type = 'edge'
+        assert len(response.data) == 1  # test network created with one edge definition
+        for table in response.data:
+            assert table['edge']
+            assert table['name'] == edge_table.name

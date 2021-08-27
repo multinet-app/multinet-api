@@ -1,4 +1,5 @@
 import itertools
+from typing import Optional
 
 from django.contrib.auth.models import User
 from faker import Faker
@@ -66,8 +67,10 @@ def populated_table(workspace: Workspace, edge: bool) -> Table:
         return table
 
 
-def populated_network(workspace: Workspace) -> Network:
-    populated_edge_table = populated_table(workspace, True)
+def populated_network(workspace: Workspace, edge_table: Optional[Table] = None) -> Network:
+    populated_edge_table = (
+        edge_table if edge_table is not None else populated_table(workspace, True)
+    )
     node_tables = list(populated_edge_table.find_referenced_node_tables().keys())
     network_name = Faker().pystr()
     return Network.create_with_edge_definition(

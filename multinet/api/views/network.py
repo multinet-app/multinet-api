@@ -160,7 +160,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         manual_parameters=[
             openapi.Parameter('type', 'query', type='string', enum=['node', 'edge'], required=False)
         ],
-        responses={200: TableReturnSerializer(many=True)},
+        responses={200: TableSerializer(many=True)},
     )
     @action(detail=True, url_path='tables')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
@@ -177,6 +177,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             table_names = network.node_tables() + network.edge_tables()
 
         network_tables = Table.objects.filter(name__in=table_names)
-        serializer = TableReturnSerializer(network_tables, many=True)
+        serializer = TableSerializer(network_tables, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
