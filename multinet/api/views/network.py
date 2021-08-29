@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -14,29 +13,15 @@ from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
+    LimitOffsetSerializer,
     NetworkCreateSerializer,
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
+    PaginatedResultSerializer,
 )
 
-from .common import (
-    LIMIT_OFFSET_QUERY_PARAMS,
-    PAGINATED_RESULTS_SCHEMA,
-    ArangoPagination,
-    MultinetPagination,
-    WorkspaceChildMixin,
-)
-
-EDGE_DEFINITION_CREATE_SCHEMA = openapi.Schema(
-    type=openapi.TYPE_OBJECT,
-    properties={
-        'edge_table': openapi.Schema(type=openapi.TYPE_STRING),
-        'node_tables': openapi.Schema(
-            type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)
-        ),
-    },
-)
+from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
 
 
 class NetworkCreationErrorSerializer(serializers.Serializer):
@@ -136,8 +121,8 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
-        responses={200: PAGINATED_RESULTS_SCHEMA},
+        query_serializer=LimitOffsetSerializer(),
+        responses={200: PaginatedResultSerializer()},
     )
     @action(detail=True, url_path='nodes')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
@@ -154,8 +139,8 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
-        manual_parameters=LIMIT_OFFSET_QUERY_PARAMS,
-        responses={200: PAGINATED_RESULTS_SCHEMA},
+        query_serializer=LimitOffsetSerializer(),
+        responses={200: PaginatedResultSerializer()},
     )
     @action(detail=True, url_path='edges')
     @require_workspace_permission(WorkspaceRoleChoice.READER)

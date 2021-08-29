@@ -88,6 +88,22 @@ class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
     permission_label = serializers.CharField(allow_null=True)
 
 
+class LimitOffsetSerializer(serializers.Serializer):
+    limit = serializers.IntegerField(required=False)
+    offset = serializers.IntegerField(required=False)
+
+
+class PaginatedResultSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    previous = serializers.URLField(allow_null=True)
+    next = serializers.URLField(allow_null=True)
+    results = serializers.ListField(child=serializers.JSONField())
+
+
+class TableRowRetrieveSerializer(LimitOffsetSerializer):
+    filter = serializers.JSONField(required=False)
+
+
 # The required fields for table creation
 class TableCreateSerializer(serializers.ModelSerializer):
     class Meta:
