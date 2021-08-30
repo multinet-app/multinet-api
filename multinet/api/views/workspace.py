@@ -183,10 +183,9 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def aql(self, request, name: str):
         """Execute AQL in a workspace."""
-        query_str = request.query_params.get('query')
-        if query_str is None:
-            return Response('No query provided', status=status.HTTP_400_BAD_REQUEST)
-
+		serializer = AqlQuerySerailizer(data=request.query_params)
+		serializer.is_valid(raise_exception=True)
+		query_str = serializer.validated_data['query']
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         database = workspace.get_arango_db()
         query = ArangoQuery(database, query_str)
