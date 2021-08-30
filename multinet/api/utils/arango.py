@@ -50,11 +50,6 @@ def ensure_db_deleted(name: str) -> None:
         sysdb.delete_database(name)
 
 
-def get_or_create_db(name: str, readonly=True) -> StandardDatabase:
-    ensure_db_created(name)
-    return db(name, readonly=readonly)
-
-
 class ArangoQuery:
     """A class to represent an AQL query."""
 
