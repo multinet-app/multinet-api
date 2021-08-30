@@ -21,7 +21,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         try:
             password = settings.MULTINET_ARANGO_READONLY_PASSWORD
-            system_db = arango_system_db()
+            system_db = arango_system_db(readonly=False)
             readonly_user_exists = system_db.has_user(READONLY_USERNAME)
 
             if not readonly_user_exists:

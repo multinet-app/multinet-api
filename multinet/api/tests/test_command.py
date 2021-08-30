@@ -5,7 +5,7 @@ from multinet.api.utils.arango import arango_system_db
 
 
 def test_createarangoreadonlyuser():
-    system_db = arango_system_db()
+    system_db = arango_system_db(readonly=False)
 
     if system_db.has_user(READONLY_USERNAME):
         system_db.delete_user(READONLY_USERNAME)
