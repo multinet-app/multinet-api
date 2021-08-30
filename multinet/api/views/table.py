@@ -3,7 +3,6 @@ import json
 
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -11,23 +10,18 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Table, Workspace, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
+    PaginatedResultSerializer,
     TableCreateSerializer,
     TableReturnSerializer,
+    TableRowRetrieveSerializer,
     TableSerializer,
 )
-from multinet.auth.decorators import require_workspace_permission
 
-from .common import (
-    ARRAY_OF_OBJECTS_SCHEMA,
-    LIMIT_OFFSET_QUERY_PARAMS,
-    PAGINATED_RESULTS_SCHEMA,
-    ArangoPagination,
-    MultinetPagination,
-    WorkspaceChildMixin,
-)
+from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
 
 
 class RowInsertResponseSerializer(serializers.Serializer):
@@ -90,11 +84,8 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('filter', 'query', type='object'),
-            *LIMIT_OFFSET_QUERY_PARAMS,
-        ],
-        responses={200: PAGINATED_RESULTS_SCHEMA},
+        query_serializer=TableRowRetrieveSerializer(),
+        responses={200: PaginatedResultSerializer()},
     )
     @action(detail=True, url_path='rows')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
@@ -118,7 +109,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
-        request_body=ARRAY_OF_OBJECTS_SCHEMA,
+        request_body=serializers.ListSerializer(child=serializers.JSONField()),
         responses={200: RowInsertResponseSerializer()},
     )
     @get_rows.mapping.put
@@ -134,7 +125,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        request_body=ARRAY_OF_OBJECTS_SCHEMA,
+        request_body=serializers.ListSerializer(child=serializers.JSONField()),
         responses={200: RowDeleteResponseSerializer()},
     )
     @get_rows.mapping.delete
