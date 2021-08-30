@@ -403,7 +403,7 @@ def test_network_rest_retrieve_tables_all(
     edge_table = populated_table(workspace, edge=True)
     network = populated_network(workspace, edge_table=edge_table)
     node_tables = list(edge_table.find_referenced_node_tables().keys())
-    table_names = node_tables + [edge_table.name]
+    table_names = {*node_tables, edge_table.name}
 
     response = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/networks/{network.name}/tables/'
@@ -411,9 +411,7 @@ def test_network_rest_retrieve_tables_all(
 
     if success:
         assert response.status_code == 200
-        assert len(response.data) == len(table_names)
-        for table in response.data:
-            assert table['name'] in table_names
+        assert table_names == {table['name'] for table in response.data}
     else:
         assert response.status_code == 404
 

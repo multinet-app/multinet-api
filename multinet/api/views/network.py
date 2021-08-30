@@ -18,7 +18,7 @@ from multinet.api.views.serializers import (
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
-    NetworkTableTypeSerializer,
+    NetworkTablesSerializer,
     PaginatedResultSerializer,
     TableReturnSerializer,
 )
@@ -159,7 +159,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
-        query_serializer=NetworkTableTypeSerializer(),
+        query_serializer=NetworkTablesSerializer(),
         responses={200: TableReturnSerializer(many=True)},
     )
     @action(detail=True, url_path='tables')
@@ -168,7 +168,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
-        serializer = NetworkTableTypeSerializer(data=request.query_params)
+        serializer = NetworkTablesSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         table_type = serializer.validated_data.get('type', None)
         if table_type == 'node':
