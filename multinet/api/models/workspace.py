@@ -10,7 +10,7 @@ from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 from django_extensions.db.models import TimeStampedModel
 
-from multinet.api.utils.arango import ensure_db_created, ensure_db_deleted, db
+from multinet.api.utils.arango import db, ensure_db_created, ensure_db_deleted
 
 
 def create_default_arango_db_name():
