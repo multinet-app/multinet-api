@@ -88,6 +88,10 @@ class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
     permission_label = serializers.CharField(allow_null=True)
 
 
+class AqlQuerySerializer(serializers.Serializer):
+    query = serializers.CharField()
+
+
 class LimitOffsetSerializer(serializers.Serializer):
     limit = serializers.IntegerField(required=False)
     offset = serializers.IntegerField(required=False)

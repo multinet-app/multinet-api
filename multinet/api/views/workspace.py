@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -18,6 +17,7 @@ from multinet.api.auth.decorators import require_workspace_ownership, require_wo
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
+    AqlQuerySerializer,
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
     SingleUserWorkspacePermissionSerializer,
@@ -178,7 +178,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(manual_parameters=[openapi.Parameter('query', 'query', type='string')])
+    @swagger_auto_schema(query_serializer=AqlQuerySerializer())
     @action(detail=True)
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def aql(self, request, name: str):
