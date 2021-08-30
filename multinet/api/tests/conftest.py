@@ -88,9 +88,10 @@ def pytest_sessionfinish(session, exitstatus):
     # `pytest.mark.django_db` decorator doesn't run the model save/delete methods, meaning the sync
     # between arangodb and django doesn't happen.
 
-    for db in arango_system_db().databases():
+    system_db = arango_system_db(readonly=False)
+    for db in system_db.databases():
         if db not in pytest.before_session_arango_databases:
-            arango_system_db().delete_database(db, ignore_missing=True)
+            system_db.delete_database(db, ignore_missing=True)
 
 
 register(UserFactory)

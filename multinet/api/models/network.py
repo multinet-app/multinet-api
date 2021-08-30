@@ -68,7 +68,7 @@ class Network(TimeStampedModel):
     ) -> Network:
         """Create a network with an edge definition, using the provided arguments."""
         # Create graph in arango before creating the Network object here
-        workspace.get_arango_db().create_graph(
+        workspace.get_arango_db(readonly=False).create_graph(
             name,
             edge_definitions=[
                 {
@@ -93,7 +93,7 @@ class Network(TimeStampedModel):
 def arango_graph_save(sender: Type[Network], instance: Network, **kwargs):
     workspace: Workspace = instance.workspace
 
-    db = workspace.get_arango_db()
+    db = workspace.get_arango_db(readonly=False)
     if not db.has_graph(instance.name):
         db.create_graph(instance.name)
 
@@ -102,6 +102,6 @@ def arango_graph_save(sender: Type[Network], instance: Network, **kwargs):
 def arango_graph_delete(sender: Type[Network], instance: Network, **kwargs):
     workspace: Workspace = instance.workspace
 
-    db = workspace.get_arango_db()
+    db = workspace.get_arango_db(readonly=False)
     if db.has_graph(instance.name):
         db.delete_graph(instance.name)

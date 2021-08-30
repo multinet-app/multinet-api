@@ -43,9 +43,9 @@ class Table(TimeStampedModel):
     def count(self) -> int:
         return self.get_arango_collection().count()
 
-    def get_arango_collection(self) -> StandardCollection:
+    def get_arango_collection(self, readonly=True) -> StandardCollection:
         workspace: Workspace = self.workspace
-        return workspace.get_arango_db().collection(self.name)
+        return workspace.get_arango_db(readonly=readonly).collection(self.name)
 
     def get_row(self, query: Optional[Dict] = None) -> Cursor:
         """Return a specific document."""
@@ -58,7 +58,7 @@ class Table(TimeStampedModel):
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().insert_many(rows, overwrite=True)
+        res = self.get_arango_collection(readonly=False).insert_many(rows, overwrite=True)
         errors = [
             RowModifyError(index=i, message=doc.error_message)
             for i, doc in enumerate(res)
@@ -70,7 +70,7 @@ class Table(TimeStampedModel):
 
     def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
-        res = self.get_arango_collection().delete_many(rows)
+        res = self.get_arango_collection(readonly=False).delete_many(rows)
         errors = [
             RowModifyError(index=i, message=doc.error_message)
             for i, doc in enumerate(res)
@@ -127,7 +127,7 @@ class Table(TimeStampedModel):
 def arango_coll_save(sender: Type[Table], instance: Table, **kwargs):
     workspace: Workspace = instance.workspace
 
-    db = workspace.get_arango_db()
+    db = workspace.get_arango_db(readonly=False)
     if not db.has_collection(instance.name):
         db.create_collection(instance.name, edge=instance.edge)
 
@@ -136,6 +136,6 @@ def arango_coll_save(sender: Type[Table], instance: Table, **kwargs):
 def arango_coll_delete(sender: Type[Table], instance: Table, **kwargs):
     workspace: Workspace = instance.workspace
 
-    db = workspace.get_arango_db()
+    db = workspace.get_arango_db(readonly=False)
     if db.has_collection(instance.name):
         db.delete_collection(instance.name)

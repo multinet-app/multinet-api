@@ -1,5 +1,7 @@
 from typing import OrderedDict
 
+from arango.cursor import Cursor
+from arango.exceptions import AQLQueryExecuteError, ArangoServerError
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -13,7 +15,9 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_ownership, require_workspace_permission
 from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
+from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
+    AqlQuerySerializer,
     PermissionsCreateSerializer,
     PermissionsReturnSerializer,
     SingleUserWorkspacePermissionSerializer,
@@ -173,3 +177,32 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             workspace.set_owner(new_owner)
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(query_serializer=AqlQuerySerializer())
+    @action(detail=True)
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def aql(self, request, name: str):
+        """Execute AQL in a workspace."""
+        serializer = AqlQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        query_str = serializer.validated_data['query']
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+        database = workspace.get_arango_db()
+        query = ArangoQuery(database, query_str)
+
+        try:
+            cursor: Cursor = query.execute()
+            return Response(
+                cursor,
+                status=status.HTTP_200_OK,
+            )
+        except AQLQueryExecuteError as err:
+            # Invalid query, time/memory limit reached, or
+            # attempt to run a mutating query as the readonly user
+            return Response(
+                err.error_message,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ArangoServerError as err:
+            # Arango server errors unrelated to the client's query
+            return Response(err.error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

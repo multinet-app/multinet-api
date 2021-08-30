@@ -15,7 +15,7 @@ jobs:
           MINIO_SECRET_KEY: minioSecretKey
       - image: arangodb/arangodb:3.5.6
         environment:
-          ARANGO_ROOT_PASSWORD=letmein
+          ARANGO_ROOT_PASSWORD: letmein
     steps:
       - checkout
       - run:
@@ -31,6 +31,7 @@ jobs:
             DJANGO_MINIO_STORAGE_SECRET_KEY: minioSecretKey
             DJANGO_MULTINET_ARANGO_URL: http://localhost:8529
             DJANGO_MULTINET_ARANGO_PASSWORD: letmein
+            DJANGO_MULTINET_ARANGO_READONLY_PASSWORD: letmein
 workflows:
   version: 2
   ci:

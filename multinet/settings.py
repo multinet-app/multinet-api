@@ -38,6 +38,7 @@ class MultinetMixin(ConfigMixin):
 
     MULTINET_ARANGO_URL = values.Value(environ_required=True)
     MULTINET_ARANGO_PASSWORD = values.Value(environ_required=True)
+    MULTINET_ARANGO_READONLY_PASSWORD = values.Value(environ_required=True)
     SWAGGER_SETTINGS = {
         'DEFAULT_AUTO_SCHEMA_CLASS': 'multinet.api.utils.swagger.ImprovedAutoSchema'
     }

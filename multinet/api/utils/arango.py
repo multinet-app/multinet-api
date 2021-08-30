@@ -23,30 +23,31 @@ def arango_client():
     return ArangoClient(hosts=settings.MULTINET_ARANGO_URL, http_client=NoTimeoutHttpClient())
 
 
-def db(name: str):
-    return arango_client().db(name, username='root', password=settings.MULTINET_ARANGO_PASSWORD)
+def db(name: str, readonly):
+    username = 'readonly' if readonly else 'root'
+    password = (
+        settings.MULTINET_ARANGO_READONLY_PASSWORD
+        if readonly
+        else settings.MULTINET_ARANGO_PASSWORD
+    )
+    return arango_client().db(name, username=username, password=password)
 
 
 @lru_cache()
-def arango_system_db():
-    return db('_system')
+def arango_system_db(readonly=True):
+    return db('_system', readonly)
 
 
 def ensure_db_created(name: str) -> None:
-    sysdb = arango_system_db()
+    sysdb = arango_system_db(readonly=False)
     if not sysdb.has_database(name):
         sysdb.create_database(name)
 
 
 def ensure_db_deleted(name: str) -> None:
-    sysdb = arango_system_db()
+    sysdb = arango_system_db(readonly=False)
     if sysdb.has_database(name):
         sysdb.delete_database(name)
-
-
-def get_or_create_db(name: str) -> StandardDatabase:
-    ensure_db_created(name)
-    return db(name)
 
 
 class ArangoQuery:
@@ -57,10 +58,14 @@ class ArangoQuery:
         db: StandardDatabase,
         query_str: Optional[str] = None,
         bind_vars: Optional[Dict[str, str]] = None,
+        time_limit_secs: int = 30,
+        memory_limit_bytes: int = 20000000,  # 20MB
     ) -> None:
         self.db = db
         self.query_str = query_str
         self.bind_vars = bind_vars
+        self.time_limit_secs = time_limit_secs
+        self.memory_limit_bytes = memory_limit_bytes
 
     @staticmethod
     def from_collections(db: StandardDatabase, collections: List[str]) -> ArangoQuery:
@@ -132,4 +137,11 @@ class ArangoQuery:
 
         Accepts the same keyword arguments as `arango.database.StandardDatabase.aql.execute`.
         """
+        # Use time and memory limit of the query object unless different values
+        # are explicitly passed.
+        if 'max_runtime' not in kwargs:
+            kwargs['max_runtime'] = self.time_limit_secs
+        if 'memory_limit' not in kwargs:
+            kwargs['memory_limit'] = self.memory_limit_bytes
+
         return self.db.aql.execute(query=self.query_str, bind_vars=self.bind_vars, **kwargs)
