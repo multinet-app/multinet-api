@@ -18,6 +18,7 @@ from multinet.api.views.serializers import (
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
+    NetworkTableTypeSerializer,
     PaginatedResultSerializer,
     TableReturnSerializer,
 )
@@ -158,9 +159,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         return pagination.get_paginated_response(paginated_query)
 
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('type', 'query', type='string', enum=['node', 'edge'], required=False)
-        ],
+        query_serializer=NetworkTableTypeSerializer(),
         responses={200: TableReturnSerializer(many=True)},
     )
     @action(detail=True, url_path='tables')
@@ -169,7 +168,9 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         network: Network = get_object_or_404(Network, workspace=workspace, name=name)
 
-        table_type = request.query_params.get('type')
+        serializer = NetworkTableTypeSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        table_type = serializer.validated_data.get('type', None)
         if table_type == 'node':
             table_names = network.node_tables()
         elif table_type == 'edge':
