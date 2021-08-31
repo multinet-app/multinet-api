@@ -417,9 +417,11 @@ def test_network_rest_retrieve_tables_all(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('type', ['node', 'edge'])
+@pytest.mark.parametrize(
+    'type,success', [('node', True), ('edge', True), ('all', True), ('foo', False)]
+)
 def test_network_rest_retrieve_tables_type(
-    workspace: Workspace, user: User, authenticated_api_client: APIClient, type: str
+    workspace: Workspace, user: User, authenticated_api_client: APIClient, type: str, success: bool
 ):
     workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
 
@@ -430,15 +432,19 @@ def test_network_rest_retrieve_tables_type(
     response = authenticated_api_client.get(
         f'/api/workspaces/{workspace.name}/networks/{network.name}/tables/', data={'type': type}
     )
-    assert response.status_code == 200
-
-    if type == 'node':
-        assert len(response.data) == len(node_tables)
-        for table in response.data:
-            assert not table['edge']
-            assert table['name'] in node_tables
-    else:  # type = 'edge'
-        assert len(response.data) == 1  # test network created with one edge definition
-        for table in response.data:
-            assert table['edge']
-            assert table['name'] == edge_table.name
+    if success:
+        assert response.status_code == 200
+        if type == 'node':
+            assert len(response.data) == len(node_tables)
+            for table in response.data:
+                assert not table['edge']
+                assert table['name'] in node_tables
+        elif type == 'edge':  # type = 'edge'
+            assert len(response.data) == 1  # test network created with one edge definition
+            for table in response.data:
+                assert table['edge']
+                assert table['name'] == edge_table.name
+        else:  # type == 'all'
+            assert {*node_tables, edge_table.name} == {table['name'] for table in response.data}
+    else:
+        assert response.status_code == 400

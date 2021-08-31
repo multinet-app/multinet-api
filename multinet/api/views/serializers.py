@@ -174,7 +174,7 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
 
 
 class NetworkTablesSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=['node', 'edge'], required=False)
+    type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
 
 
 class UploadCreateSerializer(serializers.Serializer):
