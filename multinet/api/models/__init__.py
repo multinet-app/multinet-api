@@ -1,6 +1,14 @@
 from .network import Network
 from .table import Table
-from .upload import Upload
+from .tasks import Task, Upload
 from .workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
 
-__all__ = ['Network', 'Table', 'Upload', 'Workspace', 'WorkspaceRole', 'WorkspaceRoleChoice']
+__all__ = [
+    'Network',
+    'Table',
+    'Task',
+    'Upload',
+    'Workspace',
+    'WorkspaceRole',
+    'WorkspaceRoleChoice',
+]

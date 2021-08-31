@@ -36,12 +36,12 @@ class ProcessUploadTask(celery.Task):
     def start_upload(upload_id: int):
         logger.info(f'Begin processing of upload {upload_id}')
         upload: Upload = Upload.objects.get(id=upload_id)
-        upload.status = Upload.UploadStatus.STARTED
+        upload.status = Upload.Status.STARTED
         upload.save()
 
     @staticmethod
     def fail_upload_with_message(upload: Upload, message: str):
-        upload.status = Upload.UploadStatus.FAILED
+        upload.status = Upload.Status.FAILED
         if upload.error_messages is None:
             upload.error_messages = [message]
         else:
@@ -51,7 +51,7 @@ class ProcessUploadTask(celery.Task):
 
     @staticmethod
     def complete_upload(upload: Upload):
-        upload.status = Upload.UploadStatus.FINISHED
+        upload.status = Upload.Status.FINISHED
         upload.save()
 
     def __call__(self, *args, **kwargs):

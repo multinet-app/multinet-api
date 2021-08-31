@@ -81,7 +81,7 @@ def test_create_upload_model(workspace: Workspace, user: User, miserables_json):
         'user': user.username,
         'data_type': Upload.DataType.D3_JSON,
         'error_messages': None,
-        'status': Upload.UploadStatus.PENDING,
+        'status': Upload.Status.PENDING,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
     }
@@ -191,7 +191,7 @@ def test_valid_d3_json_task_response(
 
     r_json = r.json()
     assert r.status_code == 200
-    assert r_json['status'] == Upload.UploadStatus.FINISHED
+    assert r_json['status'] == Upload.Status.FINISHED
     assert r_json['error_messages'] is None
 
     # Check that tables are created
