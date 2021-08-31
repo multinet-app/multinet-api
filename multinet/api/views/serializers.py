@@ -173,6 +173,10 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
     workspace = WorkspaceSerializer()
 
 
+class NetworkTablesSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
+
+
 class UploadCreateSerializer(serializers.Serializer):
     field_value = serializers.CharField()
 
