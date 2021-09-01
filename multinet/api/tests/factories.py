@@ -3,7 +3,7 @@ import factory
 import factory.fuzzy
 
 from multinet.api.models import Network, Table, Workspace
-from multinet.api.models.upload import Upload
+from multinet.api.models.tasks import Upload
 
 
 class UserFactory(factory.django.DjangoModelFactory):

@@ -7,9 +7,9 @@ from django.contrib.auth.models import User
 import pytest
 from rest_framework.response import Response
 
-from multinet.api.models.upload import Upload
+from multinet.api.models.tasks import Upload
 from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.tasks.process.utils import str_to_number
+from multinet.api.tasks.upload.utils import str_to_number
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
     TIMESTAMP_RE,
@@ -68,7 +68,7 @@ def test_create_upload_model_csv(workspace: Workspace, user: User, airports_csv)
         'user': user.username,
         'data_type': Upload.DataType.CSV,
         'error_messages': None,
-        'status': Upload.UploadStatus.PENDING,
+        'status': Upload.Status.PENDING,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
     }
@@ -168,7 +168,7 @@ def test_upload_valid_csv_task_response(
 
     r_json = r.json()
     assert r.status_code == 200
-    assert r_json['status'] == Upload.UploadStatus.FINISHED
+    assert r_json['status'] == Upload.Status.FINISHED
     assert r_json['error_messages'] is None
 
     # Check that table is created

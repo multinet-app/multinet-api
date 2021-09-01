@@ -3,7 +3,7 @@ import pytest
 from rest_framework.response import Response
 from rest_framework.test import APIClient
 
-from multinet.api.models.upload import Upload
+from multinet.api.models.tasks import Upload
 from multinet.api.models.workspace import Workspace, WorkspaceRoleChoice
 from multinet.api.tests.factories import UploadFactory
 from multinet.api.tests.fuzzy import TIMESTAMP_RE, workspace_re

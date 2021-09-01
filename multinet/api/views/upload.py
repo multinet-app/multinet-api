@@ -11,7 +11,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
-from multinet.api.tasks.process import process_csv, process_d3_json
+from multinet.api.tasks.upload import process_csv, process_d3_json
 
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (
@@ -86,7 +86,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         # Dispatch task
         process_csv.delay(
-            upload_id=upload.pk,
+            task_id=upload.pk,
             table_name=table_name,
             edge=serializer.validated_data['edge'],
             columns=serializer.validated_data['columns'],
@@ -142,7 +142,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         # Dispatch task
         process_d3_json.delay(
-            upload_id=upload.pk,
+            task_id=upload.pk,
             network_name=network_name,
             node_table_name=node_table_name,
             edge_table_name=edge_table_name,
