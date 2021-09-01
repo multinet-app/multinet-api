@@ -6,7 +6,7 @@ from celery.utils.log import get_task_logger
 
 from multinet.api.models import Network, Table, Upload
 
-from .utils import ProcessUploadTask
+from .common import ProcessUploadTask
 
 logger = get_task_logger(__name__)
 

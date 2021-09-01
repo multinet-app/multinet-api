@@ -11,7 +11,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
-from multinet.api.tasks.process import process_csv, process_d3_json
+from multinet.api.tasks.upload import process_csv, process_d3_json
 
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (

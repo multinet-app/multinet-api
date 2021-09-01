@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from multinet.api.models.tasks import Upload
 from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.tasks.process.utils import str_to_number
+from multinet.api.tasks.upload.utils import str_to_number
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
     TIMESTAMP_RE,

@@ -6,9 +6,6 @@ from typing import Optional, Union
 from celery.utils.log import get_task_logger
 from dateutil import parser as dateutilparser
 
-from multinet.api.models import Upload
-from multinet.api.tasks import MultinetCeleryTask
-
 logger = get_task_logger(__name__)
 
 
@@ -22,10 +19,6 @@ class ColumnTypeEnum(Enum):
     @classmethod
     def values(cls):
         return list(map(lambda c: c.value, cls))
-
-
-class ProcessUploadTask(MultinetCeleryTask):
-    task_model = Upload
 
 
 def str_to_bool(entry: str) -> bool:
