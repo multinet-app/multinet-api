@@ -86,7 +86,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         # Dispatch task
         process_csv.delay(
-            upload_id=upload.pk,
+            task_id=upload.pk,
             table_name=table_name,
             edge=serializer.validated_data['edge'],
             columns=serializer.validated_data['columns'],
@@ -142,7 +142,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         # Dispatch task
         process_d3_json.delay(
-            upload_id=upload.pk,
+            task_id=upload.pk,
             network_name=network_name,
             node_table_name=node_table_name,
             edge_table_name=edge_table_name,

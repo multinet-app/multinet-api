@@ -36,9 +36,9 @@ def process_row(row: Dict[str, Any], cols: Dict[str, ColumnTypeEnum]) -> Dict:
 
 @shared_task(base=ProcessUploadTask)
 def process_csv(
-    upload_id: int, table_name: str, edge: bool, columns: Dict[str, ColumnTypeEnum]
+    task_id: int, table_name: str, edge: bool, columns: Dict[str, ColumnTypeEnum]
 ) -> None:
-    upload: Upload = Upload.objects.get(id=upload_id)
+    upload: Upload = Upload.objects.get(id=task_id)
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:

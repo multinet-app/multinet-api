@@ -28,12 +28,12 @@ def d3_link_to_arango_doc(link: Dict, node_table_name: str) -> Dict:
 
 @shared_task(base=ProcessUploadTask)
 def process_d3_json(
-    upload_id: int,
+    task_id: int,
     network_name: str,
     node_table_name: str,
     edge_table_name: str,
 ) -> None:
-    upload: Upload = Upload.objects.get(id=upload_id)
+    upload: Upload = Upload.objects.get(id=task_id)
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:
