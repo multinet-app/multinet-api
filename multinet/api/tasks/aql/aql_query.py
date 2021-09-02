@@ -1,0 +1,33 @@
+import json
+
+from arango.exceptions import AQLQueryExecuteError, ArangoServerError
+from multinet.api.utils.arango import ArangoQuery
+from arango.cursor import Cursor
+from celery import shared_task
+
+from multinet.api.models import AqlQuery, Workspace
+from multinet.api.tasks import MultinetCeleryTask
+
+
+class ExecuteAqlQueryTask(MultinetCeleryTask):
+    task_model = AqlQuery
+
+
+@shared_task(base=ExecuteAqlQueryTask)
+def execute_query(task_id: int) -> None:
+    query_task: AqlQuery = AqlQuery.objects.select_related('workspace').get(id=task_id)
+    workspace: Workspace = query_task.workspace
+    query_str = query_task.query
+
+    try:
+        # Run the query on Arango DB
+        database = workspace.get_arango_db()
+        query = ArangoQuery(database, query_str)
+        cursor: Cursor = query.execute()
+
+        # Store the results on the task object
+        jsonResults = json.dumps(list(cursor))
+        query_task.query_results = jsonResults
+        query_task.save()
+    except (AQLQueryExecuteError, ArangoServerError) as err:
+        ExecuteAqlQueryTask.fail_task_with_message(query_task, err.error_message)
