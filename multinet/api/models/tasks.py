@@ -38,3 +38,10 @@ class Upload(Task):
 
     blob = S3FileField()
     data_type = models.CharField(max_length=20, choices=DataType.choices)
+
+
+class AqlQuery(Task):
+    """An obhect to track AQL queries."""
+
+    query = models.CharField()
+    query_results = models.JSONField()
