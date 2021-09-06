@@ -1,6 +1,6 @@
 from .network import Network
 from .table import Table
-from .tasks import Task, Upload, AqlQuery
+from .tasks import AqlQuery, Task, Upload
 from .workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
 
 __all__ = [

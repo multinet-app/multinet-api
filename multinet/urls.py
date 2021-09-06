@@ -7,6 +7,7 @@ from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
+    AqlQueryViewSet,
     NetworkViewSet,
     TableViewSet,
     UploadViewSet,
@@ -33,6 +34,12 @@ workspaces_routes.register(
     'uploads',
     UploadViewSet,
     basename='upload',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
+workspaces_routes.register(
+    'queries',
+    AqlQueryViewSet,
+    basename='query',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 

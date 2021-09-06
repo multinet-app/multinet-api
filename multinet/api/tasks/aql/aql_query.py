@@ -1,12 +1,12 @@
 import json
 
-from arango.exceptions import AQLQueryExecuteError, ArangoServerError
-from multinet.api.utils.arango import ArangoQuery
 from arango.cursor import Cursor
+from arango.exceptions import AQLQueryExecuteError, ArangoServerError
 from celery import shared_task
 
 from multinet.api.models import AqlQuery, Workspace
 from multinet.api.tasks import MultinetCeleryTask
+from multinet.api.utils.arango import ArangoQuery
 
 
 class ExecuteAqlQueryTask(MultinetCeleryTask):
@@ -26,8 +26,8 @@ def execute_query(task_id: int) -> None:
         cursor: Cursor = query.execute()
 
         # Store the results on the task object
-        jsonResults = json.dumps(list(cursor))
-        query_task.query_results = jsonResults
+        json_results = json.dumps(list(cursor))
+        query_task.query_results = json_results
         query_task.save()
     except (AQLQueryExecuteError, ArangoServerError) as err:
         ExecuteAqlQueryTask.fail_task_with_message(query_task, err.error_message)
