@@ -43,5 +43,5 @@ class Upload(Task):
 class AqlQuery(Task):
     """An obhect to track AQL queries."""
 
-    query = models.CharField()
+    query = models.TextField()
     query_results = models.JSONField()
