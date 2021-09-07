@@ -99,6 +99,9 @@ class AqlQueryTaskSerializer(serializers.ModelSerializer):
 
     workspace = WorkspaceSerializer()
 
+    # Specify user as a CharField to return username
+    user = serializers.CharField()
+
 
 class LimitOffsetSerializer(serializers.Serializer):
     limit = serializers.IntegerField(required=False)
