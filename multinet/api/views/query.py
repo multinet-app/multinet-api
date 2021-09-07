@@ -14,11 +14,14 @@ from .serializers import AqlQuerySerializer, AqlQueryTaskSerializer
 
 
 class AqlQueryViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
+    queryset = AqlQuery.objects.all().select_related('workspace')
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = AqlQueryTaskSerializer
     swagger_tags = ['queries']
 
-    @swagger_auto_schema(request_body=AqlQuerySerializer())
+    @swagger_auto_schema(
+        request_body=AqlQuerySerializer(), responses={200: AqlQueryTaskSerializer()}
+    )
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def create(self, request, parent_lookup_workspace__name: str):
         """Create an AQL query task."""
