@@ -20,7 +20,7 @@ def execute_query(task_id: int) -> None:
     try:
         # Run the query on Arango DB
         database = workspace.get_arango_db()
-        query = ArangoQuery(database, query_str)
+        query = ArangoQuery(database, query_str, time_limit_secs=60)
         cursor: Cursor = query.execute()
 
         # Store the results on the task object
