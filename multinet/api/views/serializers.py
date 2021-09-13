@@ -95,11 +95,20 @@ class AqlQuerySerializer(serializers.Serializer):
 class AqlQueryTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = AqlQuery
-        fields = '__all__'
+        exclude = ['results']
 
     workspace = WorkspaceSerializer()
 
     # Specify user as a CharField to return username
+    user = serializers.CharField()
+
+
+class AqlQueryResultsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AqlQuery
+        fields = ['id', 'workspace', 'user', 'results']
+
+    workspace = serializers.CharField()
     user = serializers.CharField()
 
 

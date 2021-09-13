@@ -50,7 +50,24 @@ def test_query_rest_create(workspace: Workspace, user: User, valid_query):
         'status': AqlQuery.Status.PENDING,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
-        'results': None,
+    }
+
+
+@pytest.mark.django_db
+def test_query_rest_create_mutating(workspace: Workspace, user: User, mutating_query):
+    r = mutating_query['response']
+
+    # even though the query is not read-only, the task object should be created
+    assert r.status_code == 200
+    assert r.json() == {
+        'id': INTEGER_ID_RE,
+        'workspace': workspace_re(workspace),
+        'query': mutating_query['query'],
+        'user': user.username,
+        'error_messages': None,
+        'status': AqlQuery.Status.PENDING,
+        'created': TIMESTAMP_RE,
+        'modified': TIMESTAMP_RE,
     }
 
 
@@ -88,31 +105,7 @@ def test_query_rest_retrieve(
     assert r.status_code == status_code
     if success:
         r_json = r.json()
-        results = r_json['results']
-        expected_results = valid_query['nodes']
-        assert len(results) == len(expected_results)
         assert r_json['status'] == AqlQuery.Status.FINISHED
-        for row in results:
-            assert row in expected_results
-
-
-@pytest.mark.django_db
-def test_query_rest_create_mutating(workspace: Workspace, user: User, mutating_query):
-    r = mutating_query['response']
-
-    # even though the query is not read-only, the task object should be created
-    assert r.status_code == 200
-    assert r.json() == {
-        'id': INTEGER_ID_RE,
-        'workspace': workspace_re(workspace),
-        'query': mutating_query['query'],
-        'user': user.username,
-        'error_messages': None,
-        'status': AqlQuery.Status.PENDING,
-        'created': TIMESTAMP_RE,
-        'modified': TIMESTAMP_RE,
-        'results': None,
-    }
 
 
 @pytest.mark.django_db
@@ -128,6 +121,64 @@ def test_query_rest_retrieve_mutating(
     )
     assert r.status_code == 200
     r_json = r.json()
-    assert r_json['results'] is None
     assert len(r_json['error_messages']) > 0
     assert r_json['status'] == AqlQuery.Status.FAILED
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    'permission,is_owner,status_code,success',
+    [
+        (None, False, 404, False),
+        (WorkspaceRoleChoice.READER, False, 200, True),
+        (WorkspaceRoleChoice.WRITER, False, 200, True),
+        (WorkspaceRoleChoice.MAINTAINER, False, 200, True),
+        (None, True, 200, True),
+    ],
+)
+def test_query_rest_retrieve_results(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    valid_query,
+    permission: WorkspaceRoleChoice,
+    is_owner: bool,
+    status_code: int,
+    success: bool,
+):
+    if permission is not None:
+        workspace.set_user_permission(user, permission)
+    elif is_owner:
+        workspace.set_owner(user)
+
+    query_info = valid_query['response'].json()
+    query_id = query_info['id']
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/queries/{query_id}/results/'
+    )
+    assert r.status_code == status_code
+    if success:
+        r_json = r.json()
+        assert r_json['id'] == query_id
+        assert r_json['workspace'] == str(workspace)
+        assert r_json['user'] == str(user)
+
+        results = r_json['results']
+        expected_results = valid_query['nodes']
+        assert len(results) == len(expected_results)
+        for row in results:
+            assert row in expected_results
+
+
+@pytest.mark.django_db
+def test_query_rest_retrieve_results_mutating(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient, mutating_query
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
+    query_info = mutating_query['response'].json()
+    query_id = query_info['id']
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/queries/{query_id}/results/'
+    )
+    assert r.status_code == 400
+    assert r.data == 'The given query could not be executed, and has no results'
