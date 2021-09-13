@@ -50,7 +50,7 @@ def test_query_rest_create(workspace: Workspace, user: User, valid_query):
         'status': AqlQuery.Status.PENDING,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
-        'query_results': None,
+        'results': None,
     }
 
 
@@ -88,7 +88,7 @@ def test_query_rest_retrieve(
     assert r.status_code == status_code
     if success:
         r_json = r.json()
-        results = r_json['query_results']
+        results = r_json['results']
         expected_results = valid_query['nodes']
         assert len(results) == len(expected_results)
         assert r_json['status'] == AqlQuery.Status.FINISHED
@@ -111,7 +111,7 @@ def test_query_rest_create_mutating(workspace: Workspace, user: User, mutating_q
         'status': AqlQuery.Status.PENDING,
         'created': TIMESTAMP_RE,
         'modified': TIMESTAMP_RE,
-        'query_results': None,
+        'results': None,
     }
 
 
@@ -128,6 +128,6 @@ def test_query_rest_retrieve_mutating(
     )
     assert r.status_code == 200
     r_json = r.json()
-    assert r_json['query_results'] is None
+    assert r_json['results'] is None
     assert len(r_json['error_messages']) > 0
     assert r_json['status'] == AqlQuery.Status.FINISHED

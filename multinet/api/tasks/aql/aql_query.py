@@ -24,7 +24,7 @@ def execute_query(task_id: int) -> None:
         cursor: Cursor = query.execute()
 
         # Store the results on the task object
-        query_task.query_results = list(cursor)
+        query_task.results = list(cursor)
         query_task.save()
     except (AQLQueryExecuteError, ArangoServerError) as err:
         ExecuteAqlQueryTask.fail_task_with_message(query_task, err.error_message)
