@@ -130,4 +130,4 @@ def test_query_rest_retrieve_mutating(
     r_json = r.json()
     assert r_json['results'] is None
     assert len(r_json['error_messages']) > 0
-    assert r_json['status'] == AqlQuery.Status.FINISHED
+    assert r_json['status'] == AqlQuery.Status.FAILED

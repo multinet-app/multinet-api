@@ -1,3 +1,3 @@
-from .aql_query import ExecuteAqlQueryTask, execute_query
+from .aql_query import AqlQueryTask, execute_query
 
-__all__ = ['ExecuteAqlQueryTask', 'execute_query']
+__all__ = ['AqlQueryTask', 'execute_query']
