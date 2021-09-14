@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import Network, Table, Upload, Workspace
+from multinet.api.models import AqlQuery, Network, Table, Upload, Workspace
 from multinet.api.tasks.upload.utils import ColumnTypeEnum
 
 
@@ -90,6 +90,26 @@ class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
 
 class AqlQuerySerializer(serializers.Serializer):
     query = serializers.CharField()
+
+
+class AqlQueryTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AqlQuery
+        exclude = ['results']
+
+    workspace = WorkspaceSerializer()
+
+    # Specify user as a CharField to return username
+    user = serializers.CharField()
+
+
+class AqlQueryResultsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AqlQuery
+        fields = ['id', 'workspace', 'user', 'results']
+
+    workspace = serializers.CharField()
+    user = serializers.CharField()
 
 
 class LimitOffsetSerializer(serializers.Serializer):
