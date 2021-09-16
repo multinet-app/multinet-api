@@ -6,11 +6,12 @@ This is the simplest configuration for developers to start with.
 ### Initial Setup
 1. Run `docker-compose run --rm django ./manage.py migrate`
 2. Run `docker-compose run --rm django ./manage.py createsuperuser`
-   and follow the prompts to create your own user
+   and follow the prompts to create your own user. Make sure to supply an email address
+3. Run `docker-compose run --rm django ./manage.py createarangoreadonlyuser`
 
 ### Run Application
 1. Run `docker-compose up`
-2. Access the site, starting at http://localhost:8000/admin/
+2. Access the site, starting at http://localhost:8000/admin/ with your email from above as the username.
 3. When finished, use `Ctrl+C`
 
 ### Application Maintenance
