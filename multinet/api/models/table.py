@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Type
+from typing import Dict, Iterable, List, Optional, Set, Type
 
 from arango.collection import StandardCollection
 from arango.cursor import Cursor
@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
+from more_itertools import chunked
 
 from .workspace import Workspace
 
@@ -56,28 +57,44 @@ class Table(TimeStampedModel):
         coll = self.get_arango_collection()
         return coll.find({}, limit=limit, skip=offset)
 
-    def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
+    def put_rows(self, rows: Iterable[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        res = self.get_arango_collection(readonly=False).insert_many(rows, overwrite=True)
-        errors = [
-            RowModifyError(index=i, message=doc.error_message)
-            for i, doc in enumerate(res)
-            if isinstance(doc, DocumentInsertError)
-        ]
+        # Never insert more than 10,000 rows at once
+        chunked_rows = chunked(rows, 10_000)
+        errors = []
+        num_rows = 0
 
-        inserted = len(rows) - len(errors)
+        for chunk in chunked_rows:
+            num_rows += len(chunk)
+            res = self.get_arango_collection(readonly=False).insert_many(chunk, overwrite=True)
+            errors.extend(
+                [
+                    RowModifyError(index=i, message=doc.error_message)
+                    for i, doc in enumerate(res)
+                    if isinstance(doc, DocumentInsertError)
+                ]
+            )
+
+        inserted = num_rows - len(errors)
         return RowInsertionResponse(inserted=inserted, errors=errors)
 
-    def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
+    def delete_rows(self, rows: Iterable[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
-        res = self.get_arango_collection(readonly=False).delete_many(rows)
-        errors = [
-            RowModifyError(index=i, message=doc.error_message)
-            for i, doc in enumerate(res)
-            if isinstance(doc, DocumentDeleteError)
-        ]
+        # Never delete more than 10,000 rows at once
+        chunked_rows = chunked(rows, 10_000)
+        errors = []
+        num_rows = 0
 
-        deleted = len(rows) - len(errors)
+        for chunk in chunked_rows:
+            num_rows += len(chunk)
+            res = self.get_arango_collection(readonly=False).delete_many(chunk)
+            errors = [
+                RowModifyError(index=i, message=doc.error_message)
+                for i, doc in enumerate(res)
+                if isinstance(doc, DocumentDeleteError)
+            ]
+
+        deleted = num_rows - len(errors)
         return RowDeletionResponse(deleted=deleted, errors=errors)
 
     def find_referenced_node_tables(self) -> Optional[Dict[str, Set[str]]]:

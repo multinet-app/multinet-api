@@ -51,6 +51,7 @@ setup(
         'drf-extensions',
         'drf-yasg',
         'python-arango',
+        'more-itertools',
         # Production-only
         'gunicorn',
         # Development-only

@@ -43,19 +43,18 @@ def process_csv(
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:
-        blob_file: BinaryIO = blob_file
-        csv_rows = list(csv.DictReader(StringIO(blob_file.read().decode('utf-8'))))
+        blob_file: BinaryIO
 
-    # Cast entries in each row to appropriate type, if necessary
-    for i, row in enumerate(csv_rows):
-        csv_rows[i] = process_row(row, columns)
+        # TODO: Fix below, as DictReader can't consume bytes
+        reader = csv.DictReader(blob_file)
+        csv_rows = (process_row(row, columns) for row in reader)
 
-    # Create new table
-    table: Table = Table.objects.create(
-        name=table_name,
-        edge=edge,
-        workspace=upload.workspace,
-    )
+        # Create new table
+        table: Table = Table.objects.create(
+            name=table_name,
+            edge=edge,
+            workspace=upload.workspace,
+        )
 
-    # Insert rows
-    table.put_rows(csv_rows)
+        # Insert rows
+        table.put_rows(csv_rows)
