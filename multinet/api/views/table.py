@@ -16,7 +16,7 @@ from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     PaginatedResultSerializer,
     TableCreateSerializer,
-    TableMetadataSerializer,
+    TableTypeAnnotationSerializer,
     TableReturnSerializer,
     TableRowRetrieveSerializer,
     TableSerializer,
@@ -142,14 +142,15 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        responses={200: TableMetadataSerializer()},
+        responses={200: TableTypeAnnotationSerializer(many=True)},
     )
-    @action(detail=True, url_path='metadata')
+    @action(detail=True, url_path='annotations')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
-    def get_metadata(self, request, parent_lookup_workspace__name: str, name: str):
+    def get_type_annotations(self, request, parent_lookup_workspace__name: str, name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        metadata = TableTypeAnnotation.objects.all().filter(table=table)
+        annotations = TableTypeAnnotation.objects.all().filter(table=table)
+        serializer = TableTypeAnnotationSerializer(annotations, many=True)
 
-        return Response(metadata)
+        return Response(serializer.data, status=status.HTTP_200_OK)
