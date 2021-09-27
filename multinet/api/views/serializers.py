@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import AqlQuery, Network, Table, Upload, Workspace
+from multinet.api.models import AqlQuery, Network, Table, TableTypeAnnotation, Upload, Workspace
 from multinet.api.tasks.upload.utils import ColumnTypeEnum
 
 
@@ -150,6 +150,13 @@ class TableSerializer(TableCreateSerializer):
             'workspace',
         ]
         read_only_fields = ['created']
+
+class TableMetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TableTypeAnnotation
+        fields = ['table', 'column',]
+
+    type = serializers.ChoiceField(choices=ColumnTypeEnum.values()),
 
 
 # Used for serializing Tables as responses
