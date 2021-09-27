@@ -57,5 +57,13 @@ def process_csv(
         workspace=upload.workspace,
     )
 
+    # Save the table metadata
+    for col_key, col_type in columns.items():
+        TableTypeAnnotation.objects.create(
+            table=table,
+            column=col_key,
+            type=col_type,
+        )
+
     # Insert rows
     table.put_rows(csv_rows)
