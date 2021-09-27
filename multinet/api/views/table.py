@@ -151,6 +151,6 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        metadata = TableTypeAnnotation.objects.all(table=table)
+        metadata = TableTypeAnnotation.objects.all().filter(table=table)
 
         return Response(metadata)
