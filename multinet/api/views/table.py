@@ -141,7 +141,6 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    
     @swagger_auto_schema(
         responses={200: TableMetadataSerializer()},
     )

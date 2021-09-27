@@ -5,7 +5,7 @@ from typing import Optional, Union
 from celery.utils.log import get_task_logger
 from dateutil import parser as dateutilparser
 
-from multinet.api.common_types import ColumnTypeEnum
+from multinet.api.models import TableTypeAnnotation
 
 logger = get_task_logger(__name__)
 
@@ -64,7 +64,7 @@ def str_to_number(entry: str) -> Union[int, float]:
 
 # Store mapping of enums to processor functions
 processor_dict = {
-    ColumnTypeEnum.BOOLEAN.value: str_to_bool,
-    ColumnTypeEnum.DATE.value: str_to_datestr,
-    ColumnTypeEnum.NUMBER.value: str_to_number,
+    TableTypeAnnotation.Type.BOOLEAN: str_to_bool,
+    TableTypeAnnotation.Type.DATE: str_to_datestr,
+    TableTypeAnnotation.Type.NUMBER: str_to_number,
 }

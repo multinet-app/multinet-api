@@ -3,7 +3,6 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
 from multinet.api.models import AqlQuery, Network, Table, TableTypeAnnotation, Upload, Workspace
-from multinet.api.tasks.upload.utils import ColumnTypeEnum
 
 
 # The default ModelSerializer for User fails if the user already exists
@@ -151,12 +150,13 @@ class TableSerializer(TableCreateSerializer):
         ]
         read_only_fields = ['created']
 
+
 class TableMetadataSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableTypeAnnotation
-        fields = ['table', 'column',]
+        fields = ['table', 'column']
 
-    type = serializers.ChoiceField(choices=ColumnTypeEnum.values()),
+    type = serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices)
 
 
 # Used for serializing Tables as responses
@@ -226,7 +226,7 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
     columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=ColumnTypeEnum.values()),
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
         default=dict,
     )
 

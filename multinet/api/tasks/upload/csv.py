@@ -5,15 +5,15 @@ from typing import Any, BinaryIO, Dict
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
-from multinet.api.models import Table, Upload
+from multinet.api.models import Table, TableTypeAnnotation, Upload
 
 from .common import ProcessUploadTask
-from .utils import ColumnTypeEnum, processor_dict
+from .utils import processor_dict
 
 logger = get_task_logger(__name__)
 
 
-def process_row(row: Dict[str, Any], cols: Dict[str, ColumnTypeEnum]) -> Dict:
+def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) -> Dict:
     """Process a CSV row."""
     new_row = dict(row)
 
@@ -37,7 +37,7 @@ def process_row(row: Dict[str, Any], cols: Dict[str, ColumnTypeEnum]) -> Dict:
 
 @shared_task(base=ProcessUploadTask)
 def process_csv(
-    task_id: int, table_name: str, edge: bool, columns: Dict[str, ColumnTypeEnum]
+    task_id: int, table_name: str, edge: bool, columns: Dict[str, TableTypeAnnotation.Type]
 ) -> None:
     upload: Upload = Upload.objects.get(id=task_id)
 
