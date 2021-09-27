@@ -1,24 +1,13 @@
 from datetime import datetime
-from enum import Enum
 import json
 from typing import Optional, Union
 
 from celery.utils.log import get_task_logger
 from dateutil import parser as dateutilparser
 
+from multinet.api.common_types import ColumnTypeEnum
+
 logger = get_task_logger(__name__)
-
-
-class ColumnTypeEnum(Enum):
-    LABEL = 'label'
-    BOOLEAN = 'boolean'
-    CATEGORY = 'category'
-    NUMBER = 'number'
-    DATE = 'date'
-
-    @classmethod
-    def values(cls):
-        return list(map(lambda c: c.value, cls))
 
 
 def str_to_bool(entry: str) -> bool:
