@@ -12,6 +12,7 @@ from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
 
 from .workspace import Workspace
+from multinet.api.common_types import ColumnTypeEnum
 
 
 @dataclass
@@ -121,6 +122,19 @@ class Table(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def type_annotations(self):
+        return TableTypeAnnotation.objects.filter(table=self)
+
+class TableTypeAnnotation(TimeStampedModel):
+    table = models.ForeignKey(Table, related_name='type_annotations', on_delete=models.CASCADE)
+    column = models.CharField(max_length=255)
+    type = models.CharField(choices=[(tag, tag.value) for tag in ColumnTypeEnum], max_length=16)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['table', 'column'], name='unique_column_type')
+        ]
 
 # Handle arango sync
 @receiver(pre_save, sender=Table)
