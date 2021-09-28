@@ -3,6 +3,7 @@ import json
 
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -19,7 +20,6 @@ from multinet.api.views.serializers import (
     TableReturnSerializer,
     TableRowRetrieveSerializer,
     TableSerializer,
-    TableTypeAnnotationSerializer,
 )
 
 from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
@@ -142,7 +142,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        responses={200: TableTypeAnnotationSerializer(many=True)},
+        responses={200: openapi.Schema(type=openapi.TYPE_OBJECT)},
     )
     @action(detail=True, url_path='annotations')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
@@ -151,6 +151,5 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
         annotations = TableTypeAnnotation.objects.all().filter(table=table)
-        serializer = TableTypeAnnotationSerializer(annotations, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        annotations_dict = {ann.column: ann.type for ann in annotations}
+        return Response(annotations_dict, status=status.HTTP_200_OK)

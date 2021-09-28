@@ -151,14 +151,6 @@ class TableSerializer(TableCreateSerializer):
         read_only_fields = ['created']
 
 
-class TableTypeAnnotationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TableTypeAnnotation
-        fields = ['table', 'column', 'type']
-
-    table = serializers.CharField()
-
-
 # Used for serializing Tables as responses
 class TableReturnSerializer(TableSerializer):
     workspace = WorkspaceSerializer()
