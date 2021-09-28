@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 import pytest
 from rest_framework.response import Response
 
+from multinet.api.models.table import TableTypeAnnotation
 from multinet.api.models.tasks import Upload
 from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
 from multinet.api.tasks.upload.utils import str_to_number
@@ -201,3 +202,23 @@ def test_upload_valid_csv_task_response(
 
         # Assert documents match
         assert result == dict_to_fuzzy_arango_doc(row)
+
+
+@pytest.mark.django_db
+def test_retrieve_table_type_annotations(
+    workspace: Workspace, user: User, authenticated_api_client, airports_csv
+):
+    """Test that the type annotations can be retrieved successfully."""
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    table_name = airports_csv['table_name']
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/tables/{table_name}/annotations/'
+    )
+
+    assert r.json() == {
+        'latitude': TableTypeAnnotation.Type.NUMBER,
+        'longitude': TableTypeAnnotation.Type.NUMBER,
+        'altitude': TableTypeAnnotation.Type.NUMBER,
+        'timezone': TableTypeAnnotation.Type.NUMBER,
+        'year built': TableTypeAnnotation.Type.NUMBER,
+    }
