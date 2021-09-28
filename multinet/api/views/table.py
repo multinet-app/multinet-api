@@ -16,10 +16,10 @@ from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     PaginatedResultSerializer,
     TableCreateSerializer,
-    TableTypeAnnotationSerializer,
     TableReturnSerializer,
     TableRowRetrieveSerializer,
     TableSerializer,
+    TableTypeAnnotationSerializer,
 )
 
 from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
