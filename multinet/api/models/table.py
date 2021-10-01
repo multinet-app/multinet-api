@@ -121,6 +121,28 @@ class Table(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def type_annotations(self):
+        return TableTypeAnnotation.objects.filter(table=self)
+
+
+class TableTypeAnnotation(TimeStampedModel):
+    class Type(models.TextChoices):
+        LABEL = 'label'
+        BOOLEAN = 'boolean'
+        CATEGORY = 'category'
+        NUMBER = 'number'
+        DATE = 'date'
+
+    table = models.ForeignKey(Table, related_name='type_annotations', on_delete=models.CASCADE)
+    column = models.CharField(max_length=255)
+    type = models.CharField(choices=Type.choices, max_length=16)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['table', 'column'], name='unique_column_type')
+        ]
+
 
 # Handle arango sync
 @receiver(pre_save, sender=Table)

@@ -2,8 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import AqlQuery, Network, Table, Upload, Workspace
-from multinet.api.tasks.upload.utils import ColumnTypeEnum
+from multinet.api.models import AqlQuery, Network, Table, TableTypeAnnotation, Upload, Workspace
 
 
 # The default ModelSerializer for User fails if the user already exists
@@ -219,7 +218,7 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
     columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=ColumnTypeEnum.values()),
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
         default=dict,
     )
 
