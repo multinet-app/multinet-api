@@ -59,7 +59,7 @@ class ArangoQuery:
         query_str: Optional[str] = None,
         bind_vars: Optional[Dict[str, str]] = None,
         time_limit_secs: int = 30,
-        memory_limit_bytes: int = 20000000,  # 20MB
+        memory_limit_bytes: int = 1 * 1024 * 1024 * 1024,  # 1GiB
     ) -> None:
         self.db = db
         self.query_str = query_str
