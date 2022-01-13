@@ -66,7 +66,6 @@ class Table(TimeStampedModel):
 
         # Limit the amount of rows inserted per request, to prevent timeouts
         for chunk in chunked(rows, DOCUMENT_CHUNK_SIZE):
-            print(len(chunk))
             res = self.get_arango_collection(readonly=False).insert_many(chunk, overwrite=True)
             errors.extend(
                 (
