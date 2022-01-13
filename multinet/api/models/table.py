@@ -10,8 +10,12 @@ from django.db import models
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from django_extensions.db.models import TimeStampedModel
+from more_itertools import chunked
 
 from .workspace import Workspace
+
+# The max number of documents that should be sent in bulk requests
+DOCUMENT_CHUNK_SIZE = 5000
 
 
 @dataclass
@@ -58,24 +62,37 @@ class Table(TimeStampedModel):
 
     def put_rows(self, rows: List[Dict]) -> RowInsertionResponse:
         """Insert/update rows in the underlying arangodb collection."""
-        res = self.get_arango_collection(readonly=False).insert_many(rows, overwrite=True)
-        errors = [
-            RowModifyError(index=i, message=doc.error_message)
-            for i, doc in enumerate(res)
-            if isinstance(doc, DocumentInsertError)
-        ]
+        errors = []
+
+        # Limit the amount of rows inserted per request, to prevent timeouts
+        for chunk in chunked(rows, DOCUMENT_CHUNK_SIZE):
+            print(len(chunk))
+            res = self.get_arango_collection(readonly=False).insert_many(chunk, overwrite=True)
+            errors.extend(
+                (
+                    RowModifyError(index=i, message=doc.error_message)
+                    for i, doc in enumerate(res)
+                    if isinstance(doc, DocumentInsertError)
+                )
+            )
 
         inserted = len(rows) - len(errors)
         return RowInsertionResponse(inserted=inserted, errors=errors)
 
     def delete_rows(self, rows: List[Dict]) -> RowDeletionResponse:
         """Delete rows in the underlying arangodb collection."""
-        res = self.get_arango_collection(readonly=False).delete_many(rows)
-        errors = [
-            RowModifyError(index=i, message=doc.error_message)
-            for i, doc in enumerate(res)
-            if isinstance(doc, DocumentDeleteError)
-        ]
+        errors = []
+
+        # Limit the amount of rows deleted per request, to prevent timeouts
+        for chunk in chunked(rows, DOCUMENT_CHUNK_SIZE):
+            res = self.get_arango_collection(readonly=False).delete_many(chunk)
+            errors.extend(
+                (
+                    RowModifyError(index=i, message=doc.error_message)
+                    for i, doc in enumerate(res)
+                    if isinstance(doc, DocumentDeleteError)
+                )
+            )
 
         deleted = len(rows) - len(errors)
         return RowDeletionResponse(deleted=deleted, errors=errors)
