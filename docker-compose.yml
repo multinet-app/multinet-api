@@ -9,7 +9,7 @@ services:
       - ${DOCKER_POSTGRES_PORT-5432}:5432
 
   arangodb:
-    image: arangodb/arangodb:3.5.6
+    image: arangodb:3.8
     ports:
       - "${ARANGO_PORT:-8529}:8529"
     environment:
