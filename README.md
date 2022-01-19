@@ -20,6 +20,7 @@ maintenance. To non-destructively update your development stack at any time:
 1. Run `docker-compose pull`
 2. Run `docker-compose build --pull --no-cache`
 3. Run `docker-compose run --rm django ./manage.py migrate`
+4. Run `docker-compose run --rm arangodb arangod --database.auto-upgrade`
 
 ## Develop Natively (advanced)
 This configuration still uses Docker to run attached services in the background,
