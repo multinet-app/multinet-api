@@ -82,7 +82,8 @@ After these steps, you should be able to login to the API from the client.
 9. Click save.
 
 ### Client
-No changes should be necessary. When logging in, choose login with Google.
+No changes should be necessary from the OAuth setup steps from above, but they must be completed.
+When logging in, choose login with Google.
 
 ## Remap Service Ports (optional)
 Attached services may be exposed to the host system via alternative ports. Developers who work
