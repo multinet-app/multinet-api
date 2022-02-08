@@ -69,6 +69,22 @@ but allows developers to run Python code on their native system.
 
 After these steps, you should be able to login to the API from the client.
 
+## Setup Google OAuth Provider
+### API
+1. Create a google oauth token through the google cloud dashboard in `APIs and Services` > `Credentials`.
+2. Navigate to the http://<server address>/admin, logging in with your admin user if you're not already logged in.
+3. Under `SOCIAL ACCOUNTS` click add next to `Social applications`.
+4. Set Provider to `Google`.
+5. Set Name to `Google Multinet Oauth`.
+6. Copy the Client ID from Google's cloud dashboard to the MultiNet instance.
+7. Copy the Client secret to `secret key` from Google's cloud dashboard to the MultiNet instance.
+8. Add multinet.test to chosen sites.
+9. Click save.
+
+### Client
+No changes should be necessary from the OAuth setup steps from above, but they must be completed.
+When logging in, choose login with Google.
+
 ## Remap Service Ports (optional)
 Attached services may be exposed to the host system via alternative ports. Developers who work
 on multiple software projects concurrently may find this helpful to avoid port conflicts.
