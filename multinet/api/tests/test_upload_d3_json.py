@@ -5,6 +5,7 @@ from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 import pytest
 from rest_framework.response import Response
 from rest_framework.test import APIClient
@@ -31,16 +32,22 @@ data_dir = pathlib.Path(__file__).parent / 'data'
 miserables_json_file = data_dir / 'miserables.json'
 
 
-@pytest.fixture
-def miserables_json_field_value(s3ff_client) -> str:
-    with open(miserables_json_file) as file_stream:
-        field_value = s3ff_client.upload_file(
-            file_stream,
-            miserables_json_file.name,
-            'api.Upload.blob',
-        )['field_value']
+def local_json_upload(path: pathlib.Path, workspace, user) -> Upload:
+    with open(path, 'rb') as f:
+        file = SimpleUploadedFile(name=path.name, content=f.read())
 
-    return field_value
+    return Upload.objects.create(
+        workspace=workspace,
+        user=user,
+        blob=file,
+        data_type=Upload.DataType.CSV,
+    )
+
+
+@pytest.fixture
+def miserables_json_field_value(s3ff_field_value_factory, workspace, user) -> str:
+    upload = local_json_upload(miserables_json_file, workspace, user)
+    return s3ff_field_value_factory(upload.blob)
 
 
 @pytest.fixture

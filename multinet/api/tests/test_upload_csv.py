@@ -4,6 +4,7 @@ from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 import pytest
 from rest_framework.response import Response
 
@@ -18,19 +19,35 @@ from multinet.api.tests.fuzzy import (
     s3_file_field_re,
     workspace_re,
 )
-from multinet.api.tests.utils import get_field_value
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 
 
+def local_csv_upload(path: pathlib.Path, workspace, user) -> Upload:
+    with open(path, 'rb') as f:
+        file = SimpleUploadedFile(name=path.name, content=f.read())
+
+    return Upload.objects.create(
+        workspace=workspace,
+        user=user,
+        blob=file,
+        data_type=Upload.DataType.CSV,
+    )
+
+
 @pytest.fixture
-def airports_csv(workspace: Workspace, user: User, authenticated_api_client, s3ff_client) -> Dict:
+def airports_csv(
+    workspace: Workspace, user: User, authenticated_api_client, s3ff_field_value_factory
+) -> Dict:
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
 
+    # Upload file
     data_file = data_dir / 'airports.csv'
-    field_value = get_field_value(data_file, s3ff_client)
+    upload = local_csv_upload(data_file, workspace, user)
+
     # Model creation request
     table_name = f't{uuid.uuid4().hex}'
+    field_value = s3ff_field_value_factory(upload.blob)
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/csv/',
         {
@@ -103,15 +120,19 @@ def test_create_upload_model_csv_invalid_permissions(
     workspace: Workspace,
     user: User,
     authenticated_api_client,
-    s3ff_client,
+    s3ff_field_value_factory,
     permission: WorkspaceRoleChoice,
     status_code: int,
 ):
     """Test that a user with insufficient permissions is forbidden from a POST request."""
     if permission is not None:
         workspace.set_user_permission(user, permission)
+
+    # Generate field value
     data_file = data_dir / 'airports.csv'
-    field_value = get_field_value(data_file, s3ff_client)
+    upload = local_csv_upload(data_file, workspace, user)
+    field_value = s3ff_field_value_factory(upload.blob)
+
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/uploads/csv/',
