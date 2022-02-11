@@ -55,18 +55,16 @@ def process_d3_json(
         d3_dict = json.loads(blob_file.read().decode('utf-8'))
 
     # Change column names from the d3 format to the arango format
-    d3_dict['nodes'] = list(
-        filter(
-            lambda x: x is not None,
-            (d3_node_to_arango_doc(node) for node in d3_dict['nodes']),
-        )
-    )
-    d3_dict['links'] = list(
-        filter(
-            lambda x: x is not None,
-            (d3_link_to_arango_doc(link, node_table_name) for link in d3_dict['links']),
-        )
-    )
+    d3_dict['nodes'] = [
+        node
+        for node in (d3_node_to_arango_doc(node) for node in d3_dict['nodes'])
+        if node is not None
+    ]
+    d3_dict['links'] = [
+        link
+        for link in (d3_link_to_arango_doc(link, node_table_name) for link in d3_dict['links'])
+        if link is not None
+    ]
 
     # Create ancillary tables
     node_table: Table = Table.objects.create(
