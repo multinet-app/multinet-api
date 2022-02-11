@@ -13,15 +13,29 @@ logger = get_task_logger(__name__)
 
 def d3_node_to_arango_doc(node: Dict) -> Dict:
     new_node = dict(node)
-    new_node['_key'] = str(new_node.pop('id'))
 
+    # Return None if necessary
+    node_id = new_node.pop('id', None)
+    if node_id is None:
+        return None
+
+    # Assign and return
+    new_node['_key'] = str(node_id)
     return new_node
 
 
 def d3_link_to_arango_doc(link: Dict, node_table_name: str) -> Dict:
     new_link = dict(link)
-    new_link['_from'] = f'{node_table_name}/{new_link.pop("source")}'
-    new_link['_to'] = f'{node_table_name}/{new_link.pop("target")}'
+
+    # Return None if necessary
+    source = new_link.pop('source', None)
+    target = new_link.pop('target', None)
+    if source is None or target is None:
+        return None
+
+    # Set values
+    new_link['_from'] = f'{node_table_name}/{source}'
+    new_link['_to'] = f'{node_table_name}/{target}'
 
     return new_link
 
@@ -41,8 +55,18 @@ def process_d3_json(
         d3_dict = json.loads(blob_file.read().decode('utf-8'))
 
     # Change column names from the d3 format to the arango format
-    d3_dict['nodes'] = [d3_node_to_arango_doc(node) for node in d3_dict['nodes']]
-    d3_dict['links'] = [d3_link_to_arango_doc(link, node_table_name) for link in d3_dict['links']]
+    d3_dict['nodes'] = list(
+        filter(
+            lambda x: x is not None,
+            (d3_node_to_arango_doc(node) for node in d3_dict['nodes']),
+        )
+    )
+    d3_dict['links'] = list(
+        filter(
+            lambda x: x is not None,
+            (d3_link_to_arango_doc(link, node_table_name) for link in d3_dict['links']),
+        )
+    )
 
     # Create ancillary tables
     node_table: Table = Table.objects.create(

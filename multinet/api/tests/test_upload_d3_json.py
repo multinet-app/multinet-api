@@ -1,3 +1,4 @@
+import io
 import json
 import operator
 import pathlib
@@ -247,3 +248,69 @@ def test_valid_d3_json_task_response(
     results = sorted(r_json['results'], key=operator.itemgetter('_from'))
     for i, link in enumerate(links):
         assert results[i] == dict_to_fuzzy_arango_doc(link)
+
+
+@pytest.mark.django_db
+def test_d3_json_task_filter_missing(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    s3ff_client,
+):
+    """Test that missing node.id or link.[source/target] fields are removed."""
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+
+    # Read original file
+    json_dict = json.load(open(miserables_json_file, 'r'))
+    original_node_length = len(json_dict['nodes'])
+    original_link_length = len(json_dict['links'])
+
+    # Add empty entries
+    json_dict['nodes'].extend([{} for _ in range(10)])
+    new_node_length = len(json_dict['nodes'])
+    assert new_node_length != original_node_length
+
+    json_dict['links'].extend([{} for _ in range(15)])
+    new_links_length = len(json_dict['links'])
+    assert new_links_length != original_link_length
+
+    # Upload
+    field_value = s3ff_client.upload_file(
+        io.StringIO(json.dumps(json_dict)),
+        miserables_json_file.name,
+        'api.Upload.blob',
+    )['field_value']
+
+    network_name = f't{uuid.uuid4().hex}'
+    node_table_name = f'{network_name}_nodes'
+    edge_table_name = f'{network_name}_edges'
+    upload_resp: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        {
+            'field_value': field_value,
+            'network_name': network_name,
+        },
+        format='json',
+    )
+
+    # Assert upload succeeds
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/uploads/{upload_resp.json()["id"]}/'
+    )
+    assert r.status_code == 200
+    assert r.json()['status'] == Upload.Status.FINISHED
+    assert r.json()['error_messages'] is None
+
+    # Assert node table doesn't contain empty rows
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/tables/{node_table_name}/rows/', {'limit': 1}
+    )
+    assert r.status_code == 200
+    assert r.json()['count'] == original_node_length
+
+    # Assert edge table doesn't contain empty rows
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/tables/{edge_table_name}/rows/', {'limit': 1}
+    )
+    assert r.status_code == 200
+    assert r.json()['count'] == original_link_length
