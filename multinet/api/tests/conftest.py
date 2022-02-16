@@ -6,7 +6,6 @@ from faker import Faker
 import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
-from s3_file_field.testing import S3FileFieldTestClient
 
 from multinet.api.models import Network, Table, Workspace
 from multinet.api.tests.utils import generate_arango_documents
@@ -32,14 +31,6 @@ def authenticated_api_client(user: User) -> APIClient:
     client = APIClient()
     client.force_authenticate(user=user)
     return client
-
-
-@pytest.fixture()
-def s3ff_client(authenticated_api_client):
-    return S3FileFieldTestClient(
-        authenticated_api_client,  # The test APIClient instance
-        '/api/s3-upload',  # The (relative) path mounted in urlpatterns
-    )
 
 
 @pytest.fixture
