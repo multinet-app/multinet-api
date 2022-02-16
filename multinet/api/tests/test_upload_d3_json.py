@@ -2,7 +2,7 @@ import io
 import json
 import operator
 import pathlib
-from typing import Dict
+from typing import IO, Dict
 import uuid
 
 from django.contrib.auth.models import User
@@ -33,21 +33,23 @@ data_dir = pathlib.Path(__file__).parent / 'data'
 miserables_json_file = data_dir / 'miserables.json'
 
 
-def local_json_upload(path: pathlib.Path, workspace, user) -> Upload:
-    with open(path, 'rb') as f:
-        file = SimpleUploadedFile(name=path.name, content=f.read())
-
+def json_upload(obj: IO[bytes], name: str, workspace, user):
     return Upload.objects.create(
         workspace=workspace,
         user=user,
-        blob=file,
+        blob=SimpleUploadedFile(name=name, content=obj.read()),
         data_type=Upload.DataType.CSV,
     )
 
 
+def json_file_upload(path: pathlib.Path, workspace, user) -> Upload:
+    with open(path, 'rb') as f:
+        return json_upload(f, path.name, workspace, user)
+
+
 @pytest.fixture
 def miserables_json_field_value(s3ff_field_value_factory, workspace, user) -> str:
-    upload = local_json_upload(miserables_json_file, workspace, user)
+    upload = json_file_upload(miserables_json_file, workspace, user)
     return s3ff_field_value_factory(upload.blob)
 
 
@@ -262,7 +264,7 @@ def test_d3_json_task_filter_missing(
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
-    s3ff_client,
+    s3ff_field_value_factory,
 ):
     """Test that missing node.id or link.[source/target] fields are removed."""
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
@@ -281,12 +283,10 @@ def test_d3_json_task_filter_missing(
     new_links_length = len(json_dict['links'])
     assert new_links_length != original_link_length
 
-    # Upload
-    field_value = s3ff_client.upload_file(
-        io.StringIO(json.dumps(json_dict)),
-        miserables_json_file.name,
-        'api.Upload.blob',
-    )['field_value']
+    # Upload new broken JSON
+    file = io.BytesIO(json.dumps(json_dict).encode('utf-8'))
+    upload = json_upload(file, 'miserables', workspace, user)
+    field_value = s3ff_field_value_factory(upload.blob)
 
     network_name = f't{uuid.uuid4().hex}'
     node_table_name = f'{network_name}_nodes'
