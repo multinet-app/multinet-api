@@ -52,7 +52,7 @@ but allows developers to run Python code on their native system.
 ### API
 1. Navigate to the http://localhost:8000/admin, logging in with your admin user if you're not already logged in
 2. Under the `DJANGO OAUTH TOOLKIT` section click the `Add` in the `Applications` row. This will bring you to the creation dialog for an (oauth) application.
-3. In the redirect uris field, enter `http://localhost:8080/`
+3. In the redirect uris field, enter `http://localhost:8080/` (**must** include trailing slash)
 4. Select `Public` for the Client Type field
 5. Select `Authorization Code` for the Authorization Grant Type field
 6. Delete everything in the Client Secret field, leaving it blank
