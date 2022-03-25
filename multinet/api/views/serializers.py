@@ -164,6 +164,28 @@ class NetworkCreateSerializer(serializers.ModelSerializer):
     edge_table = serializers.CharField()
 
 
+class ColumnSerializer(serializers.Serializer):
+    table = serializers.CharField()
+    column = serializers.CharField()
+
+
+class TableLinkSerialier(serializers.Serializer):
+    column = serializers.CharField()
+    foreign_column = ColumnSerializer()
+
+
+class EdgeTableSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    source = TableLinkSerialier()
+    target = TableLinkSerialier()
+
+
+class CSVNetworkCreateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    edge_table = EdgeTableSerializer()
+    joins = serializers.DictField(child=TableLinkSerialier(), required=False)
+
+
 class NetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Network

@@ -11,8 +11,10 @@ from rest_framework_extensions.mixins import DetailSerializerMixin
 
 from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
+from multinet.api.tasks.upload.csv import create_csv_network
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
+    CSVNetworkCreateSerializer,
     LimitOffsetSerializer,
     NetworkCreateSerializer,
     NetworkReturnDetailSerializer,
@@ -112,6 +114,20 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             node_tables=list(node_tables.keys()),
         )
 
+        return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=CSVNetworkCreateSerializer(),
+        responses={200: NetworkReturnSerializer()},
+    )
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def create_csv(self, request, parent_lookup_workspace__name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+
+        serializer = CSVNetworkCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        network = create_csv_network(workspace, serializer)
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)
 
     @require_workspace_permission(WorkspaceRoleChoice.WRITER)

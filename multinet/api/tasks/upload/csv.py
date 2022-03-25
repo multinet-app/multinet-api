@@ -4,8 +4,11 @@ from typing import Any, BinaryIO, Dict
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from django.shortcuts import get_object_or_404
 
 from multinet.api.models import Table, TableTypeAnnotation, Upload
+from multinet.api.models.workspace import Workspace
+from multinet.api.utils.arango import ArangoQuery
 
 from .common import ProcessUploadTask
 from .utils import processor_dict
@@ -67,3 +70,65 @@ def process_csv(
 
     # Insert rows
     table.put_rows(csv_rows)
+
+
+def create_csv_network(workspace: Workspace, serializer):
+    """Create a network from a link of tables (in request thread)."""
+    from multinet.api.views.serializers import CSVNetworkCreateSerializer
+
+    serializer: CSVNetworkCreateSerializer
+    serializer.is_valid(raise_exception=True)
+    source_edge_table: Table = get_object_or_404(
+        Table,
+        workspace=workspace,
+        name=serializer.validated_data['edge_table']['name'],
+    )
+
+    # Create new edge table
+    new_edge_table: Table = Table.objects.create(
+        name=f'{serializer.validated_data["name"]}_edges', workspace=workspace, edge=True
+    )
+
+    # Copy rows from original edge table to new edge table
+    edge_table_data = serializer.validated_data['edge_table']
+    bind_vars = {
+        '@ORIGINAL': source_edge_table.get_arango_collection().name,
+        '@NEW_COLL': new_edge_table.get_arango_collection().name,
+        # Source
+        'ORIGINAL_SOURCE_COLUMN': edge_table_data['source']['column'],
+        '@FOREIGN_SOURCE_TABLE': edge_table_data['source']['foreign_column']['table'],
+        'FOREIGN_SOURCE_COLUMN': edge_table_data['source']['foreign_column']['column'],
+        # Target
+        'ORIGINAL_TARGET_COLUMN': edge_table_data['target']['column'],
+        '@FOREIGN_TARGET_TABLE': edge_table_data['target']['foreign_column']['table'],
+        'FOREIGN_TARGET_COLUMN': edge_table_data['target']['foreign_column']['column'],
+    }
+    query_str = '''
+        FOR edge_doc in @@ORIGINAL
+            // Find matching source doc
+            LET source_doc = FIRST(
+                FOR dd in @@FOREIGN_SOURCE_TABLE
+                    FILTER edge_doc.@ORIGINAL_SOURCE_COLUMN == dd.@FOREIGN_SOURCE_COLUMN
+                    return dd
+            )
+            // Find matching target doc
+            LET target_doc = FIRST(
+                FOR dd in @@FOREIGN_TARGET_TABLE
+                    FILTER edge_doc.@ORIGINAL_TARGET_COLUMN == dd.@FOREIGN_TARGET_COLUMN
+                    return dd
+            )
+
+            // Add _from/_to to new doc, remove internal fields, insert into new coll
+            LET new_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
+            LET fixed = UNSET(new_doc, ['_id', '_key', 'rev'])
+            INSERT fixed INTO @@NEW_COLL
+    '''
+    query = ArangoQuery(
+        workspace.get_arango_db(readonly=False),
+        query_str=query_str,
+        bind_vars=bind_vars,
+    )
+    query.execute()
+
+    # Create network
+    # TODO
