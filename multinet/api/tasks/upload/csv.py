@@ -6,8 +6,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.shortcuts import get_object_or_404
 
-from multinet.api.models import Table, TableTypeAnnotation, Upload
-from multinet.api.models.workspace import Workspace
+from multinet.api.models import Network, Table, TableTypeAnnotation, Upload, Workspace
 from multinet.api.utils.arango import ArangoQuery
 
 from .common import ProcessUploadTask
@@ -85,8 +84,9 @@ def create_csv_network(workspace: Workspace, serializer):
     )
 
     # Create new edge table
+    network_name = serializer.validated_data['name']
     new_edge_table: Table = Table.objects.create(
-        name=f'{serializer.validated_data["name"]}_edges', workspace=workspace, edge=True
+        name=f'{network_name}_edges', workspace=workspace, edge=True
     )
 
     # Copy rows from original edge table to new edge table
@@ -103,7 +103,7 @@ def create_csv_network(workspace: Workspace, serializer):
         '@FOREIGN_TARGET_TABLE': edge_table_data['target']['foreign_column']['table'],
         'FOREIGN_TARGET_COLUMN': edge_table_data['target']['foreign_column']['column'],
     }
-    query_str = '''
+    query_str = """
         FOR edge_doc in @@ORIGINAL
             // Find matching source doc
             LET source_doc = FIRST(
@@ -122,7 +122,7 @@ def create_csv_network(workspace: Workspace, serializer):
             LET new_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
             LET fixed = UNSET(new_doc, ['_id', '_key', 'rev'])
             INSERT fixed INTO @@NEW_COLL
-    '''
+    """
     query = ArangoQuery(
         workspace.get_arango_db(readonly=False),
         query_str=query_str,
@@ -131,4 +131,12 @@ def create_csv_network(workspace: Workspace, serializer):
     query.execute()
 
     # Create network
-    # TODO
+    network: Network = Network.create_with_edge_definition(
+        name=network_name,
+        workspace=workspace,
+        edge_table=new_edge_table.name,
+        node_tables=[
+            edge_table_data['source']['foreign_column']['table'],
+            edge_table_data['target']['foreign_column']['table'],
+        ],
+    )
