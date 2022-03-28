@@ -130,8 +130,35 @@ def create_csv_network(workspace: Workspace, serializer):
     )
     query.execute()
 
+    # Perform joins
+    for table, mapping in serializer.validated_data['joins'].items():
+        bind_vars = {
+            '@TABLE': table,
+            'TABLE_COL': mapping['column'],
+            '@FOREIGN_TABLE': mapping['foreign_column']['table'],
+            'FOREIGN_TABLE_COL': mapping['foreign_column']['column'],
+        }
+        query_str = """
+            FOR foreign_doc in @@FOREIGN_TABLE
+                // Find matching doc
+                LET table_doc = FIRST(
+                    FOR doc in @@TABLE
+                        FILTER doc.@TABLE_COL == foreign_doc.@FOREIGN_TABLE_COL
+                        return doc
+                ) || {}
+
+                LET new_doc = MERGE(foreign_doc, UNSET(table_doc, ['_id', '_key', 'rev']))
+                UPDATE new_doc IN @@FOREIGN_TABLE
+        """
+        query = ArangoQuery(
+            workspace.get_arango_db(readonly=False),
+            query_str=query_str,
+            bind_vars=bind_vars,
+        )
+        query.execute()
+
     # Create network
-    network: Network = Network.create_with_edge_definition(
+    return Network.create_with_edge_definition(
         name=network_name,
         workspace=workspace,
         edge_table=new_edge_table.name,

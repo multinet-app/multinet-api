@@ -93,4 +93,8 @@ def test_create_csv_network(workspace, table_factory):
         'to_vertex_collections': node_tables,
     }
 
-    # TODO: Assert node joining was performed correctly
+    # Assert node joining was performed correctly
+    table1_doc = table1.get_rows().next()
+    assert table1_doc['other'] == table1_doc['id']
+    assert table1_doc['asd'] == 'asd'
+    assert table1_doc['zxc'] == 'zxc'
