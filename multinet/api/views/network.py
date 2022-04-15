@@ -120,12 +120,18 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         request_body=CSVNetworkCreateSerializer(),
         responses={200: NetworkReturnSerializer()},
     )
+    @action(detail=False, methods=['POST'])
     @require_workspace_permission(WorkspaceRoleChoice.WRITER)
-    def create_csv(self, request, parent_lookup_workspace__name: str):
+    def from_tables(self, request, parent_lookup_workspace__name: str):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
 
         serializer = CSVNetworkCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # Ensure network doesn't already exist
+        network_name = serializer.validated_data['name']
+        if Network.objects.filter(workspace=workspace, name=network_name).first():
+            return Response('Network already exists', status=status.HTTP_400_BAD_REQUEST)
 
         network = create_csv_network(workspace, serializer)
         return Response(NetworkReturnDetailSerializer(network).data, status=status.HTTP_200_OK)

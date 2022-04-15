@@ -131,7 +131,7 @@ def create_csv_network(workspace: Workspace, serializer):
     query.execute()
 
     # Perform joins
-    for table, mapping in serializer.validated_data['joins'].items():
+    for table, mapping in serializer.validated_data.get('joins', {}).items():
         bind_vars = {
             '@TABLE': table,
             'TABLE_COL': mapping['column'],

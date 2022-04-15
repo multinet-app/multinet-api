@@ -1,14 +1,16 @@
 import pytest
+from rest_framework.test import APIClient
 
 from multinet.api.models.network import Network
 from multinet.api.models.table import Table
+from multinet.api.models.workspace import WorkspaceRoleChoice
 from multinet.api.tasks.upload.csv import create_csv_network
 from multinet.api.tests.fuzzy import dict_to_fuzzy_arango_doc
 from multinet.api.views.serializers import CSVNetworkCreateSerializer
 
 
-@pytest.mark.django_db
-def test_create_csv_network(workspace, table_factory):
+@pytest.fixture
+def csv_network_def(workspace, table_factory):
     # Edge table isn't defined as an actual edge table,
     # as it just contains the data that will be used in a new one
     edge_table: Table = table_factory(workspace=workspace)
@@ -65,6 +67,20 @@ def test_create_csv_network(workspace, table_factory):
     )
     serializer.is_valid(raise_exception=True)
 
+    return {
+        'edge_table': edge_table,
+        'tables': [table1, table2, table3],
+        'name': network_name,
+        'serializer': serializer,
+    }
+
+
+@pytest.mark.django_db
+def test_create_csv_network(workspace, csv_network_def):
+    network_name = csv_network_def['name']
+    serializer = csv_network_def['serializer']
+    table1, table2, table3 = csv_network_def['tables']
+
     create_csv_network(workspace, serializer)
 
     # Fetch stored rows
@@ -98,3 +114,77 @@ def test_create_csv_network(workspace, table_factory):
     assert table1_doc['other'] == table1_doc['id']
     assert table1_doc['asd'] == 'asd'
     assert table1_doc['zxc'] == 'zxc'
+
+
+@pytest.mark.django_db
+def test_rest_create_csv_network(
+    workspace,
+    user,
+    csv_network_def,
+    authenticated_api_client: APIClient,
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+
+    network_name = csv_network_def['name']
+    serializer = csv_network_def['serializer']
+    table1, table2, table3 = csv_network_def['tables']
+
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/networks/from_tables/',
+        serializer.validated_data,
+    )
+    assert r.status_code == 200
+    assert r.json()['name'] == network_name
+    assert r.json()['edge_count'] == 1
+    assert r.json()['node_count'] == 2
+
+    # Fetch stored rows
+    table1_doc = table1.get_rows().next()
+    table2_doc = table2.get_rows().next()
+    # table3_doc = table3.get_rows().next()
+
+    # Assert edge link was performed correctly
+    new_edge_table_name = f'{network_name}_edges'
+    new_edge_table: Table = Table.objects.get(workspace=workspace, name=new_edge_table_name)
+    assert new_edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(
+        {
+            '_from': table1_doc['_id'],
+            '_to': table2_doc['_id'],
+            'a': 1,
+            'b': 2,
+        }
+    )
+
+    # Assert network created correctly
+    network: Network = Network.objects.get(workspace=workspace, name=network_name)
+    node_tables = sorted([table1.name, table2.name])
+    assert network.get_arango_graph().edge_definitions()[0] == {
+        'edge_collection': new_edge_table_name,
+        'from_vertex_collections': node_tables,
+        'to_vertex_collections': node_tables,
+    }
+
+    # Assert node joining was performed correctly
+    table1_doc = table1.get_rows().next()
+    assert table1_doc['other'] == table1_doc['id']
+    assert table1_doc['asd'] == 'asd'
+    assert table1_doc['zxc'] == 'zxc'
+
+
+@pytest.mark.django_db
+def test_rest_create_csv_network_already_exists(
+    workspace,
+    user,
+    network_factory,
+    csv_network_def,
+    authenticated_api_client: APIClient,
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+
+    network_factory(workspace=workspace, name=csv_network_def['name'])
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/networks/from_tables/',
+        csv_network_def['serializer'].validated_data,
+    )
+    assert r.status_code == 400
+    assert r.json() == 'Network already exists'
