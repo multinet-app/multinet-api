@@ -77,6 +77,52 @@ def create_csv_network(workspace: Workspace, serializer):
 
     serializer: CSVNetworkCreateSerializer
     serializer.is_valid(raise_exception=True)
+
+    # Perform joins before edge creation, since new tables are created
+    mapped_tables = {}
+    for table, mapping in serializer.validated_data.get('joins', {}).items():
+        foreign_table = mapping['foreign_column']['table']
+        foreign_column = mapping['foreign_column']['column']
+        joined_table, created = Table.objects.get_or_create(
+            name=f'{foreign_table}-joined-{table}', workspace=workspace
+        )
+
+        # Clear table rows if already exists
+        joined_table: Table
+        mapped_tables[foreign_table] = joined_table.name
+        if created:
+            joined_table.get_arango_collection(readonly=False).truncate()
+
+        # Begin AQL query for joining
+        bind_vars = {
+            '@TABLE': table,
+            'TABLE_COL': mapping['column'],
+            '@FOREIGN_TABLE': foreign_table,
+            'FOREIGN_TABLE_COL': foreign_column,
+            '@JOINED_TABLE': joined_table.name,
+        }
+        query_str = """
+            FOR foreign_doc in @@FOREIGN_TABLE
+                // Find matching doc
+                LET table_doc = FIRST(
+                    FOR doc in @@TABLE
+                        FILTER doc.@TABLE_COL == foreign_doc.@FOREIGN_TABLE_COL
+                        return doc
+                ) || {}
+
+                LET new_doc = MERGE(
+                    UNSET(foreign_doc, ['_id', '_key', 'rev']),
+                    UNSET(table_doc, ['_id', '_key', 'rev'])
+                )
+                INSERT new_doc IN @@JOINED_TABLE
+        """
+        query = ArangoQuery(
+            workspace.get_arango_db(readonly=False),
+            query_str=query_str,
+            bind_vars=bind_vars,
+        )
+        query.execute()
+
     source_edge_table: Table = get_object_or_404(
         Table,
         workspace=workspace,
@@ -89,18 +135,30 @@ def create_csv_network(workspace: Workspace, serializer):
         name=f'{network_name}_edges', workspace=workspace, edge=True
     )
 
-    # Copy rows from original edge table to new edge table
+    # Use mapped source table if joined on, otherwise original
     edge_table_data = serializer.validated_data['edge_table']
+    foreign_source_table = mapped_tables.get(
+        edge_table_data['source']['foreign_column']['table'],
+        edge_table_data['source']['foreign_column']['table'],
+    )
+
+    # Use mapped target table if joined on, otherwise original
+    foreign_target_table = mapped_tables.get(
+        edge_table_data['target']['foreign_column']['table'],
+        edge_table_data['target']['foreign_column']['table'],
+    )
+
+    # Copy rows from original edge table to new edge table
     bind_vars = {
         '@ORIGINAL': source_edge_table.get_arango_collection().name,
         '@NEW_COLL': new_edge_table.get_arango_collection().name,
         # Source
         'ORIGINAL_SOURCE_COLUMN': edge_table_data['source']['column'],
-        '@FOREIGN_SOURCE_TABLE': edge_table_data['source']['foreign_column']['table'],
+        '@FOREIGN_SOURCE_TABLE': foreign_source_table,
         'FOREIGN_SOURCE_COLUMN': edge_table_data['source']['foreign_column']['column'],
         # Target
         'ORIGINAL_TARGET_COLUMN': edge_table_data['target']['column'],
-        '@FOREIGN_TARGET_TABLE': edge_table_data['target']['foreign_column']['table'],
+        '@FOREIGN_TARGET_TABLE': foreign_target_table,
         'FOREIGN_TARGET_COLUMN': edge_table_data['target']['foreign_column']['column'],
     }
     query_str = """
@@ -130,40 +188,10 @@ def create_csv_network(workspace: Workspace, serializer):
     )
     query.execute()
 
-    # Perform joins
-    for table, mapping in serializer.validated_data.get('joins', {}).items():
-        bind_vars = {
-            '@TABLE': table,
-            'TABLE_COL': mapping['column'],
-            '@FOREIGN_TABLE': mapping['foreign_column']['table'],
-            'FOREIGN_TABLE_COL': mapping['foreign_column']['column'],
-        }
-        query_str = """
-            FOR foreign_doc in @@FOREIGN_TABLE
-                // Find matching doc
-                LET table_doc = FIRST(
-                    FOR doc in @@TABLE
-                        FILTER doc.@TABLE_COL == foreign_doc.@FOREIGN_TABLE_COL
-                        return doc
-                ) || {}
-
-                LET new_doc = MERGE(foreign_doc, UNSET(table_doc, ['_id', '_key', 'rev']))
-                UPDATE new_doc IN @@FOREIGN_TABLE
-        """
-        query = ArangoQuery(
-            workspace.get_arango_db(readonly=False),
-            query_str=query_str,
-            bind_vars=bind_vars,
-        )
-        query.execute()
-
     # Create network
     return Network.create_with_edge_definition(
         name=network_name,
         workspace=workspace,
         edge_table=new_edge_table.name,
-        node_tables=[
-            edge_table_data['source']['foreign_column']['table'],
-            edge_table_data['target']['foreign_column']['table'],
-        ],
+        node_tables=[foreign_source_table, foreign_target_table],
     )

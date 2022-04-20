@@ -86,34 +86,35 @@ def test_create_csv_network(workspace, csv_network_def):
     # Fetch stored rows
     table1_doc = table1.get_rows().next()
     table2_doc = table2.get_rows().next()
-    # table3_doc = table3.get_rows().next()
+    table3_doc = table3.get_rows().next()
+
+    # Assert node joining was performed correctly
+    joined_table: Table = Table.objects.get(name=f'{table1}-joined-{table3}')
+    joined_table_doc = joined_table.get_rows().next()
+    assert joined_table_doc['other'] == table3_doc['other'] == table1_doc['id']
+    assert joined_table_doc['asd'] == table3_doc['asd'] == 'asd'
+    assert joined_table_doc['zxc'] == table3_doc['zxc'] == 'zxc'
 
     # Assert edge link was performed correctly
+    edge_dict = {
+        '_from': joined_table_doc['_id'],
+        '_to': table2_doc['_id'],
+        'a': 1,
+        'b': 2,
+    }
     new_edge_table_name = f'{network_name}_edges'
     new_edge_table: Table = Table.objects.get(workspace=workspace, name=new_edge_table_name)
-    assert new_edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(
-        {
-            '_from': table1_doc['_id'],
-            '_to': table2_doc['_id'],
-            'a': 1,
-            'b': 2,
-        }
-    )
+    assert new_edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(edge_dict)
 
     # Assert network created correctly
+    node_tables = sorted([joined_table.name, table2.name])
     network: Network = Network.objects.get(workspace=workspace, name=network_name)
-    node_tables = sorted([table1.name, table2.name])
+    assert network.edges().next() == dict_to_fuzzy_arango_doc(edge_dict)
     assert network.get_arango_graph().edge_definitions()[0] == {
         'edge_collection': new_edge_table_name,
         'from_vertex_collections': node_tables,
         'to_vertex_collections': node_tables,
     }
-
-    # Assert node joining was performed correctly
-    table1_doc = table1.get_rows().next()
-    assert table1_doc['other'] == table1_doc['id']
-    assert table1_doc['asd'] == 'asd'
-    assert table1_doc['zxc'] == 'zxc'
 
 
 @pytest.mark.django_db
@@ -127,8 +128,6 @@ def test_rest_create_csv_network(
 
     network_name = csv_network_def['name']
     serializer = csv_network_def['serializer']
-    table1, table2, table3 = csv_network_def['tables']
-
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/networks/from_tables/',
         serializer.validated_data,
@@ -138,37 +137,8 @@ def test_rest_create_csv_network(
     assert r.json()['edge_count'] == 1
     assert r.json()['node_count'] == 2
 
-    # Fetch stored rows
-    table1_doc = table1.get_rows().next()
-    table2_doc = table2.get_rows().next()
-    # table3_doc = table3.get_rows().next()
-
-    # Assert edge link was performed correctly
-    new_edge_table_name = f'{network_name}_edges'
-    new_edge_table: Table = Table.objects.get(workspace=workspace, name=new_edge_table_name)
-    assert new_edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(
-        {
-            '_from': table1_doc['_id'],
-            '_to': table2_doc['_id'],
-            'a': 1,
-            'b': 2,
-        }
-    )
-
-    # Assert network created correctly
-    network: Network = Network.objects.get(workspace=workspace, name=network_name)
-    node_tables = sorted([table1.name, table2.name])
-    assert network.get_arango_graph().edge_definitions()[0] == {
-        'edge_collection': new_edge_table_name,
-        'from_vertex_collections': node_tables,
-        'to_vertex_collections': node_tables,
-    }
-
-    # Assert node joining was performed correctly
-    table1_doc = table1.get_rows().next()
-    assert table1_doc['other'] == table1_doc['id']
-    assert table1_doc['asd'] == 'asd'
-    assert table1_doc['zxc'] == 'zxc'
+    # Assert network created
+    Network.objects.get(workspace=workspace, name=network_name)
 
 
 @pytest.mark.django_db
