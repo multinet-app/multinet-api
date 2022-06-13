@@ -23,9 +23,88 @@ from multinet.api.views.serializers import (
     NetworkTablesSerializer,
     PaginatedResultSerializer,
     TableReturnSerializer,
+    NodeStatsSerializer,
+    NodeStatsQuerySerializer,
+    NodeAndEdgeFilteredQuerySerializer,
+    NodeStatsAllFieldsSerializer,
 )
 
 from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
+
+# added for graph library exploration
+import networkx as nx
+import arrow
+from django.http import JsonResponse
+import json
+
+
+## -------------------- CRL added supporting routines for graph manipulation using networkX
+
+# develop accessor function to return node index from _key. Be tolerant of
+# table names preceding the unique node name
+def nodeKeyToNumber(g,namestring):
+    if '/' in namestring:
+        # chop off the table name
+        namestring = namestring.split('/')[1]
+    names = nx.get_node_attributes(g,'_key')
+    for name in names:
+        # chop of the table name
+        nodename = names[name]
+        if '/' in nodename:
+            nodename = nodename.split('/')[1]
+        if str(nodename) == str(namestring):
+            return name
+
+def buildGraph_netX(node_list,edge_list):
+    # create empty directed graph.  All ArangoDB graphs are directed by default
+    g = nx.DiGraph()
+    
+    # insert nodes
+    node_index = 1
+    for node in node_list:
+        for attrib in node:
+            g.add_node(node_index)
+            if attrib not in ['gt_object','used_by_edge','index']:
+                g.nodes[node_index][attrib] = node[attrib]
+        node_index+=1
+        
+    # insert edges
+    for edge in edge_list:
+        sourceNode = nodeKeyToNumber(g,edge['_from'])
+        destNode = nodeKeyToNumber(g,edge['_to'])
+        g.add_edge(sourceNode,destNode)
+        for attrib in edge:
+            if attrib not in ['_from','_to']:
+                g[sourceNode][destNode][attrib] = edge[attrib]
+    # return the nx graph object
+    return g
+
+# return a subset of a graph by filtering by node in or out degree
+def subsetGraph_netX(g,algorithm,threshold):
+    def in_node_filter(index):
+        if algorithm == 'in_degree':
+            return (g.in_degree(index)>threshold)
+    def out_node_filter(index):
+            return (g.out_degree(index)>threshold)
+    if algorithm == 'in_degree':
+        view = nx.subgraph_view(g, filter_node=in_node_filter)
+    else:
+        view = nx.subgraph_view(g, filter_node=out_node_filter)
+    return view
+
+
+def calculateNodeCentrality_netX(g):
+    returnValues = nx.degree_centrality(g)
+    return returnValues
+
+def calculateBetweenness_netX(g):
+    returnValues = nx.betweenness_centrality(g)
+    return returnValues
+    
+
+# --------------- end of graph support routines
+
+
 
 
 class NetworkCreationErrorSerializer(serializers.Serializer):
@@ -144,6 +223,8 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+
+
     @swagger_auto_schema(
         query_serializer=LimitOffsetSerializer(),
         responses={200: PaginatedResultSerializer()},
@@ -161,6 +242,243 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         paginated_query = pagination.paginate_queryset(query, request)
 
         return pagination.get_paginated_response(paginated_query)
+
+#-------- add algorithm calls
+
+    @swagger_auto_schema(
+        query_serializer=NodeStatsQuerySerializer(),
+        responses={200: NodeStatsSerializer()},
+    )
+    @action(detail=True, url_path='nodes_stats')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def nodes_stats(self, request, parent_lookup_workspace__name: str, name: str):
+
+        # algorithm value selects which algorithm to run
+        # options are: in-degree, out-degree, pagerank, node-centrality, betweenness
+
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        # get the algorithm option from the query serializer
+        serializer = NodeStatsQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        algorithm = serializer.validated_data['algorithm']
+
+        #print('received algorithm choice:',algorithm)
+
+        # traverse through arango cursors to get data into lists
+        timestamps = []
+        timestamps.append(('before cursor read',arrow.now()))
+        edge_list = []
+        node_list = []
+        edges = network.edges()
+        nodes = network.nodes()
+
+        # iterate through Arango cursors to extract the node and edge data
+        while not edges.empty():
+            edge = edges.next()
+            edge_list.append(edge)
+            #print(edge)
+        while not nodes.empty():
+            node = nodes.next()
+            node_list.append(node)
+            #print(node)
+
+        timestamps.append(('after cursor read',arrow.now()))
+        print('found',len(node_list),'nodes and ',len(edge_list),'edges')   
+        # print a sample to observe we are traversing correctly
+        print('node[2]:',node_list[2])   
+        print('edge[2]:',edge_list[2])   
+
+        timestamps.append(('before graph creation',arrow.now()))
+        nxNetwork = buildGraph_netX(node_list,edge_list)
+        timestamps.append(('after graph creation',arrow.now()))
+
+        if algorithm == 'node_centrality':
+            algorithmReturn = calculateNodeCentrality_netX(nxNetwork)
+        elif algorithm == 'betweenness':
+            algorithmReturn = calculateBetweenness_netX(nxNetwork)
+        elif algorithm == 'pagerank':
+            algorithmReturn = nx.pagerank(nxNetwork)
+        elif algorithm == 'all':
+            nodeCentrality_result = calculateNodeCentrality_netX(nxNetwork)
+            betweenness_result = calculateBetweenness_netX(nxNetwork)
+            pagerank_result = nx.pagerank(nxNetwork)
+        
+        timestamps.append(('after algorithm completed',arrow.now()))
+
+
+        node_stat_list = []
+        for index,node in enumerate(node_list):
+            entry = {}
+            # add in the node _key for reference
+            entry['_key'] = node['_key']
+            # fill in the result value according to what algorithm was selected
+            if algorithm in ['node_centrality','betweenness']:
+                entry['result'] = algorithmReturn[index+1]
+            elif algorithm == 'in_degree':
+                entry['result'] = nxNetwork.in_degree(index+1)
+            elif algorithm == 'out_degree':
+                entry['result'] = nxNetwork.out_degree(index+1)
+            elif algorithm == 'node_centrality':
+                entry['result'] = algorithmReturn[index+1]
+            elif algorithm == 'pagerank':
+                entry['result'] = algorithmReturn[index+1]
+            elif algorithm == 'all':
+                entry['in_degree'] = nxNetwork.in_degree(index+1)
+                entry['out_degree'] = nxNetwork.out_degree(index+1)
+                entry['node_centrality'] = nodeCentrality_result[index+1]
+                entry['betweenness'] = betweenness_result[index+1]
+                entry['pagerank'] = pagerank_result[index+1]
+            else:
+                # return out-degree as a default
+                entry['result'] = nxNetwork.out_degree(index+1)
+            node_stat_list.append(entry)
+
+        for stamp in range(len(timestamps)-1):
+            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
+            print(timestamps[stamp+1][0],diff)
+
+        if algorithm == 'all':
+            serializer = NodeStatsAllFieldsSerializer(node_stat_list, many=True)
+        else:
+            serializer = NodeStatsSerializer(node_stat_list, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
+    # If the stored graph is large, we may want to request a subset of the graph containing
+    # only high degree nodes and their corresponding edges.  The nodes_filtered and edges_filtered
+    # endpoints expect a parameter ('in-degree' or 'out-degree') and a threshold to be over (e.g. 10)
+    # in order to return the subgraph containing nodes only above the threshold degree
+
+    @swagger_auto_schema(
+        query_serializer=NodeAndEdgeFilteredQuerySerializer(),
+        responses={200: TableReturnSerializer(many=True)},
+    )
+    @action(detail=True, url_path='nodes_filtered')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def nodes_filtered(self, request, parent_lookup_workspace__name: str, name: str):
+
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        # get the algorithm option from the query serializer
+        serializer = NodeAndEdgeFilteredQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        algorithm = serializer.validated_data['algorithm']
+        threshold = serializer.validated_data['threshold']
+
+        # traverse through arango cursors to get data into lists
+        timestamps = []
+        timestamps.append(('before cursor read',arrow.now()))
+        edge_list = []
+        node_list = []
+        edges = network.edges()
+        while not edges.empty():
+            edge = edges.next()
+            edge_list.append(edge)
+            #print(edge)
+        nodes = network.nodes()
+        while not nodes.empty():
+            node = nodes.next()
+            node_list.append(node)
+
+        timestamps.append(('before graph creation',arrow.now()))
+        nxNetwork = buildGraph_netX(node_list,edge_list)
+        timestamps.append(('after graph creation',arrow.now()))
+        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,threshold)
+        timestamps.append(('after graph subset',arrow.now()))
+        print('timestamps:')
+        #print(timestamps)
+        for stamp in range(len(timestamps)-1):
+            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
+            print(timestamps[stamp+1][0],diff)
+
+        print('reduced graph has ',nx.number_of_nodes(smallNetwork),'nodes')
+        print('reduced graph has ',nx.number_of_edges(smallNetwork),'edges')
+
+        # iterate over the nodes returned and build a json structure that
+        # contains all the node information
+        node_iter = list(smallNetwork.nodes)
+        out_list = []
+        for index in node_iter:
+            out_list.append(node_list[index-1])
+        return JsonResponse(out_list,safe=False)
+
+
+    @swagger_auto_schema(
+        query_serializer=NodeAndEdgeFilteredQuerySerializer(),
+        responses={200: TableReturnSerializer(many=True)},
+    )
+    @action(detail=True, url_path='edges_filtered')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def edges_filtered(self, request, parent_lookup_workspace__name: str, name: str):
+
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        # get the algorithm option from the query serializer
+        serializer = NodeAndEdgeFilteredQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        algorithm = serializer.validated_data['algorithm']
+        threshold = serializer.validated_data['threshold']
+
+        # traverse through arango cursors to get data into lists
+        timestamps = []
+        timestamps.append(('before cursor read',arrow.now()))
+        edge_list = []
+        node_list = []
+        edges = network.edges()
+        # Question: should this be a test of cursor.has_more() instead? what is the batch size?
+        # iterate through Arango cursors to extract the node and edge data
+        while not edges.empty():
+            edge = edges.next()
+            edge_list.append(edge)
+            #print(edge)
+        nodes = network.nodes()
+        while not nodes.empty():
+            node = nodes.next()
+            node_list.append(node)
+
+
+        timestamps.append(('before graph creation',arrow.now()))
+        nxNetwork = buildGraph_netX(node_list,edge_list)
+        timestamps.append(('after graph creation',arrow.now()))
+        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,threshold)
+        timestamps.append(('after graph subset',arrow.now()))
+      
+
+        print('reduced graph has ',nx.number_of_nodes(smallNetwork),'nodes')
+        print('reduced graph has ',nx.number_of_edges(smallNetwork),'edges')
+
+        # now we need to build a lookup table that maps each edge from its
+        # node indices, e.g. (2,4), to its full data so we can output the edges
+        # of a reduced graph
+        edgeIndexToData = {}
+        for edge in edge_list:
+            fromIndex = nodeKeyToNumber(nxNetwork,edge['_from'])
+            toIndex = nodeKeyToNumber(nxNetwork,edge['_to'])
+            edgeIndexToData[(fromIndex,toIndex)] = edge
+
+        print('timestamps:')
+        for stamp in range(len(timestamps)-1):
+            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
+            print(timestamps[stamp+1][0],diff)
+
+        # iterate over the edges returned and build a json structure that
+        # contains all the edge information.  This is complicated because networkX returns
+        # only a index tuple, do we use the index we built during the inital traversal to 
+        # recover the edge metadata
+        edge_iter = list(smallNetwork.edges)
+        out_list = []
+        for edgeTuple in edge_iter:
+            edgeMetadata = edgeIndexToData[edgeTuple]
+            out_list.append(edgeMetadata)
+        return JsonResponse(out_list,safe=False)
+
+
+
+
+#---------------- end of graph algorithm additions
 
     @swagger_auto_schema(
         query_serializer=LimitOffsetSerializer(),
@@ -204,3 +522,4 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer = TableReturnSerializer(network_tables, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+ 

@@ -247,3 +247,25 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
 
 class D3JSONUploadCreateSerializer(UploadCreateSerializer):
     network_name = serializers.CharField()
+
+# define the output of the node_stats endpoint.  It is either a single value or a fixed set of values
+class NodeStatsSerializer(serializers.Serializer):
+    _key = serializers.CharField()
+    result = serializers.FloatField()
+
+class NodeStatsAllFieldsSerializer(serializers.Serializer):
+    _key = serializers.CharField()
+    in_degree = serializers.FloatField()
+    out_degree = serializers.FloatField()
+    node_centrality = serializers.FloatField()
+    betweenness = serializers.FloatField()
+    pagerank = serializers.FloatField()
+
+# define the input options for the node stats queries.  
+class NodeStatsQuerySerializer(serializers.Serializer):
+    algorithm = serializers.ChoiceField(choices=['in_degree', 'out_degree','node_centrality', 'betweenness','pagerank','all'], default='all', required=False)
+
+# define the input options for the filtered node and filtered edge calls.
+class NodeAndEdgeFilteredQuerySerializer(serializers.Serializer):
+    algorithm = serializers.ChoiceField(choices=['in_degree', 'out_degree'], default='out_degree', required=False)
+    threshold = serializers.FloatField()

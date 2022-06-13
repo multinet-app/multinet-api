@@ -56,6 +56,11 @@ setup(
         'gunicorn',
         # Development-only
         'django-debug-toolbar',
+        # add for graph algorithms
+        'arrow',
+        'networkx',
+        'numpy',
+        'scipy',
     ],
     extras_require={'dev': ['ipython', 'tox']},
 )
