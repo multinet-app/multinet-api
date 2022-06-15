@@ -8,6 +8,7 @@ This is the simplest configuration for developers to start with.
 2. Run `docker-compose run --rm django ./manage.py createsuperuser`
    and follow the prompts to create your own user. Make sure to supply an email address.
 3. Run `docker-compose run --rm django ./manage.py createarangoreadonlyuser`
+4. To hydrate the database with the demo data, run `./manage.py setupdevenv <user_email from above step>`
 
 ### Run Application
 1. Run `docker-compose up`
@@ -37,6 +38,7 @@ but allows developers to run Python code on their native system.
 7. Run `./manage.py migrate`
 8. Run `./manage.py createsuperuser` and follow the prompts to create your own user. Make sure to supply an email address.
 9. Run `./manage.py createarangoreadonlyuser`
+10. To hydrate the database with the demo data, run `./manage.py setupdevenv <user_email from above step>`
 
 ### Run Application
 1.  Ensure `docker-compose -f ./docker-compose.yml up -d` is still active
