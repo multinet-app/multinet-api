@@ -9,12 +9,13 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 
 from multinet.api.utils.arango import arango_system_db
-from multinet.api.models import Workspace, Network, Table
+from multinet.api.models import Workspace, Network, Table, TableTypeAnnotation
 from multinet.api.tasks.upload.csv import process_row
 
 from pathlib import Path
 from io import StringIO
 import csv
+import json
 
 
 
@@ -55,22 +56,33 @@ class Command(BaseCommand):
                         f"{workspace_name}/{filename} already exists, removing to recreate"
                     ))
                     Table.objects.filter(workspace=workspace, name=filename).delete()
-                
-                # Create the table
-                new_table = Table.objects.create(workspace=workspace, name=filename, edge=filename==edge_table_name)
 
-                # Open the file and read in the rows
+                # Open the types file and read the types in
+                types_path = Path(str(csv_path).replace(f"{filename}.csv", "")) / "types" / f"{filename}.json"
+                with types_path.open('rb') as f:
+                    columns = json.load(f)
+                    
+                # Open the csv and read in the rows
                 with csv_path.open('rb') as f:
                     csv_rows = list(csv.DictReader(StringIO(f.read().decode('utf-8'))))
 
-                    # TODO: add back when table type annotations are added
-                    # for i, row in enumerate(csv_rows):
-                    #     csv_rows[i] = process_row(row, columns)
+                # Process csv rows with the type annotations
+                for i, row in enumerate(csv_rows):
+                    csv_rows[i] = process_row(row, columns)
 
-                    # Put the rows into the table
-                    new_table.put_rows(csv_rows)
+                # Create the table
+                new_table = Table.objects.create(workspace=workspace, name=filename, edge=filename==edge_table_name)
 
-                # TODO: Create table type annotations
+                # Put the rows into the table
+                new_table.put_rows(csv_rows)
+
+                # Create type annotations
+                TableTypeAnnotation.objects.bulk_create(
+                    [
+                        TableTypeAnnotation(table=new_table, column=col_key, type=col_type)
+                        for col_key, col_type in columns.items()
+                    ]
+                )
 
                 self.stdout.write(self.style.SUCCESS(
                     f"{workspace_name}/{filename} created"
