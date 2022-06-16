@@ -1,0 +1,14 @@
+{
+    "_key": "label",
+    "followers_count": "number",
+    "query_tweet_count": "number",
+    "friends_count": "number",
+    "statuses_count": "number",
+    "listed_count": "number",
+    "favourites_count": "number",
+    "count_followers_in_query": "number",
+    "screen_name": "label",
+    "profile_image_url": "label",
+    "influential": "boolean",
+    "original": "boolean"
+}

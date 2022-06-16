@@ -1,0 +1,11 @@
+{
+    "airline": "category",
+    "airline ID": "category",
+    "source airport": "label",
+    "_from": "label",
+    "destination airport": "label",
+    "_to": "label",
+    "codeshare": "boolean",
+    "stops": "number",
+    "equipment": "label"
+}
