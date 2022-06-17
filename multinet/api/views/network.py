@@ -269,26 +269,50 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         # traverse through arango cursors to get data into lists
         timestamps = []
         timestamps.append(('before cursor read',arrow.now()))
-        edge_list = []
-        node_list = []
-        edges = network.edges()
-        nodes = network.nodes()
 
         # iterate through Arango cursors to extract the node and edge data
+        # arango queries are buffered by default pagination of 
+        # 1000 entries, so loop through all the batches
+        edge_list = []
+        node_list = []
+
+        edges = network.edges()
+        # loop until there are no more batches waiting
+        if edges.has_more():
+            while edges.has_more():
+                while not edges.empty():
+                    edge = edges.next()
+                    edge_list.append(edge)
+                # advance to the last partial batch
+                edges.fetch()
+        # get the last partial batch
         while not edges.empty():
             edge = edges.next()
             edge_list.append(edge)
-            #print(edge)
+
+        nodes = network.nodes()
+        # loop until there are no more batches waiting
+        if nodes.has_more():
+            while nodes.has_more():
+                while not nodes.empty():
+                    node = nodes.next()
+                    node_list.append(node)
+                nodes.fetch()
+        # get the last partial batch
         while not nodes.empty():
             node = nodes.next()
             node_list.append(node)
-            #print(node)
+
+
 
         timestamps.append(('after cursor read',arrow.now()))
-        print('found',len(node_list),'nodes and ',len(edge_list),'edges')   
+        edgecount = network.edge_count
+
+        #print('network has:',edgecount,'edges')
+        #print('found',len(node_list),'nodes and ',len(edge_list),'edges')   
         # print a sample to observe we are traversing correctly
-        print('node[2]:',node_list[2])   
-        print('edge[2]:',edge_list[2])   
+        #print('node[2]:',node_list[2])   
+        #print('edge[2]:',edge_list[2])   
 
         timestamps.append(('before graph creation',arrow.now()))
         nxNetwork = buildGraph_netX(node_list,edge_list)
@@ -335,9 +359,9 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
                 entry['result'] = nxNetwork.out_degree(index+1)
             node_stat_list.append(entry)
 
-        for stamp in range(len(timestamps)-1):
-            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
-            print(timestamps[stamp+1][0],diff)
+        #for stamp in range(len(timestamps)-1):
+        #    diff = timestamps[stamp+1][1]-timestamps[stamp][1]
+        #    print(timestamps[stamp+1][0],diff)
 
         if algorithm == 'all':
             serializer = NodeStatsAllFieldsSerializer(node_stat_list, many=True)
@@ -370,14 +394,36 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         # traverse through arango cursors to get data into lists
         timestamps = []
         timestamps.append(('before cursor read',arrow.now()))
+     
+        # iterate through Arango cursors to extract the node and edge data
+        # arango queries are buffered by default pagination of 
+        # 1000 entries, so loop through all the batches
         edge_list = []
         node_list = []
+
         edges = network.edges()
+        # loop until there are no more batches waiting
+        if edges.has_more():
+            while edges.has_more():
+                while not edges.empty():
+                    edge = edges.next()
+                    edge_list.append(edge)
+                # advance to the last partial batch
+                edges.fetch()
+        # get the last partial batch
         while not edges.empty():
             edge = edges.next()
             edge_list.append(edge)
-            #print(edge)
+
         nodes = network.nodes()
+        # loop until there are no more batches waiting
+        if nodes.has_more():
+            while nodes.has_more():
+                while not nodes.empty():
+                    node = nodes.next()
+                    node_list.append(node)
+                nodes.fetch()
+        # get the last partial batch
         while not nodes.empty():
             node = nodes.next()
             node_list.append(node)
@@ -425,19 +471,39 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         # traverse through arango cursors to get data into lists
         timestamps = []
         timestamps.append(('before cursor read',arrow.now()))
+
+        # iterate through Arango cursors to extract the node and edge data
+        # arango queries are buffered by default pagination of 
+        # 1000 entries, so loop through all the batches
         edge_list = []
         node_list = []
+
         edges = network.edges()
-        # Question: should this be a test of cursor.has_more() instead? what is the batch size?
-        # iterate through Arango cursors to extract the node and edge data
+        # loop until there are no more batches waiting
+        if edges.has_more():
+            while edges.has_more():
+                while not edges.empty():
+                    edge = edges.next()
+                    edge_list.append(edge)
+                # advance to the last partial batch
+                edges.fetch()
+        # get the last partial batch
         while not edges.empty():
             edge = edges.next()
             edge_list.append(edge)
-            #print(edge)
+
         nodes = network.nodes()
+        # loop until there are no more batches waiting
+        if nodes.has_more():
+            while nodes.has_more():
+                while not nodes.empty():
+                    node = nodes.next()
+                    node_list.append(node)
+                nodes.fetch()
+        # get the last partial batch
         while not nodes.empty():
             node = nodes.next()
-            node_list.append(node)
+            node_list.append(node)     
 
 
         timestamps.append(('before graph creation',arrow.now()))
