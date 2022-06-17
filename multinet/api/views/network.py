@@ -80,16 +80,19 @@ def buildGraph_netX(node_list,edge_list):
     return g
 
 # return a subset of a graph by filtering by node in or out degree
-def subsetGraph_netX(g,algorithm,threshold):
+def subsetGraph_netX(g,algorithm,lowerBound,upperBound):
     def in_node_filter(index):
-        if algorithm == 'in_degree':
-            return (g.in_degree(index)>threshold)
+        return (g.in_degree(index)>=lowerBound and g.in_degree(index)<=upperBound)
     def out_node_filter(index):
-            return (g.out_degree(index)>threshold)
+        return (g.out_degree(index)>=lowerBound and g.out_degree(index)<=upperBound)
+    def degree_node_filter(index):
+        return (in_node_filter(index) or out_node_filter(index))
     if algorithm == 'in_degree':
         view = nx.subgraph_view(g, filter_node=in_node_filter)
-    else:
+    elif algorithm == 'out_degree':
         view = nx.subgraph_view(g, filter_node=out_node_filter)
+    else:
+        view = nx.subgraph_view(g, filter_node=degree_node_filter)
     return view
 
 
@@ -303,8 +306,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             node = nodes.next()
             node_list.append(node)
 
-
-
         timestamps.append(('after cursor read',arrow.now()))
         edgecount = network.edge_count
 
@@ -389,7 +390,8 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer = NodeAndEdgeFilteredQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         algorithm = serializer.validated_data['algorithm']
-        threshold = serializer.validated_data['threshold']
+        lowerBound = serializer.validated_data['lowerBound']
+        upperBound = serializer.validated_data['upperBound']
 
         # traverse through arango cursors to get data into lists
         timestamps = []
@@ -431,9 +433,9 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         timestamps.append(('before graph creation',arrow.now()))
         nxNetwork = buildGraph_netX(node_list,edge_list)
         timestamps.append(('after graph creation',arrow.now()))
-        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,threshold)
+        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,lowerBound, upperBound)
         timestamps.append(('after graph subset',arrow.now()))
-        print('timestamps:')
+        #print('timestamps:')
         #print(timestamps)
         for stamp in range(len(timestamps)-1):
             diff = timestamps[stamp+1][1]-timestamps[stamp][1]
@@ -466,8 +468,9 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer = NodeAndEdgeFilteredQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         algorithm = serializer.validated_data['algorithm']
-        threshold = serializer.validated_data['threshold']
-
+        lowerBound = serializer.validated_data['lowerBound']
+        upperBound = serializer.validated_data['upperBound']
+        
         # traverse through arango cursors to get data into lists
         timestamps = []
         timestamps.append(('before cursor read',arrow.now()))
@@ -509,7 +512,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         timestamps.append(('before graph creation',arrow.now()))
         nxNetwork = buildGraph_netX(node_list,edge_list)
         timestamps.append(('after graph creation',arrow.now()))
-        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,threshold)
+        smallNetwork = subsetGraph_netX(nxNetwork,algorithm,lowerBound,upperBound)
         timestamps.append(('after graph subset',arrow.now()))
       
 
@@ -525,10 +528,10 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             toIndex = nodeKeyToNumber(nxNetwork,edge['_to'])
             edgeIndexToData[(fromIndex,toIndex)] = edge
 
-        print('timestamps:')
-        for stamp in range(len(timestamps)-1):
-            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
-            print(timestamps[stamp+1][0],diff)
+        # print('timestamps:')
+        # for stamp in range(len(timestamps)-1):
+        #     diff = timestamps[stamp+1][1]-timestamps[stamp][1]
+        #     print(timestamps[stamp+1][0],diff)
 
         # iterate over the edges returned and build a json structure that
         # contains all the edge information.  This is complicated because networkX returns

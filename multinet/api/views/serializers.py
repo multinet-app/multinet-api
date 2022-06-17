@@ -267,5 +267,6 @@ class NodeStatsQuerySerializer(serializers.Serializer):
 
 # define the input options for the filtered node and filtered edge calls.
 class NodeAndEdgeFilteredQuerySerializer(serializers.Serializer):
-    algorithm = serializers.ChoiceField(choices=['in_degree', 'out_degree'], default='out_degree', required=False)
-    threshold = serializers.FloatField()
+    algorithm = serializers.ChoiceField(choices=['degree','in_degree', 'out_degree'], default='degree', required=False)
+    lowerBound = serializers.FloatField()
+    upperBound = serializers.FloatField()
