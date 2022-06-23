@@ -13,6 +13,8 @@ from composed_configuration import (
 from configurations import values
 
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 class MultinetMixin(ConfigMixin):
     WSGI_APPLICATION = 'multinet.wsgi.application'
     ROOT_URLCONF = 'multinet.urls'
