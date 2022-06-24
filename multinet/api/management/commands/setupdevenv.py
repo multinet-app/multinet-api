@@ -14,6 +14,7 @@ from multinet.api.tasks.upload.csv import process_row
 
 from pathlib import Path
 from io import StringIO
+import os
 import csv
 import json
 
