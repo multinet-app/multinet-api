@@ -48,7 +48,7 @@ class Command(BaseCommand):
             workspace = Workspace.objects.get(name=workspace_name)
 
             for csv_path in csv_paths:
-                filename = str(csv_path).split("/")[-1].split(".")[0]
+                filename = os.path.splitext(csv_path.name)[0]
                 
                 # Check if table with name exists, if so delete
                 if Table.objects.filter(workspace=workspace, name=filename).exists():
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                     Table.objects.filter(workspace=workspace, name=filename).delete()
 
                 # Open the types file and read the types in
-                types_path = Path(str(csv_path).replace(f"{filename}.csv", "")) / "types" / f"{filename}.json"
+                types_path = data_dir_path / "types" / f"{filename}.json"
                 with types_path.open('rb') as f:
                     columns = json.load(f)
                     
@@ -95,13 +95,6 @@ class Command(BaseCommand):
         try:
             workspace = Workspace.objects.get(name=workspace_name)
 
-            # # Get the table objects to create the network
-            # edge_table = Table.objects.get(name=edge_table_name, workspace=workspace)
-
-            # node_tables = []
-            # for node_table_name in node_table_names:
-            #     node_tables.append(Table.objects.get(name=node_table_name, workspace=workspace))
-
             # Create the network
             Network.create_with_edge_definition(workspace_name, workspace, edge_table_name, node_table_names)
             self.stdout.write(self.style.SUCCESS(
@@ -116,10 +109,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Check that owner exists
-        queried_users = User.objects.filter(email=options["email"])
-        if not queried_users.exists():
-            raise Exception('User did not exist')
-        self.user = queried_users.first()
+        self.user = User.objects.filter(email=options["email"]).first()
+        if self.user is None:
+      	    raise Exception('User did not exist')        
 
         # Create the workspaces
         self.create_workspace_if_not_exists("boston")
@@ -132,13 +124,12 @@ class Command(BaseCommand):
         self.create_tables_for_workspace("boston", "membership")
         self.create_tables_for_workspace("eurovis-2019", "connections")
         self.create_tables_for_workspace("miserables", "relationships")
-        self.create_tables_for_workspace("movies", "")
         self.create_tables_for_workspace("openflights", "routes")
 
         # Create the networks from the tables
         self.create_network_in_workspace("boston", "membership", ["clubs", "members"])
         self.create_network_in_workspace("eurovis-2019", "connections", ["people"])
         self.create_network_in_workspace("miserables", "relationships", ["characters"])
-        # self.create_network_in_workspace("movies") Not possible with the data structure,
-        # maybe we could use the new network creation API from the command line
         self.create_network_in_workspace("openflights", "routes", ["airports"])
+        
+        # TODO: Include movies dataset here once new network creation API is accessible internally from the API
