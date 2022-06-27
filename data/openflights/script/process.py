@@ -17,8 +17,8 @@ def main():
         # Filter out flights to or from undeclared airports.
         if row['_from'] in ids and row['_to'] in ids:
             # Prepend the presumed node table name to the from/to columns.
-            row['_from'] = f'''airports/{row['_from']}'''
-            row['_to'] = f'''airports/{row['_to']}'''
+            row['_from'] = f"airports/{row['_from']}"
+            row['_to'] = f"airports/{row['_to']}"
 
             writer.writerow(row)
 

@@ -12,6 +12,7 @@ def namify_member(name):
 
 def namify_club(name):
     """Convert data formmated club name into human readable form."""
+
     def split_on(s, splitters):
         if not s:
             return []
@@ -37,9 +38,7 @@ if __name__ == '__main__':
     ids = {name: idx for (idx, name) in enumerate(club_names + member_names)}
 
     # Create member and club tables.
-    members = [
-        {'_key': ids[name], 'name': namify_member(name)} for name in member_names
-    ]
+    members = [{'_key': ids[name], 'name': namify_member(name)} for name in member_names]
     clubs = [{'_key': ids[name], 'name': namify_club(name)} for name in club_names]
 
     # Create the membership table.

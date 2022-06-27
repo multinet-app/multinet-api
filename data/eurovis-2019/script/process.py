@@ -20,8 +20,8 @@ def convert_link(link, idx):
     """Convert the D3 JSON link data into a Multinet-style record."""
     return {
         '_key': str(idx),
-        '_from': f'''people/{link['source']}''',
-        '_to': f'''people/{link['target']}''',
+        '_from': f"people/{link['source']}",
+        '_to': f"people/{link['target']}",
     }
 
 
@@ -56,8 +56,8 @@ def main():
         link
         for link in links
         if (
-            any(f'''people/{node['_key']}''' == link['_from'] for node in nodes)
-            and any(f'''people/{node['_key']}''' == link['_to'] for node in nodes)
+            any(f"people/{node['_key']}" == link['_from'] for node in nodes)
+            and any(f"people/{node['_key']}" == link['_to'] for node in nodes)
         )
     ]
     links = [link for (index, link) in enumerate(links) if index % 10 == 0]

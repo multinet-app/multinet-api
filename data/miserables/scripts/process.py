@@ -13,8 +13,8 @@ def add_key(rec, idx):
 def convert_link(link):
     """Convert the D3 JSON link data into a Multinet-style record."""
     return {
-        '_from': f'''characters/{link['source']}''',
-        '_to': f'''characters/{link['target']}''',
+        '_from': f"characters/{link['source']}",
+        '_to': f"characters/{link['target']}",
         'value': link['value'],
     }
 
@@ -35,12 +35,12 @@ def main():
 
     # Prepare the node data by adjoining a key value equal to each record's
     # index in the original data.
-    nodes = [add_key(record, index) for (index, record) in enumerate(data["nodes"])]
+    nodes = [add_key(record, index) for (index, record) in enumerate(data['nodes'])]
 
     # Convert the link data to Multinet form. Note that the D3 JSON format uses
     # node list indices to refer to the source and target nodes; these can be
     # used unchanged because of how the key value for the nodes was set above.
-    links = [convert_link(link) for link in data["links"]]
+    links = [convert_link(link) for link in data['links']]
 
     # Write out both the node and link data to CSV files.
     write_csv(nodes, ['_key', 'name', 'group'], 'characters.csv')
