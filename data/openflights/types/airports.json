@@ -1,0 +1,16 @@
+{
+    "_key": "label",
+    "name": "label",
+    "city": "label",
+    "country": "label",
+    "IATA": "label",
+    "ICAO": "label",
+    "latitude": "number",
+    "longitude": "number",
+    "altitude": "number",
+    "timezone": "label",
+    "DST": "label",
+    "tz database time": "label",
+    "type": "category",
+    "source": "category"
+}
