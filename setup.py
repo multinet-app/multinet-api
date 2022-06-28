@@ -61,6 +61,8 @@ setup(
         'networkx',
         'numpy',
         'scipy',
+        # installing older pandas to work with numpy version installed
+        'pandas~=1.2.2',
     ],
     extras_require={'dev': ['ipython', 'tox']},
 )

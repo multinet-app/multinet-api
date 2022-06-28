@@ -251,10 +251,13 @@ class D3JSONUploadCreateSerializer(UploadCreateSerializer):
 # define the output of the node_stats endpoint.  It is either a single value or a fixed set of values
 class NodeStatsSerializer(serializers.Serializer):
     _key = serializers.CharField()
+    _id = serializers.CharField()
     result = serializers.FloatField()
 
 class NodeStatsAllFieldsSerializer(serializers.Serializer):
     _key = serializers.CharField()
+    _id = serializers.CharField()
+    degree = serializers.FloatField()
     in_degree = serializers.FloatField()
     out_degree = serializers.FloatField()
     node_centrality = serializers.FloatField()
@@ -263,7 +266,7 @@ class NodeStatsAllFieldsSerializer(serializers.Serializer):
 
 # define the input options for the node stats queries.  
 class NodeStatsQuerySerializer(serializers.Serializer):
-    algorithm = serializers.ChoiceField(choices=['in_degree', 'out_degree','node_centrality', 'betweenness','pagerank','all'], default='all', required=False)
+    algorithm = serializers.ChoiceField(choices=['degree','in_degree', 'out_degree','node_centrality', 'betweenness','pagerank','all'], default='all', required=False)
 
 # define the input options for the filtered node and filtered edge calls.
 class NodeAndEdgeFilteredQuerySerializer(serializers.Serializer):
