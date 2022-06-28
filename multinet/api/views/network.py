@@ -168,8 +168,8 @@ def BuildNodeAndEdgeAttributeStructure_gtool(g,node_list,edge_list):
             
     # now fill in the edge values. We have to look up the proper edge by its start and end nodes
     for edge in edge_list:
-        sourceNode = node_dict[edge['subject']]['gt_object']
-        destNode   = node_dict[edge['object']]['gt_object']
+        sourceNode = node_dict[edge['_from']]['gt_object']
+        destNode   = node_dict[edge['_to']]['gt_object']
         thisEdge = g.edge(sourceNode,destNode)
         for attrib in edge:
             if attrib not in ['subject','object','_from','_to']:
