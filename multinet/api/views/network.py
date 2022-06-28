@@ -161,10 +161,10 @@ def BuildNodeAndEdgeAttributeStructure_gtool(g,node_list,edge_list):
             edge_attrs[column]['value'] = edge_id_prop
             g.edge_properties[column] = edge_id_prop
             
-    # make a dict of all nodes indexed by 'id' to help lookup faster when we are adding edges
+    # make a dict of all nodes indexed by '_id' to help lookup faster when we are adding edges
     node_dict = {}
     for node in node_list:
-        node_dict[node['id']] = node
+        node_dict[node['_id']] = node
             
     # now fill in the edge values. We have to look up the proper edge by its start and end nodes
     for edge in edge_list:
@@ -172,7 +172,7 @@ def BuildNodeAndEdgeAttributeStructure_gtool(g,node_list,edge_list):
         destNode   = node_dict[edge['_to']]['gt_object']
         thisEdge = g.edge(sourceNode,destNode)
         for attrib in edge:
-            if attrib not in ['subject','object','_from','_to']:
+            if attrib not in ['_from','_to']:
                 #print('edge attrib:',attrib)
                 edge_attrs[attrib]['value'][thisEdge] = edge[attrib]
         
