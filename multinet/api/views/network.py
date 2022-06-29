@@ -40,7 +40,12 @@ import arrow
 from django.http import JsonResponse
 import json
 import pandas as pd
+import math
 
+# define return values for graph algorithms instead of 'nan' so JSON serialization doesn't break
+ERROR_FLAG_VALUE = 0
+# define a replacement attribute value if it wouldn's store in graph_tools property maps
+ERROR_ATTRIBUTE_VALUE = '-999'
 
 # develop accessor function to return node index from _key. Be tolerant of
 # table names preceding the unique node name
@@ -146,10 +151,15 @@ def BuildNodeAndEdgeAttributeStructure_gtool(g,node_list,edge_list):
     for node in node_list:
         for attrib in node.keys():
             if attrib not in ['gt_object','used_by_edge','index']:
-                #print(node['id'],attrib)
                 # assign the attribute value to the proper place in the vertex_properties object
-                # the node['gt_object'] is the index into the property object, which is shared across all nodes
-                node_attrs[attrib]['value'][node['gt_object']] = node[attrib]
+                # the node['gt_object'] is the index into the property object, which is shared across all nodes.
+                # a runtime exception is used here to catch and replace any offending bad source data attribute values, like '\\N' 
+                try:
+                    node_attrs[attrib]['value'][node['gt_object']] = node[attrib]
+                except:
+                    print('node:',node['_id'],' has bad attribute:',attrib,'value:',node[attrib], 'assigning value:\"',ERROR_ATTRIBUTE_VALUE,'\"')
+                    # assign an error flag value
+                    node_attrs[attrib]['value'][node['gt_object']] = ERROR_ATTRIBUTE_VALUE
 
     # find the edge properties
     for column in edge_df.columns:
@@ -247,11 +257,11 @@ def buildGraph_gtool(node_list,edge_list):
         if (edge['_from'] in potential_nodes.keys()) and (edge['_to'] in potential_nodes.keys()):
             newEdge = g.add_edge((potential_nodes[edge['_from']])['gt_object'],(potential_nodes[edge['_to']])['gt_object'])
             used_edge_list.append(edge)
-    #print('really used ',len(used_edge_list),'edges')
+
     # now that we know what node and edge records are used, lets add attributes to the graph. the used_nodes and used_edges
     # are lists of dicts that contain all the attributes
     node_attrs,edge_attrs = BuildNodeAndEdgeAttributeStructure_gtool(g,used_node_list,used_edge_list)
-    # return the graph-tool graph object 
+    # return the graph-tool graph object and the attribute arrays
     return (g, node_attrs, edge_attrs)
 
 
@@ -462,35 +472,30 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         node_stat_list = []
         # traverse through all the vertices in the intermediate graph, read out their calculated
         # algorithm values and pack into a returned JSON structure.   The If-then clauses are because
-        # the client might have selected one or all of the supported algorithms
+        # the client might have selected one or all of the supported algorithms. An Error flag is used
+        # because sometimes graph_tool algorithms return 'NaN' values. These are filtered out to prevent
+        # a run time failure.   The error code is defined at the top of this source file. 
         for node in gtoolNetwork.vertices():
             entry = {}
             # add in the node _key for reference
             entry['_key'] = node_attrs['_key']['value'][node]
             entry['_id'] = node_attrs['_id']['value'][node]
             # fill in the result value according to what algorithm was selected
-            if algorithm in ['node_centrality','betweenness']:
-                try:
-                    entry['result'] = algorithmReturn[node]
-                except:
-                    # there was no value for this vertex index, so return -1 flag
-                    print('returning -1 for',entry['_key'])
-                    entry['result'] = -1
+            if algorithm in ['node_centrality','betweenness','pagerank']:
+                entry['result'] = ERROR_FLAG_VALUE if math.isnan(algorithmReturn[node]) == True else algorithmReturn[node]
             elif algorithm == 'in_degree':
                 entry['result'] = gtoolNetwork.vertex(node).in_degree()
             elif algorithm == 'out_degree':
                 entry['result'] = gtoolNetwork.vertex(node).out_degree()
             elif algorithm == 'degree':
                 entry['result'] = gtoolNetwork.vertex(node).in_degree()+gtoolNetwork.vertex(node).out_degree()
-            elif algorithm == 'pagerank':
-                entry['result'] = algorithmReturn[node]
             elif algorithm == 'all':
                 entry['degree'] = gtoolNetwork.vertex(node).out_degree() + gtoolNetwork.vertex(node).in_degree()
                 entry['in_degree'] = gtoolNetwork.vertex(node).in_degree()
                 entry['out_degree'] = gtoolNetwork.vertex(node).out_degree()
-                entry['node_centrality'] = nodeCentrality_result[node]
-                entry['betweenness'] = betweenness_result[node]
-                entry['pagerank'] = pagerank_result[node]
+                entry['node_centrality'] = ERROR_FLAG_VALUE if math.isnan(nodeCentrality_result[node]) == True else nodeCentrality_result[node]
+                entry['betweenness'] = ERROR_FLAG_VALUE if math.isnan(betweenness_result[node]) == True else betweenness_result[node]
+                entry['pagerank'] = ERROR_FLAG_VALUE if math.isnan(pagerank_result[node]) == True else pagerank_result[node]
             else:
                 # return out-degree as a default
                 entry['result'] = gtoolNetwork.out_degree(node)
