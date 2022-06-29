@@ -87,16 +87,25 @@ def subsetGraph_gtool(g,algorithm,lowerBound,upperBound):
         view = GraphView(g, vfilt=lambda v: (v.in_degree() >= lowerBound and v.in_degree() <= upperBound))
     elif algorithm == 'out_degree':
         view = GraphView(g, vfilt=lambda v: (v.out_degree() >= lowerBound and v.out_degree() <= upperBound))
-        # vcount = 0
-        # for v in view.vertices():
-        #     if (vcount<5):
-        #         print('vert info:',v)
-        #     vcount += 1
-
     else:
         # or of two conditions gives 'degree' (either in or out conditions match)
         view = GraphView(g, vfilt=lambda v: ((v.out_degree() >= lowerBound and v.out_degree() <= upperBound) or 
                                              (v.in_degree() >= lowerBound and v.in_degree() <= upperBound))
+                                             )
+    return view
+
+
+# return a subset of a graph that has all unconnected nodes removed
+def filterUnconnectedNodes_gtool(g,algorithm):
+    lowerBound = 1
+    # if algorithm == 'in_degree':
+    #     view = GraphView(g, vfilt=lambda v: (v.in_degree() >= lowerBound))
+    # elif algorithm == 'out_degree':
+    #     view = GraphView(g, vfilt=lambda v: (v.out_degree() >= lowerBound)
+    # else:
+    # or of two conditions gives 'degree' (either in or out conditions match)
+    view = GraphView(g, vfilt=lambda v: ((v.out_degree() >= lowerBound ) or 
+                                             (v.in_degree() >= lowerBound ))
                                              )
     return view
 
@@ -404,12 +413,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer.is_valid(raise_exception=True)
         algorithm = serializer.validated_data['algorithm']
 
-        #print('received algorithm choice:',algorithm)
-
-        # traverse through arango cursors to get data into lists
-        timestamps = []
-        timestamps.append(('before cursor read',arrow.now()))
-
         # iterate through Arango cursors to extract the node and edge data
         # arango queries are buffered by default pagination of 
         # 1000 entries, so loop through all the batches
@@ -443,12 +446,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             node = nodes.next()
             node_list.append(node)
 
-        timestamps.append(('after cursor read',arrow.now()))
-        edgecount = network.edge_count  
-
-        timestamps.append(('before graph creation',arrow.now()))
         gtoolNetwork, node_attrs, edge_attrs  = buildGraph_gtool(node_list,edge_list)
-        timestamps.append(('after graph creation',arrow.now()))
 
         if algorithm == 'node_centrality':
             algorithmReturn = katz(gtoolNetwork)
@@ -461,46 +459,42 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             betweenness_result, edge_betweenness = betweenness(gtoolNetwork)
             pagerank_result = pagerank(gtoolNetwork)
         
-        timestamps.append(('after algorithm completed',arrow.now()))
-
-
         node_stat_list = []
-        for index,node in enumerate(node_list):
+        # traverse through all the vertices in the intermediate graph, read out their calculated
+        # algorithm values and pack into a returned JSON structure.   The If-then clauses are because
+        # the client might have selected one or all of the supported algorithms
+        for node in gtoolNetwork.vertices():
             entry = {}
             # add in the node _key for reference
-            entry['_key'] = node['_key']
-            entry['_id'] = node['_id']
+            entry['_key'] = node_attrs['_key']['value'][node]
+            entry['_id'] = node_attrs['_id']['value'][node]
             # fill in the result value according to what algorithm was selected
             if algorithm in ['node_centrality','betweenness']:
                 try:
-                    entry['result'] = algorithmReturn[index]
+                    entry['result'] = algorithmReturn[node]
                 except:
                     # there was no value for this vertex index, so return -1 flag
-                    print('returning -1 for',node['_key'])
+                    print('returning -1 for',entry['_key'])
                     entry['result'] = -1
             elif algorithm == 'in_degree':
-                entry['result'] = gtoolNetwork.vertex(index).in_degree()
+                entry['result'] = gtoolNetwork.vertex(node).in_degree()
             elif algorithm == 'out_degree':
-                entry['result'] = gtoolNetwork.vertex(index).out_degree()
+                entry['result'] = gtoolNetwork.vertex(node).out_degree()
             elif algorithm == 'degree':
-                entry['result'] = gtoolNetwork.vertex(index).in_degree()+gtoolNetwork.vertex(index).out_degree()
+                entry['result'] = gtoolNetwork.vertex(node).in_degree()+gtoolNetwork.vertex(node).out_degree()
             elif algorithm == 'pagerank':
-                entry['result'] = algorithmReturn[index]
+                entry['result'] = algorithmReturn[node]
             elif algorithm == 'all':
-                entry['degree'] = gtoolNetwork.vertex(index).out_degree() + gtoolNetwork.vertex(index).in_degree()
-                entry['in_degree'] = gtoolNetwork.vertex(index).in_degree()
-                entry['out_degree'] = gtoolNetwork.vertex(index).out_degree()
-                entry['node_centrality'] = nodeCentrality_result[index]
-                entry['betweenness'] = betweenness_result[index]
-                entry['pagerank'] = pagerank_result[index]
+                entry['degree'] = gtoolNetwork.vertex(node).out_degree() + gtoolNetwork.vertex(node).in_degree()
+                entry['in_degree'] = gtoolNetwork.vertex(node).in_degree()
+                entry['out_degree'] = gtoolNetwork.vertex(node).out_degree()
+                entry['node_centrality'] = nodeCentrality_result[node]
+                entry['betweenness'] = betweenness_result[node]
+                entry['pagerank'] = pagerank_result[node]
             else:
                 # return out-degree as a default
-                entry['result'] = gtoolNetwork.out_degree(index)
+                entry['result'] = gtoolNetwork.out_degree(node)
             node_stat_list.append(entry)
-
-        #for stamp in range(len(timestamps)-1):
-        #    diff = timestamps[stamp+1][1]-timestamps[stamp][1]
-        #    print(timestamps[stamp+1][0],diff)
 
         if algorithm == 'all':
             serializer = NodeStatsAllFieldsSerializer(node_stat_list, many=True)
@@ -531,10 +525,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         lowerBound = serializer.validated_data['lowerBound']
         upperBound = serializer.validated_data['upperBound']
 
-        # traverse through arango cursors to get data into lists
-        timestamps = []
-        timestamps.append(('before cursor read',arrow.now()))
-     
         # iterate through Arango cursors to extract the node and edge data
         # arango queries are buffered by default pagination of 
         # 1000 entries, so loop through all the batches
@@ -568,14 +558,8 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             node = nodes.next()
             node_list.append(node)
 
-        timestamps.append(('before graph creation',arrow.now()))
         gtoolNetwork, node_attrs, edge_attrs  = buildGraph_gtool(node_list,edge_list)
-        timestamps.append(('after graph creation',arrow.now()))
         smallNetwork = subsetGraph_gtool(gtoolNetwork,algorithm,lowerBound, upperBound)
-        timestamps.append(('after graph subset',arrow.now()))
-        for stamp in range(len(timestamps)-1):
-            diff = timestamps[stamp+1][1]-timestamps[stamp][1]
-            print(timestamps[stamp+1][0],diff)
 
         # iterate over the nodes returned and build a json structure that
         # contains all the node information
@@ -613,10 +597,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         lowerBound = serializer.validated_data['lowerBound']
         upperBound = serializer.validated_data['upperBound']
         
-        # traverse through arango cursors to get data into lists
-        timestamps = []
-        timestamps.append(('before cursor read',arrow.now()))
-
         # iterate through Arango cursors to extract the node and edge data
         # arango queries are buffered by default pagination of 
         # 1000 entries, so loop through all the batches
@@ -650,11 +630,12 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
             node = nodes.next()
             node_list.append(node)     
 
-        timestamps.append(('before graph creation',arrow.now()))
+        # build a graph_tool version of this network
         gtoolNetwork, node_attrs,edge_attrs = buildGraph_gtool(node_list,edge_list)
-        timestamps.append(('after graph creation',arrow.now()))
+        # find the remaining subgraph when nodes are filtered by degree
         smallNetwork = subsetGraph_gtool(gtoolNetwork,algorithm,lowerBound,upperBound)
-        timestamps.append(('after graph subset',arrow.now()))
+        # eliminate floating, unconnected nodes generated by subgraph filtering
+        #connectedNetwork = filterUnconnectedNodes_gtool(smallNetwork)
 
         vertcount = edgecount = 0
         for vert in smallNetwork.vertices():
@@ -662,11 +643,6 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         for edge in smallNetwork.edges():
             edgecount += 1
         print('reduced network has',vertcount,' nodes and',edgecount,'edges')
-
-        # print('timestamps:')
-        # for stamp in range(len(timestamps)-1):
-        #     diff = timestamps[stamp+1][1]-timestamps[stamp][1]
-        #     print(timestamps[stamp+1][0],diff)
 
         # iterate over the edges returned and build a json structure that
         # contains all the edge information.  Iterating over the edge_attrs returns
