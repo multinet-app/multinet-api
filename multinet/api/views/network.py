@@ -189,11 +189,19 @@ def BuildNodeAndEdgeAttributeStructure_gtool(g,node_list,edge_list):
     for edge in edge_list:
         sourceNode = node_dict[edge['_from']]['gt_object']
         destNode   = node_dict[edge['_to']]['gt_object']
-        thisEdge = g.edge(sourceNode,destNode)
-        for attrib in edge:
-            if attrib not in ['_from','_to']:
-                #print('edge attrib:',attrib)
-                edge_attrs[attrib]['value'][thisEdge] = edge[attrib]
+        try: 
+            thisEdge = g.edge(sourceNode,destNode)
+            for attrib in edge:
+                if attrib not in ['_from','_to']:
+                    ## catch bad attribute values and assign an error code to avoid run-time failures
+                    try:
+                        edge_attrs[attrib]['value'][thisEdge] = edge[attrib]
+                    except:
+                        print('edge',thisEdge,'has bad attribute',attrib,'value:',edge[attrib])
+                        edge_attrs[attrib]['value'][thisEdge] = ERROR_ATTRIBUTE_VALUE
+        except:
+            # skip this edge
+            print('could not find matching edge for (',sourceNode,destNode,')')
         
     # return attribute structures
     return (node_attrs,edge_attrs)
