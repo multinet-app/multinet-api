@@ -194,7 +194,6 @@ def create_csv_network(workspace: Workspace, serializer):
     }
 
     # Make query to copy edge table docs to new edge table, inserting from/to links
-    # TODO: Include joining query
     query_str = """
         FOR edge_doc in @@ORIGINAL
             // Find matching source doc
@@ -209,11 +208,15 @@ def create_csv_network(workspace: Workspace, serializer):
                     FILTER edge_doc.@TARGET_LINK_LOCAL == dd.@TARGET_LINK_FOREIGN
                     return dd
             )
-
             // Add _from/_to to new doc, remove internal fields, insert into new coll
-            LET new_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
-            LET fixed = UNSET(new_doc, ['_id', '_key', 'rev'])
-            INSERT fixed INTO @@NEW_TABLE
+            LET new_edge_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
+            LET new_doc = UNSET(new_edge_doc, ['_id', '_key', 'rev'])
+    """
+
+    # Add join statements if needed
+    query_str, bind_vars = maybe_insert_join_statement(query_str, bind_vars, data['edge']['table'])
+    query_str += """
+            INSERT final_doc INTO @@NEW_TABLE
     """
 
     # Execute query

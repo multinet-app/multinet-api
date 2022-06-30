@@ -27,7 +27,7 @@ def csv_network_def(workspace, table_factory):
     table2.put_rows([{'id': 2, 'bar': 'baz'}])
     edge_table.put_rows([{'a': 1, 'b': 2}])
 
-    # Add extra data to join to table1
+    # Add extra data to join to table1 and edge_table
     table3.put_rows([{'other': 1, 'asd': 'asd', 'zxc': 'zxc'}])
 
     # Assert data is present
@@ -45,7 +45,16 @@ def csv_network_def(workspace, table_factory):
                 'table': {
                     'name': edge_table.name,
                     'excluded': [],
-                    # TODO: Include join for edge table
+                    'joined': {
+                        'table': {
+                            'name': table3.name,
+                            'excluded': ['other'],
+                        },
+                        'link': {
+                            'local': 'a',
+                            'foreign': 'other',
+                        },
+                    },
                 },
                 'source': {
                     'local': 'a',
@@ -117,12 +126,14 @@ def test_create_csv_network(workspace, csv_network_def):
     assert table1_doc['asd'] == table3_doc['asd'] == 'asd'
     assert table1_doc['zxc'] == table3_doc['zxc'] == 'zxc'
 
-    # Assert edge link was performed correctly
+    # Assert edge linking, joining and exclusion was performed correctly
     edge_dict = {
         '_from': table1_doc['_id'],
         '_to': table2_doc['_id'],
         'a': 1,
         'b': 2,
+        'asd': 'asd',
+        'zxc': 'zxc',
     }
     assert edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(edge_dict)
 
