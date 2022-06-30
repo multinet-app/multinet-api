@@ -25,7 +25,7 @@ def csv_network_def(workspace, table_factory):
     # Create small network
     table1.put_rows([{'id': 1, 'foo': 'bar'}])
     table2.put_rows([{'id': 2, 'bar': 'baz'}])
-    edge_table.put_rows([{'a': 1, 'b': 2}])
+    edge_table.put_rows([{'a': 1, 'b': 2, 'c': 3}])
 
     # Add extra data to join to table1 and edge_table
     table3.put_rows([{'other': 1, 'asd': 'asd', 'zxc': 'zxc'}])
@@ -44,7 +44,7 @@ def csv_network_def(workspace, table_factory):
             'edge': {
                 'table': {
                     'name': edge_table.name,
-                    'excluded': [],
+                    'excluded': ['c'],
                     'joined': {
                         'table': {
                             'name': table3.name,
@@ -125,6 +125,9 @@ def test_create_csv_network(workspace, csv_network_def):
     assert table1_doc['other'] == table3_doc['other']
     assert table1_doc['asd'] == table3_doc['asd'] == 'asd'
     assert table1_doc['zxc'] == table3_doc['zxc'] == 'zxc'
+
+    # Assert column exclusion was performed correctly
+    # TODO
 
     # Assert edge linking, joining and exclusion was performed correctly
     edge_dict = {

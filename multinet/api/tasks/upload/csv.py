@@ -188,6 +188,7 @@ def create_csv_network(workspace: Workspace, serializer):
     bind_vars = {
         '@ORIGINAL': edge_table_name,
         '@NEW_TABLE': new_edge_table_name,
+        'EXCLUDED_COLS': data['edge']['table']['excluded'],
         # Source
         '@SOURCE_TABLE': source_table,
         'SOURCE_LINK_LOCAL': data['edge']['source']['local'],
@@ -214,8 +215,9 @@ def create_csv_network(workspace: Workspace, serializer):
                     return dd
             )
             // Add _from/_to to new doc, remove internal fields, insert into new coll
+            LET excluded = APPEND(['_id', '_key', 'rev'], @EXCLUDED_COLS)
             LET new_edge_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
-            LET new_doc = UNSET(new_edge_doc, ['_id', '_key', 'rev'])
+            LET new_doc = UNSET(new_edge_doc, excluded)
     """
 
     # Add join statements if needed
