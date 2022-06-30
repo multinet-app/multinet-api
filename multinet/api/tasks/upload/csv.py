@@ -1,6 +1,6 @@
 import csv
 from io import StringIO
-from typing import Any, BinaryIO, Dict
+from typing import Any, BinaryIO, Dict, Tuple
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -70,6 +70,49 @@ def process_csv(
     table.put_rows(csv_rows)
 
 
+def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -> Tuple[str, Dict]:
+    """Return mutated query and bind_vars to account for joins."""
+    join_table = None
+    join_table_excluded = []
+    join_col_local = None
+    join_col_foreign = None
+    if table_dict.get('joined') is not None:
+        join_table = table_dict['joined']['table']['name']
+        join_table_excluded = table_dict['joined']['table']['excluded']
+        join_col_local = table_dict['joined']['link']['local']
+        join_col_foreign = table_dict['joined']['link']['foreign']
+
+    # Conditionally insert join vars and query text
+    if join_table is None:
+        query += """
+            LET final_doc = new_doc
+        """
+    else:
+        bind_vars.update(
+            {
+                '@JOINING_TABLE': join_table,
+                'JOINING_TABLE_EXCLUDED': join_table_excluded,
+                'JOIN_COL_LOCAL': join_col_local,
+                'JOIN_COL_FOREIGN': join_col_foreign,
+            }
+        )
+        query += """
+            // Perform join
+            LET foreign_doc = (
+                FIRST(
+                    FOR doc in @@JOINING_TABLE
+                        FILTER new_doc.@JOIN_COL_LOCAL == doc.@JOIN_COL_FOREIGN
+                        return doc
+                ) || {}
+            )
+            LET foreign_excluded = APPEND(['_id', '_key', 'rev'], @JOINING_TABLE_EXCLUDED)
+            LET new_foreign_doc = UNSET(foreign_doc, foreign_excluded)
+            LET final_doc = MERGE(new_doc, new_foreign_doc)
+        """
+
+    return query, bind_vars
+
+
 # CSV Network functions
 def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> str:
     """Create table from definition, including joins."""
@@ -82,17 +125,6 @@ def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> s
     table, created = Table.objects.get_or_create(workspace=workspace, name=new_table_name)
     if not created:
         table.get_arango_collection(readonly=False).truncate()
-
-    # Include joins
-    join_table = None
-    join_table_excluded = []
-    join_col_local = None
-    join_col_foreign = None
-    if table_dict.get('joined') is not None:
-        join_table = table_dict['joined']['table']['name']
-        join_table_excluded = table_dict['joined']['table']['excluded']
-        join_col_local = table_dict['joined']['link']['local']
-        join_col_foreign = table_dict['joined']['link']['foreign']
 
     # AQL query for copying doc, excluding certain columns, and joining
     bind_vars = {
@@ -107,33 +139,8 @@ def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> s
             LET new_doc = UNSET(og_doc, excluded)
     """
 
-    # Conditionally insert join vars and query text
-    if join_table is not None:
-        bind_vars.update(
-            {
-                '@JOINING_TABLE': join_table,
-                'JOINING_TABLE_EXCLUDED': join_table_excluded,
-                'JOIN_COL_LOCAL': join_col_local,
-                'JOIN_COL_FOREIGN': join_col_foreign,
-            }
-        )
-        query_str += """
-            // Perform join
-            LET foreign_doc = (
-                FIRST(
-                    FOR doc in @@JOINING_TABLE
-                        FILTER new_doc.@JOIN_COL_LOCAL == doc.@JOIN_COL_FOREIGN
-                        return doc
-                ) || {}
-            )
-            LET foreign_excluded = APPEND(['_id', '_key', 'rev'], @JOINING_TABLE_EXCLUDED)
-            LET new_foreign_doc = UNSET(foreign_doc, foreign_excluded)
-            LET final_doc = MERGE(new_doc, new_foreign_doc)
-        """
-    else:
-        query_str += """
-            LET final_doc = new_doc
-        """
+    # Add join statements if needed
+    query_str, bind_vars = maybe_insert_join_statement(query_str, bind_vars, table_dict)
 
     # Add final insert
     query_str += """
