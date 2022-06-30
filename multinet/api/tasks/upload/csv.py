@@ -187,6 +187,7 @@ def create_csv_network(workspace: Workspace, serializer):
     }
 
     # Make query to copy edge table docs to new edge table, inserting from/to links
+    # TODO: Include joining query
     query_str = """
         FOR edge_doc in @@ORIGINAL
             // Find matching source doc

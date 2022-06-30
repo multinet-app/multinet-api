@@ -9,6 +9,10 @@ from multinet.api.tests.fuzzy import dict_to_fuzzy_arango_doc
 from multinet.api.views.serializers import CSVNetworkCreateSerializer
 
 
+def new_table_name(network_name: str, table_name: str):
+    return f'{network_name}--{table_name}'
+
+
 @pytest.fixture
 def csv_network_def(workspace, table_factory):
     # Edge table isn't defined as an actual edge table,
@@ -37,31 +41,38 @@ def csv_network_def(workspace, table_factory):
     serializer = CSVNetworkCreateSerializer(
         data={
             'name': network_name,
-            'edge_table': {
-                'name': edge_table.name,
+            'edge': {
+                'table': {
+                    'name': edge_table.name,
+                    'excluded': [],
+                    # TODO: Include join for edge table
+                },
                 'source': {
-                    'column': 'a',
-                    'foreign_column': {
-                        'table': table1.name,
-                        'column': 'id',
-                    },
+                    'local': 'a',
+                    'foreign': 'id',
                 },
                 'target': {
-                    'column': 'b',
-                    'foreign_column': {
-                        'table': table2.name,
-                        'column': 'id',
+                    'local': 'b',
+                    'foreign': 'id',
+                },
+            },
+            'source_table': {
+                'name': table1.name,
+                'excluded': [],
+                'joined': {
+                    'table': {
+                        'name': table3.name,
+                        'excluded': [],
+                    },
+                    'link': {
+                        'local': 'id',
+                        'foreign': 'other',
                     },
                 },
             },
-            'joins': {
-                table3.name: {
-                    'column': 'other',
-                    'foreign_column': {
-                        'table': table1.name,
-                        'column': 'id',
-                    },
-                }
+            'target_table': {
+                'name': table2.name,
+                'excluded': [],
             },
         }
     )
@@ -78,10 +89,23 @@ def csv_network_def(workspace, table_factory):
 @pytest.mark.django_db
 def test_create_csv_network(workspace, csv_network_def):
     network_name = csv_network_def['name']
+    edge_table = csv_network_def['edge_table']
     serializer = csv_network_def['serializer']
     table1, table2, table3 = csv_network_def['tables']
 
     create_csv_network(workspace, serializer)
+
+    # Since new tables were created, need to replace current tables with those tables
+    # (table3 isn't re-created)
+    edge_table: Table = Table.objects.get(
+        workspace=workspace, name=new_table_name(network_name, edge_table.name)
+    )
+    table1: Table = Table.objects.get(
+        workspace=workspace, name=new_table_name(network_name, table1.name)
+    )
+    table2: Table = Table.objects.get(
+        workspace=workspace, name=new_table_name(network_name, table2.name)
+    )
 
     # Fetch stored rows
     table1_doc = table1.get_rows().next()
@@ -89,29 +113,25 @@ def test_create_csv_network(workspace, csv_network_def):
     table3_doc = table3.get_rows().next()
 
     # Assert node joining was performed correctly
-    joined_table: Table = Table.objects.get(name=f'{table1}-joined-{table3}')
-    joined_table_doc = joined_table.get_rows().next()
-    assert joined_table_doc['other'] == table3_doc['other'] == table1_doc['id']
-    assert joined_table_doc['asd'] == table3_doc['asd'] == 'asd'
-    assert joined_table_doc['zxc'] == table3_doc['zxc'] == 'zxc'
+    assert table1_doc['other'] == table3_doc['other']
+    assert table1_doc['asd'] == table3_doc['asd'] == 'asd'
+    assert table1_doc['zxc'] == table3_doc['zxc'] == 'zxc'
 
     # Assert edge link was performed correctly
     edge_dict = {
-        '_from': joined_table_doc['_id'],
+        '_from': table1_doc['_id'],
         '_to': table2_doc['_id'],
         'a': 1,
         'b': 2,
     }
-    new_edge_table_name = f'{network_name}_edges'
-    new_edge_table: Table = Table.objects.get(workspace=workspace, name=new_edge_table_name)
-    assert new_edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(edge_dict)
+    assert edge_table.get_rows().next() == dict_to_fuzzy_arango_doc(edge_dict)
 
     # Assert network created correctly
-    node_tables = sorted([joined_table.name, table2.name])
+    node_tables = sorted([table1.name, table2.name])
     network: Network = Network.objects.get(workspace=workspace, name=network_name)
     assert network.edges().next() == dict_to_fuzzy_arango_doc(edge_dict)
     assert network.get_arango_graph().edge_definitions()[0] == {
-        'edge_collection': new_edge_table_name,
+        'edge_collection': edge_table.name,
         'from_vertex_collections': node_tables,
         'to_vertex_collections': node_tables,
     }
