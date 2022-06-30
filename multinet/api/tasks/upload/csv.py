@@ -71,7 +71,12 @@ def process_csv(
 
 
 def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -> Tuple[str, Dict]:
-    """Return mutated query and bind_vars to account for joins."""
+    """
+    Return mutated query and bind_vars to account for joins.
+
+    This function expects a variable defined in AQL as `new_doc`, and supply a `final_doc`
+    variable, which will either contain the joined data, or be identical to `new_doc`.
+    """
     join_table = None
     join_table_excluded = []
     join_col_local = None
