@@ -164,26 +164,37 @@ class NetworkCreateSerializer(serializers.ModelSerializer):
     edge_table = serializers.CharField()
 
 
-class ColumnSerializer(serializers.Serializer):
-    table = serializers.CharField()
-    column = serializers.CharField()
+# CSV network serializers
+class Link(serializers.Serializer):
+    local = serializers.CharField()
+    foreign = serializers.CharField()
 
 
-class TableLinkSerialier(serializers.Serializer):
-    column = serializers.CharField()
-    foreign_column = ColumnSerializer()
-
-
-class EdgeTableSerializer(serializers.Serializer):
+class BaseTable(serializers.Serializer):
     name = serializers.CharField()
-    source = TableLinkSerialier()
-    target = TableLinkSerialier()
+    excluded = serializers.ListField(child=serializers.CharField())
+
+
+class TableJoin(serializers.Serializer):
+    table = BaseTable()
+    link = Link()
+
+
+class FullTable(BaseTable):
+    joined = TableJoin(required=False)
+
+
+class EdgeTable(serializers.Serializer):
+    table = FullTable()
+    source = Link(required=False)
+    target = Link(required=False)
 
 
 class CSVNetworkCreateSerializer(serializers.Serializer):
     name = serializers.CharField()
-    edge_table = EdgeTableSerializer()
-    joins = serializers.DictField(child=TableLinkSerialier(), required=False)
+    edge = EdgeTable()
+    source_table = FullTable()
+    target_table = FullTable()
 
 
 class NetworkSerializer(serializers.ModelSerializer):
