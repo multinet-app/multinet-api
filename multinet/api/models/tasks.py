@@ -44,4 +44,5 @@ class AqlQuery(Task):
     """An object to track AQL queries."""
 
     query = models.TextField()
+    bind_vars = models.JSONField(blank=True, default=dict)
     results = models.JSONField(blank=True, null=True)

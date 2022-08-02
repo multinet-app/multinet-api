@@ -16,10 +16,15 @@ class AqlQueryTask(MultinetCeleryTask):
 def execute_query(task_id: int) -> None:
     query_task: AqlQuery = AqlQuery.objects.select_related('workspace').get(id=task_id)
     workspace: Workspace = query_task.workspace
-    query_str = query_task.query
+
     # Run the query on Arango DB
     database = workspace.get_arango_db()
-    query = ArangoQuery(database, query_str, time_limit_secs=60)
+    query = ArangoQuery(
+        database,
+        query_str=query_task.query,
+        bind_vars=query_task.bind_vars,
+        time_limit_secs=60,
+    )
     cursor: Cursor = query.execute()
 
     # Store the results on the task object
