@@ -178,17 +178,22 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
 
         return Response(PermissionsReturnSerializer(workspace).data, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(query_serializer=AqlQuerySerializer())
-    @action(detail=True)
+    @swagger_auto_schema(request_body=AqlQuerySerializer())
+    @action(detail=True, methods=['POST'])
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def aql(self, request, name: str):
         """Execute AQL in a workspace."""
-        serializer = AqlQuerySerializer(data=request.query_params)
+        serializer = AqlQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        query_str = serializer.validated_data['query']
+
+        # Retrieve workspace and db
         workspace: Workspace = get_object_or_404(Workspace, name=name)
         database = workspace.get_arango_db()
-        query = ArangoQuery(database, query_str)
+
+        # Form query
+        query_str = serializer.validated_data['query']
+        bind_vars = serializer.validated_data['bind_vars']
+        query = ArangoQuery(database, query_str=query_str, bind_vars=bind_vars)
 
         try:
             cursor: Cursor = query.execute()

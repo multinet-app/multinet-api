@@ -447,10 +447,16 @@ def test_workspace_rest_aql(
     node_table = populated_table(workspace, False)
     nodes: Cursor = node_table.get_rows()
     nodes_list = list(nodes)
+
     # try and execute a valid non-mutating query on the data
-    query = f'FOR document IN {node_table.name} RETURN document'
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/aql/', data={'query': query}
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/aql/',
+        {
+            'query': 'FOR doc IN @@TABLE RETURN doc',
+            'bind_vars': {
+                '@TABLE': node_table.name,
+            },
+        },
     )
     assert r.status_code == status_code
 
@@ -466,11 +472,17 @@ def test_workspace_rest_aql_mutating_query(
 ):
     workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     fake = Faker()
-
     node_table = populated_table(workspace, False)
+
     # Mutating query
-    query = f"INSERT {{ 'name': {fake.pystr()} }} INTO {node_table.name}"
-    r = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/aql/', data={'query': query}
+    r = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/aql/',
+        data={
+            'query': 'INSERT {name: @DOCNAME} INTO @@TABLE',
+            'bind_vars': {
+                '@TABLE': node_table.name,
+                'DOCNAME': fake.pystr(),
+            },
+        },
     )
     assert r.status_code == 400
