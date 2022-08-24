@@ -29,14 +29,14 @@ class AqlQueryViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         serializer = AqlQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        query_str = serializer.validated_data['query']
-
         query: AqlQuery = AqlQuery.objects.create(
-            workspace=workspace, user=request.user, query=query_str
+            workspace=workspace,
+            user=request.user,
+            query=serializer.validated_data['query'],
+            bind_vars=serializer.validated_data['bind_vars'],
         )
 
         execute_query.delay(task_id=query.pk)
-
         return Response(AqlQueryTaskSerializer(query).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(responses={200: AqlQueryResultsSerializer()})

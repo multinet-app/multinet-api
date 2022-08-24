@@ -15,12 +15,22 @@ def valid_query(workspace: Workspace, user: User, authenticated_api_client: APIC
     """Create a fixture representing the response of a POST request for AQL queries."""
     workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     node_table = populated_table(workspace, False)
-    query_str = f'FOR document IN {node_table.name} RETURN document'
+
+    query_str = 'FOR document IN @@TABLE RETURN document'
+    bind_vars = {'@TABLE': node_table.name}
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/queries/', {'query': query_str}, format='json'
+        f'/api/workspaces/{workspace.name}/queries/',
+        {'query': query_str, 'bind_vars': bind_vars},
+        format='json',
     )
     WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
-    return {'response': r, 'query': query_str, 'nodes': list(node_table.get_rows())}
+
+    return {
+        'response': r,
+        'query': query_str,
+        'bind_vars': bind_vars,
+        'nodes': list(node_table.get_rows()),
+    }
 
 
 @pytest.fixture
@@ -28,13 +38,22 @@ def mutating_query(workspace: Workspace, user: User, authenticated_api_client: A
     """Create a fixture for a mutating AQL query that will have an error message post processing."""
     workspace.set_user_permission(user, WorkspaceRoleChoice.READER)
     node_table = populated_table(workspace, False)
-    fake = Faker()
-    query_str = f"INSERT {{ 'name': {fake.pystr()} }} INTO {node_table.name}"
+
+    query_str = 'INSERT {name: @DOCNAME} INTO @@TABLE'
+    bind_vars = {'@TABLE': node_table.name, 'DOCNAME': Faker().pystr()}
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/queries/', {'query': query_str}, format='json'
+        f'/api/workspaces/{workspace.name}/queries/',
+        {'query': query_str, 'bind_vars': bind_vars},
+        format='json',
     )
     WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
-    return {'response': r, 'query': query_str, 'nodes': list(node_table.get_rows())}
+
+    return {
+        'response': r,
+        'query': query_str,
+        'bind_vars': bind_vars,
+        'nodes': list(node_table.get_rows()),
+    }
 
 
 @pytest.mark.django_db
@@ -45,6 +64,7 @@ def test_query_rest_create(workspace: Workspace, user: User, valid_query):
         'id': INTEGER_ID_RE,
         'workspace': workspace_re(workspace),
         'query': valid_query['query'],
+        'bind_vars': valid_query['bind_vars'],
         'user': user.username,
         'error_messages': None,
         'status': AqlQuery.Status.PENDING,
@@ -63,6 +83,7 @@ def test_query_rest_create_mutating(workspace: Workspace, user: User, mutating_q
         'id': INTEGER_ID_RE,
         'workspace': workspace_re(workspace),
         'query': mutating_query['query'],
+        'bind_vars': mutating_query['bind_vars'],
         'user': user.username,
         'error_messages': None,
         'status': AqlQuery.Status.PENDING,

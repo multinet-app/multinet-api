@@ -89,6 +89,7 @@ class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
 
 class AqlQuerySerializer(serializers.Serializer):
     query = serializers.CharField()
+    bind_vars = serializers.DictField(child=serializers.CharField())
 
 
 class AqlQueryTaskSerializer(serializers.ModelSerializer):
