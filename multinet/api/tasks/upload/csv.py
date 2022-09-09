@@ -214,6 +214,10 @@ def create_csv_network(workspace: Workspace, serializer):
                     FILTER edge_doc.@TARGET_LINK_LOCAL == dd.@TARGET_LINK_FOREIGN
                     return dd
             )
+
+            // Filter out missed joins
+            FILTER source_doc != null && target_doc != null
+
             // Add _from/_to to new doc, remove internal fields, insert into new coll
             LET excluded = APPEND(['_id', '_key', 'rev'], @EXCLUDED_COLS)
             LET new_edge_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
