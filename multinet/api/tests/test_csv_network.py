@@ -192,3 +192,65 @@ def test_rest_create_csv_network_already_exists(
     )
     assert r.status_code == 400
     assert r.json() == 'Network already exists'
+
+
+@pytest.mark.django_db
+def test_create_csv_network_missing_joins(workspace, table_factory):
+    edge_table: Table = table_factory(workspace=workspace)
+    table1: Table = table_factory(workspace=workspace)
+    table2: Table = table_factory(workspace=workspace)
+
+    # Create small network
+    table1.put_rows(
+        [
+            {'id': 1, 'foo': 'bar'},
+            # This wont match to anything
+            {'id': 8, 'foo': 'baz'},
+        ]
+    )
+    table2.put_rows(
+        [
+            {'id': 2, 'bar': 'baz'},
+            # This wont match to anything
+            {'id': 40, 'bar': 'bat'},
+        ]
+    )
+    edge_table.put_rows(
+        [
+            {'a': 1, 'b': 2, 'c': 3},
+            # This wont match to anything
+            {'a': 100, 'b': 101, 'c': 3},
+        ]
+    )
+
+    serializer = CSVNetworkCreateSerializer(
+        data={
+            'name': 'test',
+            'edge': {
+                'table': {
+                    'name': edge_table.name,
+                    'excluded': ['c'],
+                },
+                'source': {
+                    'local': 'a',
+                    'foreign': 'id',
+                },
+                'target': {
+                    'local': 'b',
+                    'foreign': 'id',
+                },
+            },
+            'source_table': {
+                'name': table1.name,
+                'excluded': ['test'],
+            },
+            'target_table': {
+                'name': table2.name,
+                'excluded': [],
+            },
+        }
+    )
+    serializer.is_valid(raise_exception=True)
+
+    # Ensure no exceptions raised
+    create_csv_network(workspace, serializer)
