@@ -13,6 +13,9 @@ from multinet.api.utils.arango import ArangoQuery
 
 from .workspace import Workspace
 
+# used to wait for pregel jobs
+import time 
+
 
 class Network(TimeStampedModel):
     name = models.CharField(max_length=300)
@@ -64,7 +67,7 @@ class Network(TimeStampedModel):
 
     @classmethod
     def create_with_edge_definition(
-        cls, name: str, workspace: Workspace, edge_table: str, node_tables: List[str]
+        cls, name: str, workspace: Workspace, edge_table: str, node_tables: List[str], run_graph_analyses=True
     ) -> Network:
         """Create a network with an edge definition, using the provided arguments."""
         # Create graph in arango before creating the Network object here
@@ -78,6 +81,65 @@ class Network(TimeStampedModel):
                 }
             ],
         )
+
+        # default behavior is to run Pregel algorithms when a new network is created.  This stores 
+        # data back in the node table.  If there is no node table, prohibit running the algorithms
+
+        if run_graph_analyses and (len(node_tables)>0):
+            # automatically add graph measurements to the graph by running analysis jobs
+            arango_db = workspace.get_arango_db(readonly=False)
+            print("running page rank analysis on:",name)
+            pagerank_job_id = arango_db.pregel.create_job(
+                graph=name,
+                algorithm='pagerank',
+                store=True,
+                #maxx_gss=100,
+                #thread_count=1,
+                async_mode=False,
+                result_field='_pagerank'
+            )
+            # a conflict writing results were noticed when multiple jobs finish about the same time, so 
+            # wait after each job before starting the next one
+            
+            while (arango_db.pregel.job(pagerank_job_id)['state'] == 'running'):
+                time.sleep(0.25)
+                print('waiting for pagerank job to finish')
+
+            print("running betweeenness analysis on:",name)
+            betweenness_job_id = arango_db.pregel.create_job(
+                graph=name,
+                algorithm='linerank',
+                store=True,
+                async_mode=False,
+                result_field='_betweenness'
+            )
+            while (arango_db.pregel.job(betweenness_job_id)['state'] == 'running'):
+                time.sleep(0.25)
+                print('waiting for betweenness job to finish')
+
+            print("running label propogation on:",name)
+            label_prop_job_id = arango_db.pregel.create_job(
+                graph=name,
+                algorithm='labelpropagation',
+                store=True,
+                async_mode=False,
+                result_field='_community_LP'
+            )
+            while (arango_db.pregel.job(label_prop_job_id)['state'] == 'running'):
+                time.sleep(0.25)
+                print('waiting for community label propogation job to finish')
+
+            print("running speaker-Listener label propogation on:",name)
+            slpa_job_id = arango_db.pregel.create_job(
+                graph=name,
+                algorithm='slpa',
+                store=True,
+                async_mode=False,
+                result_field='_community_SLPA'
+            )
+            while (arango_db.pregel.job(slpa_job_id)['state'] == 'running'):
+                time.sleep(0.25)
+                print('waiting for SLPA community job to finish')
 
         return Network.objects.create(
             name=name,
