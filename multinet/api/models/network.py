@@ -67,7 +67,7 @@ class Network(TimeStampedModel):
 
     @classmethod
     def create_with_edge_definition(
-        cls, name: str, workspace: Workspace, edge_table: str, node_tables: List[str], run_graph_analyses=True
+        cls, name: str, workspace: Workspace, edge_table: str, node_tables: List[str], run_graph_analyses=True, calculate_degree=True
     ) -> Network:
         """Create a network with an edge definition, using the provided arguments."""
         # Create graph in arango before creating the Network object here
@@ -100,7 +100,7 @@ class Network(TimeStampedModel):
             )
             # a conflict writing results were noticed when multiple jobs finish about the same time, so 
             # wait after each job before starting the next one
-            
+
             while (arango_db.pregel.job(pagerank_job_id)['state'] == 'running'):
                 time.sleep(0.25)
                 print('waiting for pagerank job to finish')
@@ -140,6 +140,34 @@ class Network(TimeStampedModel):
             while (arango_db.pregel.job(slpa_job_id)['state'] == 'running'):
                 time.sleep(0.25)
                 print('waiting for SLPA community job to finish')
+
+            # if calculating the degree automatically has been selected, run an AQL query for each node table. results are written
+            # back to each node table as an extra attribute "_degree". overall node degree is calculated, not IN or OUT degree. 
+            # To change to calculate IN or OUT degree, the keyword ANY below would be replaced below with INBOUND or OUTBOUND, respectively.     
+            if calculate_degree:
+                # iterate through the node tables and calculate the node degree by counting the results discovered 
+                # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
+                # limitations in AQL (or our understanding of AQL).  We understand an AQL query can only work 
+                # over a single collection at a time.  So this loop below repeats the query for each node_table. 
+ 
+                for collName in node_tables:
+                    print('calculating degree for nodes in',collName)
+                    query_str = 'FOR doc in '+collName+' '+"""
+                            UPDATE {"_key": doc._key,
+                            "_degree" : LENGTH(for edge 
+                                in 1 ANY doc._id 
+                                graph """+name+' '+"""
+                                return edge._id
+                                )
+                            } in """+collName+"""
+                        RETURN doc._id """
+
+                    bind_vars = {}
+
+                    cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+                    print(query_str)
+                    #doc_keys = [doc for doc in cursor]
+                    #print('result for',collName,'was:',doc_keys)
 
         return Network.objects.create(
             name=name,
