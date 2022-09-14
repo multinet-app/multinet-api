@@ -86,88 +86,97 @@ class Network(TimeStampedModel):
         # data back in the node table.  If there is no node table, prohibit running the algorithms
 
         if run_graph_analyses and (len(node_tables)>0):
-            # automatically add graph measurements to the graph by running analysis jobs
-            arango_db = workspace.get_arango_db(readonly=False)
-            print("running page rank analysis on:",name)
-            pagerank_job_id = arango_db.pregel.create_job(
-                graph=name,
-                algorithm='pagerank',
-                store=True,
-                #maxx_gss=100,
-                #thread_count=1,
-                async_mode=False,
-                result_field='_pagerank'
-            )
-            # a conflict writing results were noticed when multiple jobs finish about the same time, so 
-            # wait after each job before starting the next one
 
-            while (arango_db.pregel.job(pagerank_job_id)['state'] == 'running'):
-                time.sleep(0.25)
-                print('waiting for pagerank job to finish')
+            try:
+                # automatically add graph measurements to the graph by running analysis jobs
+                arango_db = workspace.get_arango_db(readonly=False)
+                print("running page rank analysis on:",name)
+                pagerank_job_id = arango_db.pregel.create_job(
+                    graph=name,
+                    algorithm='pagerank',
+                    store=True,
+                    #maxx_gss=100,
+                    #thread_count=1,
+                    async_mode=False,
+                    result_field='_pagerank'
+                )
+                # a conflict writing results were noticed when multiple jobs finish about the same time, so 
+                # wait after each job before starting the next one
 
-            print("running betweeenness analysis on:",name)
-            betweenness_job_id = arango_db.pregel.create_job(
-                graph=name,
-                algorithm='linerank',
-                store=True,
-                async_mode=False,
-                result_field='_betweenness'
-            )
-            while (arango_db.pregel.job(betweenness_job_id)['state'] == 'running'):
-                time.sleep(0.25)
-                print('waiting for betweenness job to finish')
+                while (arango_db.pregel.job(pagerank_job_id)['state'] == 'running'):
+                    time.sleep(0.25)
+                    print('waiting for pagerank job to finish')
 
-            print("running label propogation on:",name)
-            label_prop_job_id = arango_db.pregel.create_job(
-                graph=name,
-                algorithm='labelpropagation',
-                store=True,
-                async_mode=False,
-                result_field='_community_LP'
-            )
-            while (arango_db.pregel.job(label_prop_job_id)['state'] == 'running'):
-                time.sleep(0.25)
-                print('waiting for community label propogation job to finish')
+                print("running betweeenness analysis on:",name)
+                betweenness_job_id = arango_db.pregel.create_job(
+                    graph=name,
+                    algorithm='linerank',
+                    store=True,
+                    async_mode=False,
+                    result_field='_betweenness'
+                )
+                while (arango_db.pregel.job(betweenness_job_id)['state'] == 'running'):
+                    time.sleep(0.25)
+                    print('waiting for betweenness job to finish')
 
-            print("running speaker-Listener label propogation on:",name)
-            slpa_job_id = arango_db.pregel.create_job(
-                graph=name,
-                algorithm='slpa',
-                store=True,
-                async_mode=False,
-                result_field='_community_SLPA'
-            )
-            while (arango_db.pregel.job(slpa_job_id)['state'] == 'running'):
-                time.sleep(0.25)
-                print('waiting for SLPA community job to finish')
+                print("running label propogation on:",name)
+                label_prop_job_id = arango_db.pregel.create_job(
+                    graph=name,
+                    algorithm='labelpropagation',
+                    store=True,
+                    async_mode=False,
+                    result_field='_community_LP'
+                )
+                while (arango_db.pregel.job(label_prop_job_id)['state'] == 'running'):
+                    time.sleep(0.25)
+                    print('waiting for community label propogation job to finish')
+
+                print("running speaker-Listener label propogation on:",name)
+                slpa_job_id = arango_db.pregel.create_job(
+                    graph=name,
+                    algorithm='slpa',
+                    store=True,
+                    async_mode=False,
+                    result_field='_community_SLPA'
+                )
+                while (arango_db.pregel.job(slpa_job_id)['state'] == 'running'):
+                    time.sleep(0.25)
+                    print('waiting for SLPA community job to finish')
+            except:
+                print('error running network analysis via Pregel on network:',name)
 
             # if calculating the degree automatically has been selected, run an AQL query for each node table. results are written
             # back to each node table as an extra attribute "_degree". overall node degree is calculated, not IN or OUT degree. 
             # To change to calculate IN or OUT degree, the keyword ANY below would be replaced below with INBOUND or OUTBOUND, respectively.     
             if calculate_degree:
-                # iterate through the node tables and calculate the node degree by counting the results discovered 
-                # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
-                # limitations in AQL (or our understanding of AQL).  We understand an AQL query can only work 
-                # over a single collection at a time.  So this loop below repeats the query for each node_table. 
- 
-                for collName in node_tables:
-                    print('calculating degree for nodes in',collName)
-                    query_str = 'FOR doc in '+collName+' '+"""
-                            UPDATE {"_key": doc._key,
-                            "_degree" : LENGTH(for edge 
-                                in 1 ANY doc._id 
-                                graph """+name+' '+"""
-                                return edge._id
-                                )
-                            } in """+collName+"""
-                        RETURN doc._id """
+                try:
+                    # iterate through the node tables and calculate the node degree by counting the results discovered 
+                    # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
+                    # limitations in AQL (or our understanding of AQL).  We understand an AQL query can only work 
+                    # over a single collection at a time.  So this loop below repeats the query for each node_table. 
+    
+                    for collName in node_tables:
+                        print('calculating degree for nodes in',collName)
+                        query_str = 'FOR doc in '+collName+' '+"""
+                                UPDATE {"_key": doc._key,
+                                "_degree" : LENGTH(for edge 
+                                    in 1 ANY doc._id 
+                                    graph """+name+' '+"""
+                                    return edge._id
+                                    )
+                                } in """+collName+"""
+                            RETURN doc._id """
 
-                    bind_vars = {}
+                        bind_vars = {}
 
-                    cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+                        cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+
+                        #doc_keys = [doc for doc in cursor]
+                        #print('result for',collName,'was:',doc_keys)
+                except:
+                    print('error auto-calculating node degree on network:',name)
+                    print('AQL attempted was:')
                     print(query_str)
-                    #doc_keys = [doc for doc in cursor]
-                    #print('result for',collName,'was:',doc_keys)
 
         return Network.objects.create(
             name=name,
