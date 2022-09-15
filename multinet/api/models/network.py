@@ -1,4 +1,5 @@
 from __future__ import annotations
+from inspect import Attribute
 
 from typing import List, Type
 
@@ -103,7 +104,8 @@ class Network(TimeStampedModel):
                 # a conflict writing results were noticed when multiple jobs finish about the same time, so 
                 # wait after each job before starting the next one
 
-                while (arango_db.pregel.job(pagerank_job_id)['state'] == 'running'):
+                while ((arango_db.pregel.job(pagerank_job_id)['state'] == 'running') or 
+                       (arango_db.pregel.job(pagerank_job_id)['state'] == 'storing')):
                     time.sleep(0.25)
                     print('waiting for pagerank job to finish')
 
@@ -115,9 +117,12 @@ class Network(TimeStampedModel):
                     async_mode=False,
                     result_field='_betweenness'
                 )
-                while (arango_db.pregel.job(betweenness_job_id)['state'] == 'running'):
+                while ((arango_db.pregel.job(betweenness_job_id)['state'] == 'running') or 
+                       (arango_db.pregel.job(betweenness_job_id)['state'] == 'storing')):
                     time.sleep(0.25)
                     print('waiting for betweenness job to finish')
+
+
 
                 print("running label propogation on:",name)
                 label_prop_job_id = arango_db.pregel.create_job(
@@ -127,7 +132,8 @@ class Network(TimeStampedModel):
                     async_mode=False,
                     result_field='_community_LP'
                 )
-                while (arango_db.pregel.job(label_prop_job_id)['state'] == 'running'):
+                while ((arango_db.pregel.job(label_prop_job_id)['state'] == 'running') or
+                       (arango_db.pregel.job(label_prop_job_id)['state'] == 'storing')):
                     time.sleep(0.25)
                     print('waiting for community label propogation job to finish')
 
@@ -139,44 +145,53 @@ class Network(TimeStampedModel):
                     async_mode=False,
                     result_field='_community_SLPA'
                 )
-                while (arango_db.pregel.job(slpa_job_id)['state'] == 'running'):
+                while ((arango_db.pregel.job(slpa_job_id)['state'] == 'running') or 
+                       (arango_db.pregel.job(slpa_job_id)['state'] == 'storing')):
                     time.sleep(0.25)
                     print('waiting for SLPA community job to finish')
             except:
                 print('error running network analysis via Pregel on network:',name)
 
-            # if calculating the degree automatically has been selected, run an AQL query for each node table. results are written
-            # back to each node table as an extra attribute "_degree". overall node degree is calculated, not IN or OUT degree. 
-            # To change to calculate IN or OUT degree, the keyword ANY below would be replaced below with INBOUND or OUTBOUND, respectively.     
-            if calculate_degree:
-                try:
-                    # iterate through the node tables and calculate the node degree by counting the results discovered 
-                    # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
-                    # limitations in AQL (or our understanding of AQL).  We understand an AQL query can only work 
-                    # over a single collection at a time.  So this loop below repeats the query for each node_table. 
-    
-                    for collName in node_tables:
-                        print('calculating degree for nodes in',collName)
-                        query_str = 'FOR doc in '+collName+' '+"""
-                                UPDATE {"_key": doc._key,
-                                "_degree" : LENGTH(for edge 
-                                    in 1 ANY doc._id 
-                                    graph """+name+' '+"""
-                                    return edge._id
-                                    )
-                                } in """+collName+"""
-                            RETURN doc._id """
+            # **TODO Update Django models for pagerank, community, betweenness here.  The Pregel jobs added
+            # columns to the Tables without updating the Django models corresponding to these tables.  Here we need to 
+            # update the Django Table and the TableTypeAnnotation models so the new attributes are assigned the correct type 
+            # when the multinet client applications read the node tables.
 
-                        bind_vars = {}
+        # if calculating the degree automatically has been selected, run an AQL query for each node table. results are written
+        # back to each node table as an extra attribute "_degree". overall node degree is calculated, not IN or OUT degree. 
+        # To change to calculate IN or OUT degree, the keyword ANY below would be replaced below with INBOUND or OUTBOUND, respectively.   
+            
+        if calculate_degree:
+            try:
+                # iterate through the node tables and calculate the node degree by counting the results discovered 
+                # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
+                # limitations in AQL (or our understanding of AQL).  We understand an AQL query can only work 
+                # over a single collection at a time.  So this loop below repeats the query for each node_table. 
 
-                        cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+                for collName in node_tables:
+                    print('calculating degree for nodes in',collName)
+                    query_str = """FOR doc in @@COLL
+                            UPDATE {"_key": doc._key,
+                            "_degree" : LENGTH(for edge 
+                                in 1 ANY doc._id 
+                                graph @graphName
+                                return edge._id
+                                )
+                            } in @@COLL
+                        RETURN doc._id """
+                    # set the node collection and graph name dynamically
+                    bind_vars = {'@COLL': collName, 'graphName': name}
 
-                        #doc_keys = [doc for doc in cursor]
-                        #print('result for',collName,'was:',doc_keys)
-                except:
-                    print('error auto-calculating node degree on network:',name)
-                    print('AQL attempted was:')
-                    print(query_str)
+                    cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+            except:
+                print('error auto-calculating node degree on network:',name)
+                print('AQL attempted was:')
+                print(query_str)
+
+            # **TODO Update Django models for Node degree here.  The  AQL query added
+            # columns to the Tables without updating the Django models corresponding to these tables.  Here we need to 
+            # update the Django Table and the TableTypeAnnotation models so the new attributes are assigned the correct type 
+            # when the multinet client applications read the node tables. 
 
         return Network.objects.create(
             name=name,
