@@ -47,7 +47,9 @@ setup(
         'django-guardian',
         'django-oauth-toolkit==1.3.2',
         'django-s3-file-field[minio,boto3]>=0.3.0',
-        'djangorestframework',
+        # DRF 3.14 is incompatible with drf-yasg, see
+        # https://github.com/axnsan12/drf-yasg/issues/810
+        'djangorestframework<3.14',
         'drf-extensions',
         'drf-yasg',
         'more-itertools',
