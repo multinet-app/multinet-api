@@ -7,6 +7,8 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - ${DOCKER_POSTGRES_PORT-5432}:5432
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   arangodb:
     image: arangodb:3.8
@@ -38,3 +40,4 @@ services:
 volumes:
   arango_data:
   arango_apps:
+  pg_data:
