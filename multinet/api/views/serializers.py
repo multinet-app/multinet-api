@@ -256,6 +256,7 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
         default=dict,
     )
     delimiter = serializers.CharField()
+    quotechar = serializers.CharField()
 
 
 class D3JSONUploadCreateSerializer(UploadCreateSerializer):

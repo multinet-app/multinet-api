@@ -38,7 +38,7 @@ def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) 
 
 @shared_task(base=ProcessUploadTask)
 def process_csv(
-    task_id: int, table_name: str, edge: bool, columns: Dict[str, TableTypeAnnotation.Type], delimiter: str
+    task_id: int, table_name: str, edge: bool, columns: Dict[str, TableTypeAnnotation.Type], delimiter: str, quotechar: str
 ) -> None:
     upload: Upload = Upload.objects.get(id=task_id)
 
@@ -48,6 +48,7 @@ def process_csv(
         csv_rows = list(csv.DictReader(
             StringIO(blob_file.read().decode('utf-8')),
             delimiter=delimiter,
+            quotechar=quotechar,
         ))
 
     # Cast entries in each row to appropriate type, if necessary
