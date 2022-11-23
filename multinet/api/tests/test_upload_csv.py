@@ -108,6 +108,8 @@ def test_create_upload_model_invalid_columns(
             'edge': False,
             'table_name': 'table',
             'columns': {'foo': 'invalid'},
+            'delimiter': ',',
+            'quotechar': '\"',
         },
         format='json',
     )
@@ -166,6 +168,8 @@ def test_create_upload_model_invalid_field_value(
             'field_value': 'field_value',
             'edge': False,
             'table_name': 'table',
+            'delimiter': ',',
+            'quotechar': '\"',
         },
         format='json',
     )
