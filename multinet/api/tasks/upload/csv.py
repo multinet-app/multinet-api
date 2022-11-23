@@ -65,12 +65,10 @@ def process_csv(
     # Download data from S3/MinIO
     with upload.blob as blob_file:
         blob_file: BinaryIO = blob_file
-        csv_rows = list(
-            csv.DictReader(
-                StringIO(blob_file.read().decode('utf-8')),
-                delimiter=delimiter,
-                quotechar=quotechar,
-            )
+        csv_reader = csv.DictReader(
+            StringIO(blob_file.read().decode('utf-8')),
+            delimiter=delimiter,
+            quotechar=quotechar,
         )
 
         # Cast entries in each row to appropriate type, if necessary
