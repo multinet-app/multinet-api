@@ -90,6 +90,8 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
             table_name=table_name,
             edge=serializer.validated_data['edge'],
             columns=serializer.validated_data['columns'],
+            delimiter=serializer.validated_data['delimiter'],
+            quotechar=serializer.validated_data['quotechar'],
         )
 
         return Response(UploadReturnSerializer(upload).data, status=status.HTTP_200_OK)

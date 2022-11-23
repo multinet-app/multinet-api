@@ -38,14 +38,25 @@ def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) 
 
 @shared_task(base=ProcessUploadTask)
 def process_csv(
-    task_id: int, table_name: str, edge: bool, columns: Dict[str, TableTypeAnnotation.Type]
+    task_id: int,
+    table_name: str,
+    edge: bool,
+    columns: Dict[str, TableTypeAnnotation.Type],
+    delimiter: str,
+    quotechar: str,
 ) -> None:
     upload: Upload = Upload.objects.get(id=task_id)
 
     # Download data from S3/MinIO
     with upload.blob as blob_file:
         blob_file: BinaryIO = blob_file
-        csv_rows = list(csv.DictReader(StringIO(blob_file.read().decode('utf-8'))))
+        csv_rows = list(
+            csv.DictReader(
+                StringIO(blob_file.read().decode('utf-8')),
+                delimiter=delimiter,
+                quotechar=quotechar,
+            )
+        )
 
     # Cast entries in each row to appropriate type, if necessary
     for i, row in enumerate(csv_rows):

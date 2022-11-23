@@ -61,6 +61,8 @@ def airports_csv(
                 'timezone': 'number',
                 'year built': 'number',
             },
+            'delimiter': ',',
+            'quotechar': '\"',
         },
         format='json',
     )
@@ -106,12 +108,72 @@ def test_create_upload_model_invalid_columns(
             'edge': False,
             'table_name': 'table',
             'columns': {'foo': 'invalid'},
+            'delimiter': ',',
+            'quotechar': '\"',
         },
         format='json',
     )
 
     assert r.status_code == 400
     assert r.json() == {'columns': {'foo': ['"invalid" is not a valid choice.']}}
+
+
+@pytest.mark.django_db
+def test_create_upload_model_missing_delimiter(
+    workspace: Workspace, user: User, authenticated_api_client
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/csv/',
+        {
+            # Not an issue to specify invalid field_value, as that's checked after columns,
+            # so the request will return before that is checked
+            'field_value': 'field_value',
+            'edge': False,
+            'table_name': 'table',
+            'columns': {
+                'latitude': 'number',
+                'longitude': 'number',
+                'altitude': 'number',
+                'timezone': 'number',
+                'year built': 'number',
+            },
+            'quotechar': '\"',
+        },
+        format='json',
+    )
+
+    assert r.status_code == 400
+    assert r.json() == {'delimiter': ['This field is required.']}
+
+
+@pytest.mark.django_db
+def test_create_upload_model_missing_quotechar(
+    workspace: Workspace, user: User, authenticated_api_client
+):
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/csv/',
+        {
+            # Not an issue to specify invalid field_value, as that's checked after columns,
+            # so the request will return before that is checked
+            'field_value': 'field_value',
+            'edge': False,
+            'table_name': 'table',
+            'columns': {
+                'latitude': 'number',
+                'longitude': 'number',
+                'altitude': 'number',
+                'timezone': 'number',
+                'year built': 'number',
+            },
+            'delimiter': ',',
+        },
+        format='json',
+    )
+
+    assert r.status_code == 400
+    assert r.json() == {'quotechar': ['This field is required.']}
 
 
 @pytest.mark.django_db
@@ -164,6 +226,8 @@ def test_create_upload_model_invalid_field_value(
             'field_value': 'field_value',
             'edge': False,
             'table_name': 'table',
+            'delimiter': ',',
+            'quotechar': '\"',
         },
         format='json',
     )

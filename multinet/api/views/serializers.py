@@ -255,6 +255,8 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
         child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
         default=dict,
     )
+    delimiter = serializers.CharField()
+    quotechar = serializers.CharField()
 
 
 class D3JSONUploadCreateSerializer(UploadCreateSerializer):
