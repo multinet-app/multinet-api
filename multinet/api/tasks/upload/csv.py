@@ -47,21 +47,6 @@ def process_csv(
 ) -> None:
     upload: Upload = Upload.objects.get(id=task_id)
 
-    # Download data from S3/MinIO
-    with upload.blob as blob_file:
-        blob_file: BinaryIO = blob_file
-        csv_rows = list(
-            csv.DictReader(
-                StringIO(blob_file.read().decode('utf-8')),
-                delimiter=delimiter,
-                quotechar=quotechar,
-            )
-        )
-
-    # Cast entries in each row to appropriate type, if necessary
-    for i, row in enumerate(csv_rows):
-        csv_rows[i] = process_row(row, columns)
-
     # Create new table
     table: Table = Table.objects.create(
         name=table_name,
@@ -77,8 +62,27 @@ def process_csv(
         ]
     )
 
-    # Insert rows
-    table.put_rows(csv_rows)
+    # Download data from S3/MinIO
+    with upload.blob as blob_file:
+        blob_file: BinaryIO = blob_file
+        csv_reader = csv.DictReader(
+            StringIO(blob_file.read().decode('utf-8')),
+            delimiter=delimiter,
+            quotechar=quotechar,
+        )
+
+        # Cast entries in each row to appropriate type, if necessary
+        processed_rows = []
+        for row in csv_reader:
+            processed_rows.append(process_row(row, columns))
+
+            # Insert rows
+            if len(processed_rows) == 100000:
+                table.put_rows(processed_rows)
+                processed_rows = []
+
+        # Put remaining rows
+        table.put_rows(processed_rows)
 
 
 def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -> Tuple[str, Dict]:
