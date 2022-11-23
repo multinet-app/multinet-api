@@ -80,10 +80,9 @@ def process_csv(
             if len(processed_rows) == 100000:
                 table.put_rows(processed_rows)
                 processed_rows = []
-        
+
         # Put remaining rows
         table.put_rows(processed_rows)
-
 
 
 def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -> Tuple[str, Dict]:
