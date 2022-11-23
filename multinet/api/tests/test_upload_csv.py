@@ -32,6 +32,8 @@ def local_csv_upload(path: pathlib.Path, workspace, user) -> Upload:
         user=user,
         blob=file,
         data_type=Upload.DataType.CSV,
+        delimiter=",",
+        quotechar="\"",
     )
 
 
