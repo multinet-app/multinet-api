@@ -134,7 +134,7 @@ def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -
 
 
 # CSV Network functions
-def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> str:
+def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> Table:
     """Create table from definition, including joins."""
     # table_dict has the shape of the FullTable serializer
     original_table_name = table_dict['name']
@@ -174,44 +174,60 @@ def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> s
         bind_vars=bind_vars,
     ).execute()
 
-    return new_table_name
+    return table
 
 
-def create_csv_network(workspace: Workspace, serializer):
-    """Create a network from a link of tables (in request thread)."""
-    from multinet.api.views.serializers import CSVNetworkCreateSerializer
+def create_edge_table(
+    workspace: Workspace,
+    edge_data: Dict,
+    new_edge_table: Table,
+    source_table: Table,
+    target_table: Table,
+):
+    # CREATE INDEXES, SO JOIN IS PERFORMANT
 
-    serializer: CSVNetworkCreateSerializer
-    serializer.is_valid(raise_exception=True)
-
-    # Create source/target tables
-    data = serializer.validated_data
-    network_name = data['name']
-    source_table = create_table(workspace, network_name, data['source_table'])
-    target_table = create_table(workspace, network_name, data['target_table'])
-
-    # Create table, deleting any data if it already exists
-    edge_table_name = data['edge']['table']['name']
-    new_edge_table_name = f'{network_name}--{edge_table_name}'
-    table, created = Table.objects.get_or_create(
-        workspace=workspace, name=new_edge_table_name, edge=True
+    # Create indexes for source/target tables
+    source_table.get_arango_collection(False).add_persistent_index(
+        fields=[edge_data['source']['foreign']],
+        unique=True,
+        sparse=False,
+        name='edge-join-index',
     )
-    if not created:
-        table.get_arango_collection(readonly=False).truncate()
+    target_table.get_arango_collection(False).add_persistent_index(
+        fields=[edge_data['target']['foreign']],
+        unique=True,
+        sparse=False,
+        name='edge-join-index',
+    )
+
+    # Create indexes for existing edge table
+    coll = new_edge_table.get_arango_collection(False)
+    coll.add_persistent_index(
+        fields=[edge_data['source']['local']],
+        unique=False,
+        sparse=False,
+        name='source-join-index',
+    )
+    coll.add_persistent_index(
+        fields=[edge_data['target']['local']],
+        unique=False,
+        sparse=False,
+        name='target-join-index',
+    )
 
     # Setup bind vars for query
     bind_vars = {
-        '@ORIGINAL': edge_table_name,
-        '@NEW_TABLE': new_edge_table_name,
-        'EXCLUDED_COLS': data['edge']['table']['excluded'],
+        '@ORIGINAL': edge_data['table']['name'],
+        '@NEW_TABLE': new_edge_table.name,
+        'EXCLUDED_COLS': edge_data['table']['excluded'],
         # Source
-        '@SOURCE_TABLE': source_table,
-        'SOURCE_LINK_LOCAL': data['edge']['source']['local'],
-        'SOURCE_LINK_FOREIGN': data['edge']['source']['foreign'],
+        '@SOURCE_TABLE': source_table.name,
+        'SOURCE_LINK_LOCAL': edge_data['source']['local'],
+        'SOURCE_LINK_FOREIGN': edge_data['source']['foreign'],
         # Target
-        '@TARGET_TABLE': target_table,
-        'TARGET_LINK_LOCAL': data['edge']['target']['local'],
-        'TARGET_LINK_FOREIGN': data['edge']['target']['foreign'],
+        '@TARGET_TABLE': target_table.name,
+        'TARGET_LINK_LOCAL': edge_data['target']['local'],
+        'TARGET_LINK_FOREIGN': edge_data['target']['foreign'],
     }
 
     # Make query to copy edge table docs to new edge table, inserting from/to links
@@ -240,7 +256,7 @@ def create_csv_network(workspace: Workspace, serializer):
     """
 
     # Add join statements if needed
-    query_str, bind_vars = maybe_insert_join_statement(query_str, bind_vars, data['edge']['table'])
+    query_str, bind_vars = maybe_insert_join_statement(query_str, bind_vars, edge_data['table'])
     query_str += """
             INSERT final_doc INTO @@NEW_TABLE
     """
@@ -252,10 +268,47 @@ def create_csv_network(workspace: Workspace, serializer):
         bind_vars=bind_vars,
     ).execute()
 
+
+def create_csv_network(workspace: Workspace, serializer):
+    """Create a network from a link of tables (in request thread)."""
+    from multinet.api.views.serializers import CSVNetworkCreateSerializer
+
+    serializer: CSVNetworkCreateSerializer
+    serializer.is_valid(raise_exception=True)
+
+    # Create source/target tables
+    data = serializer.validated_data
+    shared_table = data['target_table']['name'] == data['source_table']['name']
+    network_name = data['name']
+
+    # Create both only if they are different tables
+    source_table = create_table(workspace, network_name, data['source_table'])
+    target_table = source_table
+    if not shared_table:
+        target_table = create_table(workspace, network_name, data['target_table'])
+
+    # Create table, deleting any data if it already exists
+    edge_table_name = data['edge']['table']['name']
+    new_edge_table: Table
+    new_edge_table, created = Table.objects.get_or_create(
+        workspace=workspace, name=f'{network_name}--{edge_table_name}', edge=True
+    )
+    if not created:
+        new_edge_table.get_arango_collection(readonly=False).truncate()
+
+    # Create edge table by joining together source/target tables
+    create_edge_table(
+        workspace=workspace,
+        edge_data=data['edge'],
+        new_edge_table=new_edge_table,
+        source_table=source_table,
+        target_table=target_table,
+    )
+
     # Create network
     return Network.create_with_edge_definition(
         name=network_name,
         workspace=workspace,
-        edge_table=new_edge_table_name,
-        node_tables=[source_table, target_table],
+        edge_table=new_edge_table.name,
+        node_tables=[source_table.name, target_table.name],
     )
