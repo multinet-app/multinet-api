@@ -32,6 +32,7 @@ class Upload(Task):
 
     class DataType(models.TextChoices):
         CSV = 'CSV'
+        JSON = 'JSON'
         D3_JSON = 'D3_JSON'
         NESTED_JSON = 'NESTED_JSON'
         NEWICK = 'NEWICK'

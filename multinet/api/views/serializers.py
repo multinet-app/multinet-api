@@ -258,6 +258,13 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
     delimiter = serializers.CharField(trim_whitespace=False)
     quotechar = serializers.CharField()
 
+class JSONTableUploadCreateSerializer(UploadCreateSerializer):
+    edge = serializers.BooleanField()
+    table_name = serializers.CharField()
+    columns = serializers.DictField(
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
+        default=dict,
+    )
 
 class D3JSONUploadCreateSerializer(UploadCreateSerializer):
     network_name = serializers.CharField()
