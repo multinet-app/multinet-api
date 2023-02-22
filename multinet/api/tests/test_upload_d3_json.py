@@ -31,6 +31,7 @@ from multinet.api.views.upload import InvalidFieldValueResponse
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 miserables_json_file = data_dir / 'miserables.json'
+miserables_key_from_to_json_file = data_dir / 'miserables-key-from-to.json'
 
 
 def json_upload(obj: IO[bytes], name: str, workspace, user):
@@ -67,6 +68,37 @@ def miserables_json(
         f'/api/workspaces/{workspace.name}/uploads/d3_json/',
         {
             'field_value': miserables_json_field_value,
+            'network_name': network_name,
+        },
+        format='json',
+    )
+    WorkspaceRole.objects.filter(workspace=workspace, user=user).delete()
+    return {
+        'response': r,
+        'network_name': network_name,
+    }
+
+
+@pytest.fixture
+def miserables_json_key_from_to_field_value(s3ff_field_value_factory, workspace, user) -> str:
+    upload = json_file_upload(miserables_key_from_to_json_file, workspace, user)
+    return s3ff_field_value_factory(upload.blob)
+
+
+@pytest.fixture
+def miserables_json_key_from_to(
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    miserables_json_field_value,
+) -> Dict:
+    # Model creation request
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    network_name = f't{uuid.uuid4().hex}'
+    r: Response = authenticated_api_client.post(
+        f'/api/workspaces/{workspace.name}/uploads/d3_json/',
+        {
+            'field_value': miserables_json_key_from_to_field_value,
             'network_name': network_name,
         },
         format='json',
@@ -256,6 +288,83 @@ def test_valid_d3_json_task_response(
 
     results = sorted(r_json['results'], key=operator.itemgetter('_from'))
     for i, link in enumerate(links):
+        assert results[i] == dict_to_fuzzy_arango_doc(link)
+
+
+@pytest.mark.django_db
+def test_valid_d3_json_task_response_key_from_to(
+    workspace: Workspace, user: User, authenticated_api_client: APIClient, miserables_json_key_from_to
+):
+    """Test just the response of the model creation, not the task itself."""
+    # Get upload info
+    workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
+    r = miserables_json_key_from_to['response']
+    network_name = miserables_json_key_from_to['network_name']
+    node_table_name = f'{network_name}_nodes'
+    edge_table_name = f'{network_name}_edges'
+
+    # Since we're running with celery_task_always_eager=True, this job is finished
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'
+    )
+
+    r_json = r.json()
+    assert r.status_code == 200
+    assert r_json['status'] == Upload.Status.FINISHED
+    assert r_json['error_messages'] is None
+
+    # Check that tables are created
+    for table_name in (node_table_name, edge_table_name):
+        r: Response = authenticated_api_client.get(
+            f'/api/workspaces/{workspace.name}/tables/{table_name}/'
+        )
+        assert r.status_code == 200
+
+    # Check that network was created
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/'
+    )
+    assert r.status_code == 200
+
+    # Get source data
+    with open(miserables_key_from_to_json_file) as file_stream:
+        loaded_miserables_key_from_to_json_file = json.load(file_stream)
+        nodes = sorted(
+            (d3_node_to_arango_doc(node) for node in loaded_miserables_key_from_to_json_file['nodes']),
+            key=operator.itemgetter('_key'),
+        )
+        edges = sorted(
+            (
+                d3_link_to_arango_doc(link, node_table_name)
+                for link in loaded_miserables_key_from_to_json_file['edges']
+            ),
+            key=operator.itemgetter('_from'),
+        )
+
+    # Check that nodes were ingested correctly
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/nodes/'
+    )
+
+    r_json = r.json()
+    assert r.status_code == 200
+    assert r_json['count'] == len(nodes)
+
+    results = sorted(r_json['results'], key=operator.itemgetter('_key'))
+    for i, node in enumerate(nodes):
+        assert results[i] == dict_to_fuzzy_arango_doc(node, exclude=['_key'])
+
+    # Check that links were ingested correctly
+    r: Response = authenticated_api_client.get(
+        f'/api/workspaces/{workspace.name}/networks/{network_name}/edges/'
+    )
+
+    r_json = r.json()
+    assert r.status_code == 200
+    assert r_json['count'] == len(edges)
+
+    results = sorted(r_json['results'], key=operator.itemgetter('_from'))
+    for i, link in enumerate(edges):
         assert results[i] == dict_to_fuzzy_arango_doc(link)
 
 
