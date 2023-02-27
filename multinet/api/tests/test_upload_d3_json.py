@@ -90,7 +90,7 @@ def miserables_json_key_from_to(
     workspace: Workspace,
     user: User,
     authenticated_api_client: APIClient,
-    miserables_json_field_value,
+    miserables_json_key_from_to_field_value,
 ) -> Dict:
     # Model creation request
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
