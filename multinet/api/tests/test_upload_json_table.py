@@ -1,10 +1,11 @@
 import json
 import pathlib
-import pytest
+from typing import Dict
 import uuid
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+import pytest
 from rest_framework.response import Response
 
 from multinet.api.models.table import TableTypeAnnotation
@@ -17,7 +18,6 @@ from multinet.api.tests.fuzzy import (
     s3_file_field_re,
     workspace_re,
 )
-from typing import Dict
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 
