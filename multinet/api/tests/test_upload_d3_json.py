@@ -293,7 +293,10 @@ def test_valid_d3_json_task_response(
 
 @pytest.mark.django_db
 def test_valid_d3_json_task_response_key_from_to(
-    workspace: Workspace, user: User, authenticated_api_client: APIClient, miserables_json_key_from_to
+    workspace: Workspace,
+    user: User,
+    authenticated_api_client: APIClient,
+    miserables_json_key_from_to,
 ):
     """Test just the response of the model creation, not the task itself."""
     # Get upload info
@@ -330,7 +333,10 @@ def test_valid_d3_json_task_response_key_from_to(
     with open(miserables_key_from_to_json_file) as file_stream:
         loaded_miserables_key_from_to_json_file = json.load(file_stream)
         nodes = sorted(
-            (d3_node_to_arango_doc(node) for node in loaded_miserables_key_from_to_json_file['nodes']),
+            (
+                d3_node_to_arango_doc(node)
+                for node in loaded_miserables_key_from_to_json_file['nodes']
+            ),
             key=operator.itemgetter('_key'),
         )
         edges = sorted(

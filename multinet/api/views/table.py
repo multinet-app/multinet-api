@@ -91,7 +91,6 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
     @action(detail=True, url_path='rows')
     @require_workspace_permission(WorkspaceRoleChoice.READER)
     def get_rows(self, request, parent_lookup_workspace__name: str, name: str):
-
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
         pagination = ArangoPagination()

@@ -16,8 +16,8 @@ from multinet.api.tasks.upload import process_csv, process_d3_json, process_json
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (
     CSVUploadCreateSerializer,
-    JSONTableUploadCreateSerializer,
     D3JSONUploadCreateSerializer,
+    JSONTableUploadCreateSerializer,
     UploadReturnSerializer,
 )
 

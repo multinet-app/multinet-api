@@ -3,11 +3,10 @@ from typing import Any, BinaryIO, Dict
 
 from celery import shared_task
 
-from multinet.api.models import Network, Table, TableTypeAnnotation, Upload
+from multinet.api.models import Table, TableTypeAnnotation, Upload
 
 from .common import ProcessUploadTask
 from .utils import processor_dict
-from .exceptions import DataFormatException
 
 
 def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) -> Dict:
@@ -33,6 +32,7 @@ def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) 
                 pass
 
     return new_row
+
 
 @shared_task(base=ProcessUploadTask)
 def process_json_table(
@@ -63,7 +63,11 @@ def process_json_table(
         blob_file: BinaryIO = blob_file
         imported_json = json.loads(blob_file.read().decode('utf-8'))
 
-        processed_rows = [new_row for new_row in [process_row(row, columns) for row in imported_json] if new_row is not None]
+        processed_rows = [
+            new_row
+            for new_row in [process_row(row, columns) for row in imported_json]
+            if new_row is not None
+        ]
 
         # Put rows in the table
         table.put_rows(processed_rows)

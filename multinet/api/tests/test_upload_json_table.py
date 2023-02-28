@@ -1,9 +1,7 @@
-import pathlib
-import uuid
-import pytest
 import json
-
-from typing import Dict
+import pathlib
+import pytest
+import uuid
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -12,7 +10,6 @@ from rest_framework.response import Response
 from multinet.api.models.table import TableTypeAnnotation
 from multinet.api.models.tasks import Upload
 from multinet.api.models.workspace import Workspace, WorkspaceRole, WorkspaceRoleChoice
-from multinet.api.tasks.upload.utils import str_to_number
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
     TIMESTAMP_RE,
@@ -20,6 +17,7 @@ from multinet.api.tests.fuzzy import (
     s3_file_field_re,
     workspace_re,
 )
+from typing import Dict
 
 data_dir = pathlib.Path(__file__).parent / 'data'
 
