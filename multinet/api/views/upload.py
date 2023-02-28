@@ -11,12 +11,13 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
-from multinet.api.tasks.upload import process_csv, process_d3_json
+from multinet.api.tasks.upload import process_csv, process_d3_json, process_json_table
 
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (
     CSVUploadCreateSerializer,
     D3JSONUploadCreateSerializer,
+    JSONTableUploadCreateSerializer,
     UploadReturnSerializer,
 )
 
@@ -92,6 +93,52 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
             columns=serializer.validated_data['columns'],
             delimiter=serializer.validated_data['delimiter'],
             quotechar=serializer.validated_data['quotechar'],
+        )
+
+        return Response(UploadReturnSerializer(upload).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=JSONTableUploadCreateSerializer(),
+        responses={200: UploadReturnSerializer()},
+    )
+    @action(detail=False, url_path='json', methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def upload_json_table(self, request, parent_lookup_workspace__name: str):
+        """Create an upload of a JSON table."""
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        serializer = JSONTableUploadCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        object_key = field_value_object_key(serializer)
+        if object_key is None:
+            return InvalidFieldValueResponse
+
+        # Check for existing table name before creating upload and dispatching task
+        table_name = serializer.validated_data['table_name']
+        if Table.objects.filter(workspace=workspace, name=table_name).exists():
+            return Response(
+                {
+                    'table_name': [
+                        f'Table {table_name} in workspace {workspace.name} already exists.'
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create upload object
+        upload: Upload = Upload.objects.create(
+            workspace=workspace,
+            user=request.user,
+            blob=object_key,
+            data_type=Upload.DataType.JSON,
+        )
+
+        # Dispatch task
+        process_json_table.delay(
+            task_id=upload.pk,
+            table_name=table_name,
+            edge=serializer.validated_data['edge'],
+            columns=serializer.validated_data['columns'],
         )
 
         return Response(UploadReturnSerializer(upload).data, status=status.HTTP_200_OK)
