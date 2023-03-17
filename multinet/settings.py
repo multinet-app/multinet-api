@@ -59,4 +59,9 @@ class ProductionConfiguration(MultinetMixin, ProductionBaseConfiguration):
 
 
 class HerokuProductionConfiguration(MultinetMixin, HerokuProductionBaseConfiguration):
-    pass
+    # All login attempts in production should go straight to Google
+    LOGIN_URL = '/accounts/google/login/'
+
+    # Don't require a POST request to initiate a Google login
+    # https://github.com/pennersr/django-allauth/blob/HEAD/ChangeLog.rst#backwards-incompatible-changes-2
+    SOCIALACCOUNT_LOGIN_ON_GET = True
