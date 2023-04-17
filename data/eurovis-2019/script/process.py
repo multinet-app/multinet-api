@@ -7,22 +7,32 @@ import sys
 def add_key(rec, idx):
     """Add a key value to the character records."""
     rec['_key'] = rec['id']
-    rec['influential'] = 'false' if rec['influential'] == 'False' else 'true'
-    rec['original'] = 'false' if rec['original'] == 'False' else 'true'
 
     del rec['utc_offset']
     del rec['id']
+    del rec['memberFor_days']
+    del rec['neighbors']
+    del rec['edges']
+    del rec['userSelectedNeighbors']
+    del rec['selected']
+    del rec['original']
+    del rec['memberSince']
 
     return rec
 
 
 def convert_link(link, idx):
     """Convert the D3 JSON link data into a Multinet-style record."""
-    return {
-        '_key': str(idx),
-        '_from': f"people/{link['source']}",
-        '_to': f"people/{link['target']}",
-    }
+    link['_key'] = str(idx)
+    link['_from'] =  f"people/{link['source']}"
+    link['_to'] =  f"people/{link['target']}"
+
+    del link['id']
+    del link['source']
+    del link['target']
+    del link['selected']
+
+    return link
 
 
 def write_csv(data, fields, filename):
@@ -48,9 +58,6 @@ def main():
     # used unchanged because of how the key value for the nodes was set above.
     links = [convert_link(link, index) for (index, link) in enumerate(data['links'])]
 
-    # Reduce the total number of nodes by truncating
-    nodes = [nodes[i] for i in range(0, 100)]
-
     # Filter links to those with both in node table
     links = [
         link
@@ -60,28 +67,14 @@ def main():
             and any(f"people/{node['_key']}" == link['_to'] for node in nodes)
         )
     ]
-    links = [link for (index, link) in enumerate(links) if index % 10 == 0]
 
     # Write out both the node and link data to CSV files.
     write_csv(
         nodes,
-        [
-            '_key',
-            'followers_count',
-            'query_tweet_count',
-            'friends_count',
-            'statuses_count',
-            'listed_count',
-            'favourites_count',
-            'count_followers_in_query',
-            'screen_name',
-            'profile_image_url',
-            'influential',
-            'original',
-        ],
+        nodes[0].keys(),
         'people.csv',
     )
-    write_csv(links, ['_key', '_from', '_to'], 'connections.csv')
+    write_csv(links, links[0].keys(), 'connections.csv')
 
     return 0
 
