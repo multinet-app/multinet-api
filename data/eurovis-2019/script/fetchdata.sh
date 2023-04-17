@@ -4,7 +4,7 @@ set -e
 # Data taken from the VDL account
 
 # Fetch raw CSV file.
-curl -O https://raw.githubusercontent.com/visdesignlab/mvnv-study/master/data/raw/Eurovis2019Network.json
+curl -O https://raw.githubusercontent.com/visdesignlab/mvnv-study/master/data/s_network_large_directed_multiEdge.json
 
 # Process the raw file into Multinet CSVs.
-python process.py < Eurovis2019Network.json
+python process.py < s_network_large_directed_multiEdge.json

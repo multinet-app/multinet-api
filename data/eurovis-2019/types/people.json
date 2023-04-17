@@ -10,5 +10,11 @@
     "screen_name": "label",
     "profile_image_url": "label",
     "influential": "boolean",
-    "original": "boolean"
+    "name": "label",
+    "location": "label",
+    "type": "category",
+    "continent": "category",
+    "shortName": "label",
+    "x": "number",
+    "y": "number"
 }

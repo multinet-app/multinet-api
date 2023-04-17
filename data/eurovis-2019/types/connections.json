@@ -1,4 +1,6 @@
 {
+    "type": "category",
+    "count": "number",
     "_key": "label",
     "_from": "label",
     "_to": "label"
