@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import AqlQuery, Network, Table, TableTypeAnnotation, Upload, Workspace
+from multinet.api.models import AqlQuery, Network, Session, Table, TableTypeAnnotation, Upload, Workspace
 
 
 # The default ModelSerializer for User fails if the user already exists
@@ -228,6 +228,14 @@ class NetworkReturnDetailSerializer(serializers.ModelSerializer):
 
 class NetworkTablesSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
+
+
+class SessionSerializer(serializers.ModelSerializer):
+    network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
+
+    class Meta:
+        model = Session
+        fields = '__all__'
 
 
 class UploadCreateSerializer(serializers.Serializer):
