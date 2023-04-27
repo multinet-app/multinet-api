@@ -44,12 +44,7 @@ workspaces_routes.register(
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
-network_routes.register(
-    'sessions',
-    SessionViewSet,
-    basename='session',
-    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}', 'network_pk']
-)
+router.register('sessions', SessionViewSet)
 
 
 # OpenAPI generation

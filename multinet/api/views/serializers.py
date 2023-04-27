@@ -231,8 +231,6 @@ class NetworkTablesSerializer(serializers.Serializer):
 
 
 class SessionSerializer(serializers.ModelSerializer):
-    network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
-
     class Meta:
         model = Session
         fields = '__all__'
