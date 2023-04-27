@@ -20,6 +20,6 @@ class Session(TimeStampedModel):
             CheckConstraint(
                 name='network_xor_table',
                 check=Q(network__isnull=True, table__isnull=False)
-                    | Q(network__isnull=False, table__isnull=True)
+                | Q(network__isnull=False, table__isnull=True),
             )
         ]

@@ -2,7 +2,15 @@ from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
-from multinet.api.models import AqlQuery, Network, Session, Table, TableTypeAnnotation, Upload, Workspace
+from multinet.api.models import (
+    AqlQuery,
+    Network,
+    Session,
+    Table,
+    TableTypeAnnotation,
+    Upload,
+    Workspace,
+)
 
 
 # The default ModelSerializer for User fails if the user already exists

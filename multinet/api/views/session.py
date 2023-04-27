@@ -1,8 +1,13 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import serializers, viewsets
-from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin
+from rest_framework import serializers
+from rest_framework.mixins import (
+    CreateModelMixin,
+    DestroyModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+)
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -36,22 +41,25 @@ class SessionListSerializer(serializers.Serializer):
         exactly_one = bool(network) ^ bool(table)
 
         if workspace and not exactly_one:
-            raise serializers.ValidationError('if `workspace` is specified, then exactly one of `network` or `table` is required')
+            raise serializers.ValidationError(
+                'if `workspace` is specified, then exactly one of `network` or `table` is required'
+            )
 
         if not workspace and (network or table):
-            raise serializers.ValidationError('specifying `network` or `table` requires also specifying `workspace`')
+            raise serializers.ValidationError(
+                'specifying `network` or `table` requires also specifying `workspace`'
+            )
 
         return data
 
 
-class SessionViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet):
+class SessionViewSet(
+    CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
+):
     queryset = Session.objects.all()
     serializer_class = SessionSerializer
 
-
-    @swagger_auto_schema(
-        request_body=SessionCreateSerializer
-    )
+    @swagger_auto_schema(request_body=SessionCreateSerializer)
     def create(self, request):
         serializer = SessionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -66,7 +74,7 @@ class SessionViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, Li
             object = get_object_or_404(Table, workspace=workspace, name=data['network'])
 
         new_session = SessionSerializer(
-            data = {
+            data={
                 'name': data['name'],
                 'workspace': object.pk,
                 'network': object.pk if 'network' in data else None,
@@ -86,9 +94,7 @@ class SessionViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, Li
 
         return Response(SessionSerializer(session).data)
 
-    @swagger_auto_schema(
-        query_serializer=SessionListSerializer
-    )
+    @swagger_auto_schema(query_serializer=SessionListSerializer)
     def list(self, request):
         serializer = SessionListSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
