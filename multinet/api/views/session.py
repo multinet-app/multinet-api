@@ -20,6 +20,7 @@ class SessionCreateSerializer(serializers.Serializer):
     network = serializers.CharField(required=False)
     table = serializers.CharField(required=False)
 
+    visapp = serializers.CharField()
     name = serializers.CharField()
 
     def validate(self, data):
@@ -79,6 +80,7 @@ class SessionViewSet(
                 'workspace': object.pk,
                 'network': object.pk if 'network' in data else None,
                 'table': object.pk if 'table' in data else None,
+                'visapp': data['visapp'],
                 'state': {},
             }
         )
@@ -89,6 +91,7 @@ class SessionViewSet(
             name=new_data['name'],
             network=new_data['network'],
             table=new_data['table'],
+            visapp=new_data['visapp'],
             state={},
         )
 

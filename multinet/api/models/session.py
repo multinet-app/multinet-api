@@ -13,6 +13,7 @@ class Session(TimeStampedModel):
     network = models.ForeignKey(Network, null=True, on_delete=models.CASCADE)
     table = models.ForeignKey(Table, null=True, on_delete=models.CASCADE)
 
+    visapp = models.CharField(max_length=64)
     state = models.JSONField()
 
     class Meta:
