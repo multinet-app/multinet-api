@@ -5,8 +5,9 @@ from rest_framework import serializers
 from multinet.api.models import (
     AqlQuery,
     Network,
-    Session,
+    NetworkSession,
     Table,
+    TableSession,
     TableTypeAnnotation,
     Upload,
     Workspace,
@@ -238,9 +239,15 @@ class NetworkTablesSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
 
 
-class SessionSerializer(serializers.ModelSerializer):
+class NetworkSessionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Session
+        model = NetworkSession
+        fields = '__all__'
+
+
+class TableSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TableSession
         fields = '__all__'
 
 

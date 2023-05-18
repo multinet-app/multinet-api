@@ -9,8 +9,9 @@ from rest_framework_extensions.routers import ExtendedSimpleRouter
 from multinet.api.views import (
     AqlQueryViewSet,
     NetworkViewSet,
-    SessionViewSet,
+    NetworkSessionViewSet,
     TableViewSet,
+    TableSessionViewSet,
     UploadViewSet,
     WorkspaceViewSet,
     users_me_view,
@@ -44,7 +45,8 @@ workspaces_routes.register(
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
-router.register('sessions', SessionViewSet)
+router.register('sessions/network', NetworkSessionViewSet)
+router.register('sessions/table', TableSessionViewSet)
 
 
 # OpenAPI generation
