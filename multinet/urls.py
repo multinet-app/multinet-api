@@ -26,7 +26,7 @@ workspaces_routes.register(
     basename='table',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
-network_routes = workspaces_routes.register(
+workspaces_routes.register(
     'networks',
     NetworkViewSet,
     basename='network',
