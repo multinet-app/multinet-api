@@ -9,18 +9,16 @@ from .table import Table
 class Session(TimeStampedModel):
     name = models.CharField(max_length=300)
 
-    # Exactly one of these will be non-null (see check constraint below).
-    network = models.ForeignKey(Network, null=True, on_delete=models.CASCADE)
-    table = models.ForeignKey(Table, null=True, on_delete=models.CASCADE)
-
     visapp = models.CharField(max_length=64)
     state = models.JSONField()
 
     class Meta:
-        constraints = [
-            CheckConstraint(
-                name='network_xor_table',
-                check=Q(network__isnull=True, table__isnull=False)
-                | Q(network__isnull=False, table__isnull=True),
-            )
-        ]
+        abstract = True
+
+
+class TableSession(Session):
+    table = models.ForeignKey(Table, on_delete=models.CASCADE)
+
+
+class NetworkSession(Session):
+    network = models.ForeignKey(Network, on_delete=models.CASCADE)
