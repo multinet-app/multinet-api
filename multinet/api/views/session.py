@@ -1,5 +1,3 @@
-from django.db.models import Q
-from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -12,7 +10,7 @@ from rest_framework.mixins import (
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from ..models import Network, NetworkSession, Table, TableSession, Workspace
+from ..models import NetworkSession, TableSession
 from .serializers import NetworkSessionSerializer, TableSessionSerializer
 
 
@@ -51,6 +49,7 @@ class SessionViewSet(
         session.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class NetworkSessionViewSet(SessionViewSet):
     queryset = NetworkSession.objects.all()

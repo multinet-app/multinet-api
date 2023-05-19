@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import CheckConstraint, Q
 from django_extensions.db.models import TimeStampedModel
 
 from .network import Network

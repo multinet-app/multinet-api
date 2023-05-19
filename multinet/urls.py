@@ -8,10 +8,10 @@ from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
     AqlQueryViewSet,
-    NetworkViewSet,
     NetworkSessionViewSet,
-    TableViewSet,
+    NetworkViewSet,
     TableSessionViewSet,
+    TableViewSet,
     UploadViewSet,
     WorkspaceViewSet,
     users_me_view,
