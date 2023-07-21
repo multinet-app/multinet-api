@@ -15,6 +15,8 @@ ENV PYTHONUNBUFFERED 1
 # and all package modules are importable.
 COPY ./setup.py /opt/django-project/setup.py
 RUN pip install --editable /opt/django-project[dev]
+# TODO: Remove this when alttxt on main pypi
+RUN pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple upset-alttxt==1.0.4
 
 # Use a directory name which will never be an import name, as isort considers this as first-party.
 WORKDIR /opt/django-project

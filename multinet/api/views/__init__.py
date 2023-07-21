@@ -13,4 +13,5 @@ __all__ = [
     'UploadViewSet',
     'WorkspaceViewSet',
     'AqlQueryViewSet',
+    'AlttxtQueryViewSet',
 ]
