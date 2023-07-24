@@ -36,7 +36,7 @@ class RowDeleteResponseSerializer(serializers.Serializer):
     errors = serializers.ListField(child=serializers.JSONField())
 
 
-class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
+class TableViewSet(WorkspaceChildMixin(), ReadOnlyModelViewSet):
     queryset = Table.objects.all().select_related('workspace')
     lookup_field = 'name'
 

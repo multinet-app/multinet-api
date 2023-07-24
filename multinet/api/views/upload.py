@@ -38,7 +38,7 @@ def field_value_object_key(serializer: serializers.Serializer) -> Optional[str]:
     return object_key
 
 
-class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
+class UploadViewSet(WorkspaceChildMixin(), ReadOnlyModelViewSet):
     queryset = Upload.objects.all().select_related('workspace')
 
     permission_classes = [IsAuthenticatedOrReadOnly]

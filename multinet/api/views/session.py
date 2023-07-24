@@ -1,3 +1,4 @@
+from django.http.response import Http404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from ..models import NetworkSession, TableSession
 from .serializers import NetworkSessionSerializer, TableSessionSerializer
+from .common import WorkspaceChildMixin
 
 
 class SessionCreateSerializer(serializers.Serializer):
@@ -51,11 +53,11 @@ class SessionViewSet(
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class NetworkSessionViewSet(SessionViewSet):
-    queryset = NetworkSession.objects.all()
+class NetworkSessionViewSet(WorkspaceChildMixin('network'), SessionViewSet):
+    queryset = NetworkSession.objects.all().select_related('network__workspace')
     serializer_class = NetworkSessionSerializer
 
 
-class TableSessionViewSet(SessionViewSet):
-    queryset = TableSession.objects.all()
+class TableSessionViewSet(WorkspaceChildMixin('table'), SessionViewSet):
+    queryset = TableSession.objects.all().select_related('table__workspace')
     serializer_class = TableSessionSerializer
