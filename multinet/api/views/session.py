@@ -11,7 +11,8 @@ from rest_framework.mixins import (
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from ..models import NetworkSession, TableSession
+from ..models import NetworkSession, TableSession, Workspace, WorkspaceRoleChoice
+from ..auth.decorators import require_workspace_permission
 from .serializers import NetworkSessionSerializer, TableSessionSerializer
 from .common import WorkspaceChildMixin
 
@@ -38,10 +39,18 @@ class SessionStatePatchSerializer(serializers.Serializer):
 class SessionViewSet(
     CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
 ):
+    swagger_tags = ['sessions']
+
     @swagger_auto_schema(request_body=SessionStatePatchSerializer)
     @action(detail=True, methods=['patch'])
-    def state(self, request, pk=None):
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def state(self, request, parent_lookup_workspace__name: str, pk=None):
         session = self.get_object()
+
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        session_ws = session.table.workspace if hasattr(session, 'table') else session.network.workspace
+        if workspace.id != session_ws:
+            raise Http404
 
         serializer = SessionStatePatchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
