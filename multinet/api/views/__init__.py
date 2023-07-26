@@ -4,6 +4,7 @@ from .table import TableViewSet
 from .upload import UploadViewSet
 from .users import users_me_view, users_search_view
 from .workspace import WorkspaceViewSet
+from .alttxt import AlttxtQueryViewSet
 
 __all__ = [
     'users_me_view',

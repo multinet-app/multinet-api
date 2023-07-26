@@ -12,6 +12,7 @@ from multinet.api.views import (
     TableViewSet,
     UploadViewSet,
     WorkspaceViewSet,
+    AlttxtQueryViewSet,
     users_me_view,
     users_search_view,
 )
@@ -43,7 +44,6 @@ workspaces_routes.register(
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
 
-
 # OpenAPI generation
 schema_view = get_schema_view(
     openapi.Info(title='multinet', default_version='v1'),
@@ -61,6 +61,7 @@ urlpatterns = [
     path('api/users/search', users_search_view),
     path('api/docs/redoc/', schema_view.with_ui('redoc'), name='docs-redoc'),
     path('swagger/', schema_view.with_ui('swagger'), name='docs-swagger'),
+    path('alttxt/', AlttxtQueryViewSet.as_view()),
 ]
 
 if settings.DEBUG:
