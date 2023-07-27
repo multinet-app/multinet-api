@@ -11,12 +11,12 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
 from multinet.api.models import Network, Table, Upload, Workspace, WorkspaceRoleChoice
-from multinet.api.tasks.upload import process_csv, process_d3_json, process_json_table
+from multinet.api.tasks.upload import process_csv, process_json_network, process_json_table
 
 from .common import MultinetPagination, WorkspaceChildMixin
 from .serializers import (
     CSVUploadCreateSerializer,
-    D3JSONUploadCreateSerializer,
+    JSONNetworkUploadCreateSerializer,
     JSONTableUploadCreateSerializer,
     UploadReturnSerializer,
 )
@@ -101,7 +101,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         request_body=JSONTableUploadCreateSerializer(),
         responses={200: UploadReturnSerializer()},
     )
-    @action(detail=False, url_path='json', methods=['POST'])
+    @action(detail=False, url_path='json_table', methods=['POST'])
     @require_workspace_permission(WorkspaceRoleChoice.WRITER)
     def upload_json_table(self, request, parent_lookup_workspace__name: str):
         """Create an upload of a JSON table."""
@@ -130,7 +130,7 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
             workspace=workspace,
             user=request.user,
             blob=object_key,
-            data_type=Upload.DataType.JSON,
+            data_type=Upload.DataType.JSON_TABLE,
         )
 
         # Dispatch task
@@ -144,15 +144,15 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         return Response(UploadReturnSerializer(upload).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        request_body=D3JSONUploadCreateSerializer(),
+        request_body=JSONNetworkUploadCreateSerializer(),
         responses={200: UploadReturnSerializer()},
     )
-    @action(detail=False, url_path='d3_json', methods=['POST'])
+    @action(detail=False, url_path='json_network', methods=['POST'])
     @require_workspace_permission(WorkspaceRoleChoice.WRITER)
-    def upload_d3_json(self, request, parent_lookup_workspace__name: str):
-        """Create an upload of a D3 JSON file."""
+    def upload_json_network(self, request, parent_lookup_workspace__name: str):
+        """Create an upload of a JSON network file."""
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-        serializer = D3JSONUploadCreateSerializer(data=request.data)
+        serializer = JSONNetworkUploadCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         object_key = field_value_object_key(serializer)
@@ -186,15 +186,17 @@ class UploadViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
             workspace=workspace,
             user=request.user,
             blob=object_key,
-            data_type=Upload.DataType.D3_JSON,
+            data_type=Upload.DataType.JSON_NETWORK,
         )
 
         # Dispatch task
-        process_d3_json.delay(
+        process_json_network.delay(
             task_id=upload.pk,
             network_name=network_name,
             node_table_name=node_table_name,
             edge_table_name=edge_table_name,
+            node_column_types=serializer.validated_data['node_columns'],
+            edge_column_types=serializer.validated_data['edge_columns'],
         )
 
         return Response(UploadReturnSerializer(upload).data, status=status.HTTP_200_OK)

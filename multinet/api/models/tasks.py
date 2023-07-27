@@ -32,10 +32,8 @@ class Upload(Task):
 
     class DataType(models.TextChoices):
         CSV = 'CSV'
-        JSON = 'JSON'
-        D3_JSON = 'D3_JSON'
-        NESTED_JSON = 'NESTED_JSON'
-        NEWICK = 'NEWICK'
+        JSON_TABLE = 'JSON_TABLE'
+        JSON_NETWORK = 'JSON_NETWORK'
 
     blob = S3FileField()
     data_type = models.CharField(max_length=20, choices=DataType.choices)

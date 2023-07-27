@@ -19,7 +19,7 @@ from multinet.api.models import (
     WorkspaceRole,
     WorkspaceRoleChoice,
 )
-from multinet.api.tasks.upload.d3_json import d3_link_to_arango_doc, d3_node_to_arango_doc
+from multinet.api.tasks.upload.json_network import d3_link_to_arango_doc, d3_node_to_arango_doc
 from multinet.api.tests.fuzzy import (
     INTEGER_ID_RE,
     TIMESTAMP_RE,
