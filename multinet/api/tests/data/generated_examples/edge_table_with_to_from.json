@@ -1,0 +1,17 @@
+[
+  {
+      "_from": "node_table_with_key/1",
+      "_to": "node_table_with_key/2",
+      "edge_weight": 10
+  },
+  {
+      "_from": "node_table_with_key/2",
+      "_to": "node_table_with_key/3",
+      "edge_weight": 20
+  },
+  {
+      "_from": "node_table_with_key/3",
+      "_to": "node_table_with_key/1",
+      "edge_weight": 30
+  }
+]
