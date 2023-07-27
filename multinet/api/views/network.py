@@ -70,7 +70,7 @@ def validate_edge_table(
         return Response(serialized_resp.data, status=status.HTTP_400_BAD_REQUEST)
 
 
-class NetworkViewSet(WorkspaceChildMixin(), DetailSerializerMixin, ReadOnlyModelViewSet):
+class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelViewSet):
     queryset = Network.objects.all().select_related('workspace')
     lookup_field = 'name'
 

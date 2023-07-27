@@ -41,64 +41,73 @@ class ArangoPagination(LimitOffsetPagination):
         return list(cur)
 
 
-def WorkspaceChildMixin(prefix=None):
-    class _WorkspaceChildMixin(NestedViewSetMixin):
-        def my_lookup_field(self):
-            field = 'workspace__name'
-            if prefix is not None:
-                field = f'{prefix}__{field}'
+class WorkspaceChildMixin(NestedViewSetMixin):
+    prefix = None
 
-            return field
+    @property
+    def workspace_field(self):
+        field = 'workspace__name'
+        print(type(self))
+        if self.prefix is not None:
+            field = f'{self.prefix}__{field}'
 
-        def get_parents_query_dict(self):
-            parents_query_dict = super().get_parents_query_dict()
+        return field
 
-            print(parents_query_dict)
+    def get_parents_query_dict(self):
+        parents_query_dict = super().get_parents_query_dict()
 
-            # Replace the standard lookup field with one that (possibly) goes
-            # through the session object's related network or table object.
-            new_field = self.my_lookup_field()
-            if not new_field in parents_query_dict:
-                old_field = 'workspace__name'
-                parents_query_dict[new_field] = parents_query_dict.pop(old_field)
+        print(parents_query_dict)
 
-            return parents_query_dict
+        # Replace the standard lookup field with one that (possibly) goes
+        # through the session object's related network or table object.
+        new_field = self.workspace_field
+        if not new_field in parents_query_dict:
+            old_field = 'workspace__name'
+            parents_query_dict[new_field] = parents_query_dict.pop(old_field)
 
-        def get_queryset(self):
-            """
-            Get the queryset for workspace child enpoints.
+        return parents_query_dict
 
-            Check that the requeting user has appropriate permissions for the associated workspace.
-            """
-            child_objects = super().get_queryset()
+    def get_queryset(self):
+        """
+        Get the queryset for workspace child enpoints.
 
-            # prevent warning for schema generation incompatibility
-            if getattr(self, 'swagger_fake_view', False):
-                return child_objects.none()
+        Check that the requeting user has appropriate permissions for the associated workspace.
+        """
+        child_objects = super().get_queryset()
 
-            parent_query_dict = self.get_parents_query_dict()
-            workspace = get_object_or_404(
-                Workspace.objects.select_related('owner'), name=parent_query_dict[self.my_lookup_field()]
-            )
+        # prevent warning for schema generation incompatibility
+        if getattr(self, 'swagger_fake_view', False):
+            return child_objects.none()
 
-            # No user or user permission required for public workspaces
-            if workspace.public:
-                return child_objects
+        parent_query_dict = self.get_parents_query_dict()
+        workspace = get_object_or_404(
+            Workspace.objects.select_related('owner'), name=parent_query_dict[self.workspace_field]
+        )
 
-            # Private workspace
-            request_user = self.request.user
-            if not request_user.is_authenticated:  # anonymous user
-                raise Http404
+        # No user or user permission required for public workspaces
+        if workspace.public:
+            return child_objects
 
-            workspace_role = WorkspaceRole.objects.filter(
-                workspace=workspace, user=request_user
-            ).first()
-
-            # If the user is at least a reader or the owner, grant access
-            if workspace_role is not None or workspace.owner == request_user:
-                return child_objects
-
-            # Read access denied
+        # Private workspace
+        request_user = self.request.user
+        if not request_user.is_authenticated:  # anonymous user
             raise Http404
 
-    return _WorkspaceChildMixin
+        workspace_role = WorkspaceRole.objects.filter(
+            workspace=workspace, user=request_user
+        ).first()
+
+        # If the user is at least a reader or the owner, grant access
+        if workspace_role is not None or workspace.owner == request_user:
+            return child_objects
+
+        # Read access denied
+        raise Http404
+
+
+class NetworkWorkspaceChildMixin(WorkspaceChildMixin):
+    prefix = 'network'
+
+
+class TableWorkspaceChildMixin(WorkspaceChildMixin):
+    prefix = 'table'

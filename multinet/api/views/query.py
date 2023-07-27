@@ -14,7 +14,7 @@ from .common import WorkspaceChildMixin
 from .serializers import AqlQueryResultsSerializer, AqlQuerySerializer, AqlQueryTaskSerializer
 
 
-class AqlQueryViewSet(WorkspaceChildMixin(), ReadOnlyModelViewSet):
+class AqlQueryViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
     queryset = AqlQuery.objects.all().select_related('workspace')
     permission_classes = [IsAuthenticatedOrReadOnly]
     serializer_class = AqlQueryTaskSerializer
