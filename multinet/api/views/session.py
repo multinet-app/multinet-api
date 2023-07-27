@@ -12,10 +12,10 @@ from rest_framework.mixins import (
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from ..models import NetworkSession, TableSession, Workspace, WorkspaceRoleChoice
 from ..auth.decorators import require_workspace_permission
+from ..models import NetworkSession, TableSession, Workspace, WorkspaceRoleChoice
+from .common import NetworkWorkspaceChildMixin, TableWorkspaceChildMixin
 from .serializers import NetworkSessionSerializer, TableSessionSerializer
-from .common import TableWorkspaceChildMixin, NetworkWorkspaceChildMixin
 
 
 class SessionCreateSerializer(serializers.Serializer):
@@ -49,7 +49,9 @@ class SessionViewSet(
         session = self.get_object()
 
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
-        session_ws = session.table.workspace if hasattr(session, 'table') else session.network.workspace
+        session_ws = (
+            session.table.workspace if hasattr(session, 'table') else session.network.workspace
+        )
         if workspace.id != session_ws.id:
             raise Http404
 

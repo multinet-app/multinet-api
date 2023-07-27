@@ -20,8 +20,8 @@ from multinet.api.views.serializers import (
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
-    NetworkTablesSerializer,
     NetworkSessionSerializer,
+    NetworkTablesSerializer,
     PaginatedResultSerializer,
     TableReturnSerializer,
 )

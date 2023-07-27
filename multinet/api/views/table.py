@@ -12,7 +12,13 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
-from multinet.api.models import Table, TableSession, TableTypeAnnotation, Workspace, WorkspaceRoleChoice
+from multinet.api.models import (
+    Table,
+    TableSession,
+    TableTypeAnnotation,
+    Workspace,
+    WorkspaceRoleChoice,
+)
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     PaginatedResultSerializer,
@@ -163,7 +169,7 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         table: Table = get_object_or_404(Table, workspace=workspace, name=name)
 
-        sessions = TableSession.objects.filter(network=network.id)
+        sessions = TableSession.objects.filter(table=table.id)
         serializer = TableSessionSerializer(sessions, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
