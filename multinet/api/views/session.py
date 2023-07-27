@@ -1,4 +1,5 @@
 from django.http.response import Http404
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
@@ -49,7 +50,7 @@ class SessionViewSet(
 
         workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
         session_ws = session.table.workspace if hasattr(session, 'table') else session.network.workspace
-        if workspace.id != session_ws:
+        if workspace.id != session_ws.id:
             raise Http404
 
         serializer = SessionStatePatchSerializer(data=request.data)
