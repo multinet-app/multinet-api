@@ -1,6 +1,6 @@
 import csv
 from io import StringIO
-from typing import Any, BinaryIO, Dict, Tuple
+from typing import BinaryIO, Dict, Tuple
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -9,31 +9,9 @@ from multinet.api.models import Network, Table, TableTypeAnnotation, Upload, Wor
 from multinet.api.utils.arango import ArangoQuery
 
 from .common import ProcessUploadTask
-from .utils import processor_dict
+from .process_single_table import process_single_table
 
 logger = get_task_logger(__name__)
-
-
-def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type]) -> Dict:
-    """Process a CSV row."""
-    new_row = dict(row)
-
-    for col_key, col_type in cols.items():
-        entry = row.get(col_key)
-
-        # If null entry, skip
-        if entry is None:
-            continue
-
-        process_func = processor_dict.get(col_type)
-        if process_func is not None:
-            try:
-                new_row[col_key] = process_func(entry)
-            except ValueError:
-                # If error processing row, keep as string
-                pass
-
-    return new_row
 
 
 @shared_task(base=ProcessUploadTask)
@@ -47,21 +25,6 @@ def process_csv(
 ) -> None:
     upload: Upload = Upload.objects.get(id=task_id)
 
-    # Create new table
-    table: Table = Table.objects.create(
-        name=table_name,
-        edge=edge,
-        workspace=upload.workspace,
-    )
-
-    # Create type annotations
-    TableTypeAnnotation.objects.bulk_create(
-        [
-            TableTypeAnnotation(table=table, column=col_key, type=col_type)
-            for col_key, col_type in columns.items()
-        ]
-    )
-
     # Download data from S3/MinIO
     with upload.blob as blob_file:
         blob_file: BinaryIO = blob_file
@@ -71,18 +34,13 @@ def process_csv(
             quotechar=quotechar,
         )
 
-        # Cast entries in each row to appropriate type, if necessary
-        processed_rows = []
-        for row in csv_reader:
-            processed_rows.append(process_row(row, columns))
-
-            # Insert rows
-            if len(processed_rows) == 100000:
-                table.put_rows(processed_rows)
-                processed_rows = []
-
-        # Put remaining rows
-        table.put_rows(processed_rows)
+        process_single_table(
+            csv_reader,
+            table_name,
+            upload.workspace,
+            edge,
+            columns,
+        )
 
 
 def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -> Tuple[str, Dict]:
