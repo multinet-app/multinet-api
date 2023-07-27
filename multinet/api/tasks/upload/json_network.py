@@ -31,9 +31,9 @@ def process_json_network(
         d3_dict = json.loads(blob_file.read().decode('utf-8'))
     
 
-    if 'links' in d3_dict.keys():
+    if 'links' in d3_dict:
         link_property_name = 'links'
-    elif 'edges' in d3_dict.keys():
+    elif 'edges' in d3_dict:
         link_property_name = 'edges'
     else:
         raise DataFormatError("JSON network file missing 'links' or 'edges' property")
