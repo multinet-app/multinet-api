@@ -144,6 +144,9 @@ class Table(TimeStampedModel):
 
 class TableTypeAnnotation(TimeStampedModel):
     class Type(models.TextChoices):
+        PRIMARY = 'primary key'
+        SOURCE = 'edge source'
+        TARGET = 'edge target'
         LABEL = 'label'
         BOOLEAN = 'boolean'
         CATEGORY = 'category'
