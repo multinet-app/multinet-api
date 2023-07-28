@@ -1,0 +1,14 @@
+[
+  {
+    "developer": "Jack",
+    "language": "JavaScript"
+  },
+  {
+    "developer": "Roni",
+    "language": "Python"
+  },
+  {
+    "developer": "Jake",
+    "language": "TypeScript"
+  }
+]

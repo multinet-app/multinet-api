@@ -5,10 +5,6 @@ from .utils import processor_dict
 def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type], primary_key: Optional[str] = None, edge_source: Optional[str] = None, edge_target: Optional[str] = None, node_table_name: Optional[str] = None) -> Dict:
     new_row = dict(row)
 
-    # Check for primary key or source and target, if missing, skip row
-    if not (new_row.get(primary_key) or (new_row.get(edge_source) and new_row.get(edge_target))):
-        return None
-
     # Convert _key to _key
     if primary_key:
         new_row['_key'] = str(new_row.pop(primary_key))
