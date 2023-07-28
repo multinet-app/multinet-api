@@ -37,6 +37,10 @@ class SessionStatePatchSerializer(serializers.Serializer):
     state = serializers.JSONField()
 
 
+class SessionNamePatchSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=300)
+
+
 class SessionViewSet(
     CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
 ):
@@ -60,6 +64,28 @@ class SessionViewSet(
         data = serializer.validated_data['state']
 
         session.state = data
+        session.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema(request_body=SessionNamePatchSerializer)
+    @action(detail=True, methods=['patch'], url_path='name')
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def set_name(self, request, parent_lookup_workspace__name: str, pk=None):
+        session = self.get_object()
+
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        session_ws = (
+            session.table.workspace if hasattr(session, 'table') else session.network.workspace
+        )
+        if workspace.id != session_ws.id:
+            raise Http404
+
+        serializer = SessionNamePatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        name = serializer.validated_data['name']
+
+        session.name = name
         session.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
