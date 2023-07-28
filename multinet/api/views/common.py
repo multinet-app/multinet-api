@@ -47,7 +47,6 @@ class WorkspaceChildMixin(NestedViewSetMixin):
     @property
     def workspace_field(self):
         field = 'workspace__name'
-        print(type(self))
         if self.prefix is not None:
             field = f'{self.prefix}__{field}'
 
