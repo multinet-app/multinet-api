@@ -55,8 +55,6 @@ class WorkspaceChildMixin(NestedViewSetMixin):
     def get_parents_query_dict(self):
         parents_query_dict = super().get_parents_query_dict()
 
-        print(parents_query_dict)
-
         # Replace the standard lookup field with one that (possibly) goes
         # through the session object's related network or table object.
         new_field = self.workspace_field
