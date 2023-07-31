@@ -8,7 +8,9 @@ from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
     AqlQueryViewSet,
+    NetworkSessionViewSet,
     NetworkViewSet,
+    TableSessionViewSet,
     TableViewSet,
     UploadViewSet,
     WorkspaceViewSet,
@@ -42,7 +44,18 @@ workspaces_routes.register(
     basename='query',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
-
+workspaces_routes.register(
+    'sessions/network',
+    NetworkSessionViewSet,
+    basename='session',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
+workspaces_routes.register(
+    'sessions/table',
+    TableSessionViewSet,
+    basename='session',
+    parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
+)
 
 # OpenAPI generation
 schema_view = get_schema_view(
