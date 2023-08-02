@@ -1,6 +1,7 @@
 from typing import Any, Dict, Iterable, Optional
 from multinet.api.models import Table, TableTypeAnnotation
 from .utils import processor_dict
+from collections import Counter
 
 def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type], primary_key: Optional[str] = None, edge_source: Optional[str] = None, edge_target: Optional[str] = None, node_table_name: Optional[str] = None) -> Dict:
     new_row = dict(row)
@@ -59,12 +60,26 @@ def process_single_table(
     column_types: Dict[str, TableTypeAnnotation.Type],
     node_table_name: Optional[str] = None,
 ):
-    # Create new table
-    table: Table = Table.objects.create(
-        name=table_name,
-        edge=edge,
-        workspace=workspace,
-    )
+    # Check that there are not multiple primary keys, multiple edge sources, or multiple edge targets using python Counter
+    value_counts = Counter(column_types.values())
+    if value_counts[TableTypeAnnotation.Type.PRIMARY] > 1:
+        raise ValueError('Multiple primary keys found')
+    if value_counts[TableTypeAnnotation.Type.SOURCE] > 1:
+        raise ValueError('Multiple edge sources found')
+    if value_counts[TableTypeAnnotation.Type.TARGET] > 1:
+        raise ValueError('Multiple edge targets found')
+    
+    # Check that if we have source, we also have target, and vice versa
+    if value_counts[TableTypeAnnotation.Type.SOURCE] != value_counts[TableTypeAnnotation.Type.TARGET]:
+        raise ValueError('Edge source and edge target must be present together')
+    
+    # Check if we have edge, we have both source and target
+    if edge and (value_counts[TableTypeAnnotation.Type.SOURCE] == 0 and value_counts[TableTypeAnnotation.Type.TARGET] == 0):
+        raise ValueError('Edge source and edge target must both be present if edge is true')
+    
+    # Check that if we have node_table_name, we have edge
+    if node_table_name and not edge:
+        raise ValueError('edge must be true if node_table_name is present')
 
     # Reverse the cols dict to find the primary key, source, and target (if they exist)
     reversed_cols = {v: k for k, v in column_types.items()}
@@ -80,6 +95,13 @@ def process_single_table(
     if edge_source and edge_target:
         type_annotation_cols['_from'] = type_annotation_cols.pop(edge_source)
         type_annotation_cols['_to'] = type_annotation_cols.pop(edge_target)
+
+    # Create new table
+    table: Table = Table.objects.create(
+        name=table_name,
+        edge=edge,
+        workspace=workspace,
+    )
 
     # Create type annotations
     TableTypeAnnotation.objects.bulk_create(
