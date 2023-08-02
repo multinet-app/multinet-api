@@ -10,7 +10,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_extensions.mixins import DetailSerializerMixin
 
 from multinet.api.auth.decorators import require_workspace_permission
-from multinet.api.models import Network, Table, Workspace, WorkspaceRoleChoice
+from multinet.api.models import Network, NetworkSession, Table, Workspace, WorkspaceRoleChoice
 from multinet.api.tasks.upload.csv import create_csv_network
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
@@ -20,6 +20,7 @@ from multinet.api.views.serializers import (
     NetworkReturnDetailSerializer,
     NetworkReturnSerializer,
     NetworkSerializer,
+    NetworkSessionSerializer,
     NetworkTablesSerializer,
     PaginatedResultSerializer,
     TableReturnSerializer,
@@ -202,5 +203,19 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         network_tables = Table.objects.filter(name__in=table_names)
         serializer = TableReturnSerializer(network_tables, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        responses={200: NetworkSessionSerializer(many=True)},
+    )
+    @action(detail=True, url_path='sessions')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def sessions(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        sessions = NetworkSession.objects.filter(network=network.id)
+        serializer = NetworkSessionSerializer(sessions, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)

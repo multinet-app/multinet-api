@@ -42,6 +42,28 @@ class ArangoPagination(LimitOffsetPagination):
 
 
 class WorkspaceChildMixin(NestedViewSetMixin):
+    prefix = None
+
+    @property
+    def workspace_field(self):
+        field = 'workspace__name'
+        if self.prefix is not None:
+            field = f'{self.prefix}__{field}'
+
+        return field
+
+    def get_parents_query_dict(self):
+        parents_query_dict = super().get_parents_query_dict()
+
+        # Replace the standard lookup field with one that (possibly) goes
+        # through the session object's related network or table object.
+        new_field = self.workspace_field
+        if new_field not in parents_query_dict:
+            old_field = 'workspace__name'
+            parents_query_dict[new_field] = parents_query_dict.pop(old_field)
+
+        return parents_query_dict
+
     def get_queryset(self):
         """
         Get the queryset for workspace child enpoints.
@@ -56,7 +78,7 @@ class WorkspaceChildMixin(NestedViewSetMixin):
 
         parent_query_dict = self.get_parents_query_dict()
         workspace = get_object_or_404(
-            Workspace.objects.select_related('owner'), name=parent_query_dict['workspace__name']
+            Workspace.objects.select_related('owner'), name=parent_query_dict[self.workspace_field]
         )
 
         # No user or user permission required for public workspaces
@@ -78,3 +100,11 @@ class WorkspaceChildMixin(NestedViewSetMixin):
 
         # Read access denied
         raise Http404
+
+
+class NetworkWorkspaceChildMixin(WorkspaceChildMixin):
+    prefix = 'network'
+
+
+class TableWorkspaceChildMixin(WorkspaceChildMixin):
+    prefix = 'table'
