@@ -148,6 +148,7 @@ class TableTypeAnnotation(TimeStampedModel):
         SOURCE = 'edge source'
         TARGET = 'edge target'
         LABEL = 'label'
+        STRING = 'string'
         BOOLEAN = 'boolean'
         CATEGORY = 'category'
         NUMBER = 'number'
