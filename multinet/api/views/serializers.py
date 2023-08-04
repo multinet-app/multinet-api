@@ -268,10 +268,11 @@ class UploadReturnSerializer(serializers.ModelSerializer):
     # Specify user as a CharField to return username
     user = serializers.CharField()
 
+
 columns_type = serializers.DictField(
     child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
-    default=dict,
 )
+
 
 class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
@@ -290,10 +291,8 @@ class JSONTableUploadCreateSerializer(UploadCreateSerializer):
 class JSONNetworkUploadCreateSerializer(UploadCreateSerializer):
     network_name = serializers.CharField()
     node_columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
-        default=dict,
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices)
     )
     edge_columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
-        default=dict,
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices)
     )

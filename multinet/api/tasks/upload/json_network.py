@@ -4,7 +4,7 @@ from typing import BinaryIO, Dict
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
-from multinet.api.models import Network, Table, Upload
+from multinet.api.models import Network, Upload
 from multinet.api.models.table import TableTypeAnnotation
 
 from .common import ProcessUploadTask
@@ -29,7 +29,6 @@ def process_json_network(
     with upload.blob as blob_file:
         blob_file: BinaryIO
         d3_dict = json.loads(blob_file.read().decode('utf-8'))
-    
 
     if 'links' in d3_dict:
         link_property_name = 'links'
@@ -37,7 +36,7 @@ def process_json_network(
         link_property_name = 'edges'
     else:
         raise DataFormatError("JSON network file missing 'links' or 'edges' property")
-    
+
     nodes = d3_dict['nodes']
     edges = d3_dict[link_property_name]
 
@@ -49,7 +48,7 @@ def process_json_network(
         False,
         node_column_types,
     )
-    
+
     # Create edge table
     process_single_table(
         edges,

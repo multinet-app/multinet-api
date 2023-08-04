@@ -1,7 +1,10 @@
 import json
-from typing import Any, BinaryIO, Dict, Optional
+from typing import BinaryIO, Dict
+
 from celery import shared_task
-from multinet.api.models import Network, Table, TableTypeAnnotation, Upload
+
+from multinet.api.models import TableTypeAnnotation, Upload
+
 from .common import ProcessUploadTask
 from .process_single_table import process_single_table
 
