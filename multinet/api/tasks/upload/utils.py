@@ -64,7 +64,13 @@ def str_to_number(entry: str) -> Union[int, float]:
 
 # Store mapping of enums to processor functions
 processor_dict = {
+    TableTypeAnnotation.Type.PRIMARY: str,
+    TableTypeAnnotation.Type.SOURCE: str,
+    TableTypeAnnotation.Type.TARGET: str,
+    TableTypeAnnotation.Type.LABEL: str,
+    TableTypeAnnotation.Type.STRING: str,
     TableTypeAnnotation.Type.BOOLEAN: str_to_bool,
-    TableTypeAnnotation.Type.DATE: str_to_datestr,
+    TableTypeAnnotation.Type.CATEGORY: str,
     TableTypeAnnotation.Type.NUMBER: str_to_number,
+    TableTypeAnnotation.Type.DATE: str_to_datestr,
 }

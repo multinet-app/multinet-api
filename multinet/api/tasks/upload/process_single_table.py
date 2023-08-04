@@ -36,12 +36,19 @@ def process_row(row: Dict[str, Any], cols: Dict[str, TableTypeAnnotation.Type], 
         
 
     for col_key, col_type in cols.items():
-        entry = row.get(col_key)
+        # If column type is IGNORED, skip
+        if col_type == TableTypeAnnotation.Type.IGNORED:
+            new_row.pop(col_key)
+            continue
 
-        # If null entry, skip
+        # Get the value of the column
+        entry = new_row.get(col_key)
+
+        # If null, skip
         if entry is None:
             continue
 
+        # Process the column value
         process_func = processor_dict.get(col_type)
         if process_func is not None:
             try:
@@ -95,6 +102,9 @@ def process_single_table(
     if edge_source and edge_target:
         type_annotation_cols['_from'] = type_annotation_cols.pop(edge_source)
         type_annotation_cols['_to'] = type_annotation_cols.pop(edge_target)
+
+    # If a column is IGNORED, remove it from the type annotation dict
+    type_annotation_cols = {k: v for k, v in type_annotation_cols.items() if v != TableTypeAnnotation.Type.IGNORED}
 
     # Create new table
     table: Table = Table.objects.create(

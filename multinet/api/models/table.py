@@ -153,6 +153,7 @@ class TableTypeAnnotation(TimeStampedModel):
         CATEGORY = 'category'
         NUMBER = 'number'
         DATE = 'date'
+        IGNORED = 'ignored'
 
     table = models.ForeignKey(Table, related_name='type_annotations', on_delete=models.CASCADE)
     column = models.CharField(max_length=255)
