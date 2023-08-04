@@ -1,0 +1,402 @@
+[
+  {
+    "label": "Row 1",
+    "boolean": true,
+    "category": "Category A",
+    "number": 42,
+    "date": "2023-07-26",
+    "number_decimal": 42.0
+  },
+  {
+    "label": "Row 2",
+    "boolean": false,
+    "category": "Category B",
+    "number": 17,
+    "date": "2023-07-25",
+    "number_decimal": 17.0
+  },
+  {
+    "label": "Row 3",
+    "boolean": true,
+    "category": "Category A",
+    "number": 95,
+    "date": "2023-07-24",
+    "number_decimal": 95.5
+  },
+  {
+    "label": "Row 4",
+    "boolean": false,
+    "category": "Category C",
+    "number": 23,
+    "date": "2023-07-23",
+    "number_decimal": 23.5
+  },
+  {
+    "label": "Row 5",
+    "boolean": true,
+    "category": "Category B",
+    "number": 78,
+    "date": "2023-07-22",
+    "number_decimal": 78.5
+  },
+  {
+    "label": "Row 6",
+    "boolean": false,
+    "category": "Category C",
+    "number": 36,
+    "date": "2023-07-21",
+    "number_decimal": 36.2345
+  },
+  {
+    "label": "Row 7",
+    "boolean": true,
+    "category": "Category A",
+    "number": 62,
+    "date": "2023-07-20",
+    "number_decimal": 62.2345
+  },
+  {
+    "label": "Row 8",
+    "boolean": false,
+    "category": "Category B",
+    "number": 11,
+    "date": "2023-07-19",
+    "number_decimal": 11.2387
+  },
+  {
+    "label": "Row 9",
+    "boolean": true,
+    "category": "Category C",
+    "number": 39,
+    "date": "2023-07-18",
+    "number_decimal": 39.2387
+  },
+  {
+    "label": "Row 10",
+    "boolean": false,
+    "category": "Category A",
+    "number": 83,
+    "date": "2023-07-17",
+    "number_decimal": 83.2387
+  },
+  {
+    "label": "Row 11",
+    "boolean": true,
+    "category": "Category B",
+    "number": 27,
+    "date": "2023-07-16",
+    "number_decimal": 42.4321
+  },
+  {
+    "label": "Row 12",
+    "boolean": false,
+    "category": "Category A",
+    "number": 56,
+    "date": "2023-07-15",
+    "number_decimal": 13.7892
+  },
+  {
+    "label": "Row 13",
+    "boolean": true,
+    "category": "Category C",
+    "number": 71,
+    "date": "2023-07-14",
+    "number_decimal": 64.9231
+  },
+  {
+    "label": "Row 14",
+    "boolean": false,
+    "category": "Category B",
+    "number": 22,
+    "date": "2023-07-13",
+    "number_decimal": 19.1092
+  },
+  {
+    "label": "Row 15",
+    "boolean": true,
+    "category": "Category A",
+    "number": 44,
+    "date": "2023-07-12",
+    "number_decimal": 81.2222
+  },
+  {
+    "label": "Row 16",
+    "boolean": false,
+    "category": "Category C",
+    "number": 64,
+    "date": "2023-07-11",
+    "number_decimal": 36.3456
+  },
+  {
+    "label": "Row 17",
+    "boolean": true,
+    "category": "Category B",
+    "number": 95,
+    "date": "2023-07-10",
+    "number_decimal": 88.8765
+  },
+  {
+    "label": "Row 18",
+    "boolean": false,
+    "category": "Category A",
+    "number": 13,
+    "date": "2023-07-09",
+    "number_decimal": 10.0000
+  },
+  {
+    "label": "Row 19",
+    "boolean": true,
+    "category": "Category C",
+    "number": 37,
+    "date": "2023-07-08",
+    "number_decimal": 32.4928
+  },
+  {
+    "label": "Row 20",
+    "boolean": false,
+    "category": "Category B",
+    "number": 87,
+    "date": "2023-07-07",
+    "number_decimal": 75.4312
+  },
+  {
+    "label": "Row 21",
+    "boolean": true,
+    "category": "Category A",
+    "number": 59,
+    "date": "2023-07-06",
+    "number_decimal": 54.9999
+  },
+  {
+    "label": "Row 22",
+    "boolean": false,
+    "category": "Category B",
+    "number": 21,
+    "date": "2023-07-05",
+    "number_decimal": 20.9999
+  },
+  {
+    "label": "Row 23",
+    "boolean": true,
+    "category": "Category C",
+    "number": 79,
+    "date": "2023-07-04",
+    "number_decimal": 78.8888
+  },
+  {
+    "label": "Row 24",
+    "boolean": false,
+    "category": "Category A",
+    "number": 14,
+    "date": "2023-07-03",
+    "number_decimal": 12.1111
+  },
+  {
+    "label": "Row 25",
+    "boolean": true,
+    "category": "Category B",
+    "number": 68,
+    "date": "2023-07-02",
+    "number_decimal": 67.5432
+  },
+  {
+    "label": "Row 26",
+    "boolean": false,
+    "category": "Category C",
+    "number": 49,
+    "date": "2023-07-01",
+    "number_decimal": 45.2398
+  },
+  {
+    "label": "Row 27",
+    "boolean": true,
+    "category": "Category A",
+    "number": 88,
+    "date": "2023-06-30",
+    "number_decimal": 87.6534
+  },
+  {
+    "label": "Row 28",
+    "boolean": false,
+    "category": "Category B",
+    "number": 33,
+    "date": "2023-06-29",
+    "number_decimal": 32.5423
+  },
+  {
+    "label": "Row 29",
+    "boolean": true,
+    "category": "Category C",
+    "number": 72,
+    "date": "2023-06-28",
+    "number_decimal": 71.4567
+  },
+  {
+    "label": "Row 30",
+    "boolean": false,
+    "category": "Category A",
+    "number": 11,
+    "date": "2023-06-27",
+    "number_decimal": 10.1234
+  },
+  {
+    "label": "Row 31",
+    "boolean": true,
+    "category": "Category B",
+    "number": 51,
+    "date": "2023-06-26",
+    "number_decimal": 49.8765
+  },
+  {
+    "label": "Row 32",
+    "boolean": false,
+    "category": "Category C",
+    "number": 74,
+    "date": "2023-06-25",
+    "number_decimal": 73.1111
+  },
+  {
+    "label": "Row 33",
+    "boolean": true,
+    "category": "Category A",
+    "number": 19,
+    "date": "2023-06-24",
+    "number_decimal": 18.5555
+  },
+  {
+    "label": "Row 34",
+    "boolean": false,
+    "category": "Category B",
+    "number": 67,
+    "date": "2023-06-23",
+    "number_decimal": 66.4567
+  },
+  {
+    "label": "Row 35",
+    "boolean": true,
+    "category": "Category C",
+    "number": 31,
+    "date": "2023-06-22",
+    "number_decimal": 30.2389
+  },
+  {
+    "label": "Row 36",
+    "boolean": false,
+    "category": "Category A",
+    "number": 82,
+    "date": "2023-06-21",
+    "number_decimal": 81.9785
+  },
+  {
+    "label": "Row 37",
+    "boolean": true,
+    "category": "Category B",
+    "number": 29,
+    "date": "2023-06-20",
+    "number_decimal": 28.6654
+  },
+  {
+    "label": "Row 38",
+    "boolean": false,
+    "category": "Category C",
+    "number": 65,
+    "date": "2023-06-19",
+    "number_decimal": 64.9876
+  },
+  {
+    "label": "Row 39",
+    "boolean": true,
+    "category": "Category A",
+    "number": 50,
+    "date": "2023-06-18",
+    "number_decimal": 49.0000
+  },
+  {
+    "label": "Row 40",
+    "boolean": false,
+    "category": "Category B",
+    "number": 16,
+    "date": "2023-06-17",
+    "number_decimal": 15.2345
+  },
+  {
+    "label": "Row 41",
+    "boolean": true,
+    "category": "Category C",
+    "number": 38,
+    "date": "2023-06-16",
+    "number_decimal": 37.1298
+  },
+  {
+    "label": "Row 42",
+    "boolean": false,
+    "category": "Category A",
+    "number": 92,
+    "date": "2023-06-15",
+    "number_decimal": 91.6345
+  },
+  {
+    "label": "Row 43",
+    "boolean": true,
+    "category": "Category B",
+    "number": 61,
+    "date": "2023-06-14",
+    "number_decimal": 60.0000
+  },
+  {
+    "label": "Row 44",
+    "boolean": false,
+    "category": "Category C",
+    "number": 27,
+    "date": "2023-06-13",
+    "number_decimal": 25.5678
+  },
+  {
+    "label": "Row 45",
+    "boolean": true,
+    "category": "Category A",
+    "number": 80,
+    "date": "2023-06-12",
+    "number_decimal": 79.1234
+  },
+  {
+    "label": "Row 46",
+    "boolean": false,
+    "category": "Category B",
+    "number": 33,
+    "date": "2023-06-11",
+    "number_decimal": 31.0987
+  },
+  {
+    "label": "Row 47",
+    "boolean": true,
+    "category": "Category C",
+    "number": 75,
+    "date": "2023-06-10",
+    "number_decimal": 74.7777
+  },
+  {
+    "label": "Row 48",
+    "boolean": false,
+    "category": "Category A",
+    "number": 12,
+    "date": "2023-06-09",
+    "number_decimal": 12.3456
+  },
+  {
+    "label": "Row 49",
+    "boolean": true,
+    "category": "Category B",
+    "number": 45,
+    "date": "2023-06-08",
+    "number_decimal": 44.9876
+  },
+  {
+    "label": "Row 50",
+    "boolean": false,
+    "category": "Category C",
+    "number": 70,
+    "date": "2023-06-07",
+    "number_decimal": 69.1111
+  }
+]

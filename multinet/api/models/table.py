@@ -144,11 +144,16 @@ class Table(TimeStampedModel):
 
 class TableTypeAnnotation(TimeStampedModel):
     class Type(models.TextChoices):
+        PRIMARY = 'primary key'
+        SOURCE = 'edge source'
+        TARGET = 'edge target'
         LABEL = 'label'
+        STRING = 'string'
         BOOLEAN = 'boolean'
         CATEGORY = 'category'
         NUMBER = 'number'
         DATE = 'date'
+        IGNORED = 'ignored'
 
     table = models.ForeignKey(Table, related_name='type_annotations', on_delete=models.CASCADE)
     column = models.CharField(max_length=255)

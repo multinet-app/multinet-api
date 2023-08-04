@@ -30,7 +30,7 @@ def local_json_table_upload(path: pathlib.Path, workspace, user) -> Upload:
         workspace=workspace,
         user=user,
         blob=file,
-        data_type=Upload.DataType.JSON,
+        data_type=Upload.DataType.JSON_TABLE,
     )
 
 
@@ -48,12 +48,13 @@ def characters_json_table(
     table_name = f't{uuid.uuid4().hex}'
     field_value = s3ff_field_value_factory(upload.blob)
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/json/',
+        f'/api/workspaces/{workspace.name}/uploads/json_table/',
         {
             'field_value': field_value,
             'edge': False,
             'table_name': table_name,
             'columns': {
+                '_key': 'primary key',
                 'name': 'label',
                 'group': 'category',
             },
@@ -80,7 +81,7 @@ def test_create_upload_model_json_table(workspace: Workspace, user: User, charac
         'workspace': workspace_re(workspace),
         'blob': s3_file_field_re(data_file.name),
         'user': user.username,
-        'data_type': Upload.DataType.JSON,
+        'data_type': Upload.DataType.JSON_TABLE,
         'error_messages': None,
         'status': Upload.Status.PENDING,
         'created': TIMESTAMP_RE,
@@ -94,7 +95,7 @@ def test_create_upload_model_invalid_columns(
 ):
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/json/',
+        f'/api/workspaces/{workspace.name}/uploads/json_table/',
         {
             # Not an issue to specify invalid field_value, as that's checked after columns,
             # so the request will return before that is checked
@@ -131,12 +132,13 @@ def test_create_upload_model_json_table_invalid_permissions(
 
     table_name = f't{uuid.uuid4().hex}'
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/json/',
+        f'/api/workspaces/{workspace.name}/uploads/json_table/',
         {
             'field_value': field_value,
             'edge': False,
             'table_name': table_name,
             'columns': {
+                '_key': 'primary key',
                 'name': 'label',
                 'group': 'category',
             },
@@ -152,11 +154,16 @@ def test_create_upload_model_invalid_field_value(
 ):
     workspace.set_user_permission(user, WorkspaceRoleChoice.WRITER)
     r: Response = authenticated_api_client.post(
-        f'/api/workspaces/{workspace.name}/uploads/json/',
+        f'/api/workspaces/{workspace.name}/uploads/json_table/',
         {
             'field_value': 'field_value',
             'edge': False,
             'table_name': 'table',
+            'columns': {
+                '_key': 'primary key',
+                'name': 'label',
+                'group': 'category',
+            },
         },
         format='json',
     )
@@ -224,6 +231,7 @@ def test_retrieve_table_type_annotations(
     )
 
     assert r.json() == {
+        '_key': TableTypeAnnotation.Type.PRIMARY,
         'name': TableTypeAnnotation.Type.LABEL,
         'group': TableTypeAnnotation.Type.CATEGORY,
     }

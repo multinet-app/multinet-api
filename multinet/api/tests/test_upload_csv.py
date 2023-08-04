@@ -228,6 +228,13 @@ def test_create_upload_model_invalid_field_value(
             'table_name': 'table',
             'delimiter': ',',
             'quotechar': '\"',
+            'columns': {
+                'latitude': 'number',
+                'longitude': 'number',
+                'altitude': 'number',
+                'timezone': 'number',
+                'year built': 'number',
+            },
         },
         format='json',
     )

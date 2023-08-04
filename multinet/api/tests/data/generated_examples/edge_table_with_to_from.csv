@@ -1,0 +1,4 @@
+_from,_to,edge_weight
+node_table_with_key/1,node_table_with_key/2,10
+node_table_with_key/2,node_table_with_key/3,20
+node_table_with_key/3,node_table_with_key/1,30

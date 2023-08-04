@@ -269,13 +269,15 @@ class UploadReturnSerializer(serializers.ModelSerializer):
     user = serializers.CharField()
 
 
+columns_type = serializers.DictField(
+    child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
+)
+
+
 class CSVUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
-    columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
-        default=dict,
-    )
+    columns = columns_type
     delimiter = serializers.CharField(trim_whitespace=False)
     quotechar = serializers.CharField()
 
@@ -283,11 +285,14 @@ class CSVUploadCreateSerializer(UploadCreateSerializer):
 class JSONTableUploadCreateSerializer(UploadCreateSerializer):
     edge = serializers.BooleanField()
     table_name = serializers.CharField()
-    columns = serializers.DictField(
-        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices),
-        default=dict,
-    )
+    columns = columns_type
 
 
-class D3JSONUploadCreateSerializer(UploadCreateSerializer):
+class JSONNetworkUploadCreateSerializer(UploadCreateSerializer):
     network_name = serializers.CharField()
+    node_columns = serializers.DictField(
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices)
+    )
+    edge_columns = serializers.DictField(
+        child=serializers.ChoiceField(choices=TableTypeAnnotation.Type.choices)
+    )

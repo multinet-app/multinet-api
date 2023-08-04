@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    {
+      "_key": "1",
+      "developer": "Jack",
+      "language": "JavaScript"
+    },
+    {
+      "_key": "2",
+      "developer": "Roni",
+      "language": "Python"
+    },
+    {
+      "_key": "3",
+      "developer": "Jake",
+      "language": "TypeScript"
+    }
+  ],
+  "edges": [
+    {
+      "_from": "1",
+      "target": "2",
+      "edge_weight": 10
+    },
+    {
+      "_from": "2",
+      "target": "3",
+      "edge_weight": 20
+    },
+    {
+      "_from": "3",
+      "target": "1",
+      "edge_weight": 30
+    }
+  ]
+}
