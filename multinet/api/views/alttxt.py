@@ -37,11 +37,11 @@ class AlttxtQueryViewSet(APIView):
 
         # Fields into variables
         parsed_data = serializer.validated_data
-        verbosity = Verbosity(parsed_data['verbosity'])
-        level = Level(parsed_data['level'])
-        explain = Explanation(parsed_data['explain'])
-        title = parsed_data['title']
-        datafile = parsed_data['data']
+        verbosity: Verbosity = Verbosity(parsed_data['verbosity'])
+        level: Level = Level(parsed_data['level'])
+        explain: Explanation = Explanation(parsed_data['explain'])
+        title: str = parsed_data['title']
+        datafile: Union[UploadedFile, str] = parsed_data['data']
 
         # Load the data
         try:
@@ -53,6 +53,7 @@ class AlttxtQueryViewSet(APIView):
                 return Response({'error': 'Invalid data file: must be a JSON file or string'}, status=status.HTTP_400_BAD_REQUEST)
         except json.decoder.JSONDecodeError as e:
             return Response({'error': f'Invalid JSON: error while parsing: {e.msg}'}, status=status.HTTP_400_BAD_REQUEST)
+        
         # Validate the data
         if not isinstance(data, dict) or "firstAggregateBy" not in data or \
             AggregateBy(data["firstAggregateBy"]) != AggregateBy.NONE:
