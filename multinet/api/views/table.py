@@ -12,7 +12,13 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from multinet.api.auth.decorators import require_workspace_permission
-from multinet.api.models import Table, TableTypeAnnotation, Workspace, WorkspaceRoleChoice
+from multinet.api.models import (
+    Table,
+    TableSession,
+    TableTypeAnnotation,
+    Workspace,
+    WorkspaceRoleChoice,
+)
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     PaginatedResultSerializer,
@@ -20,6 +26,7 @@ from multinet.api.views.serializers import (
     TableReturnSerializer,
     TableRowRetrieveSerializer,
     TableSerializer,
+    TableSessionSerializer,
 )
 
 from .common import ArangoPagination, MultinetPagination, WorkspaceChildMixin
@@ -152,3 +159,17 @@ class TableViewSet(WorkspaceChildMixin, ReadOnlyModelViewSet):
         annotations = TableTypeAnnotation.objects.all().filter(table=table)
         annotations_dict = {ann.column: ann.type for ann in annotations}
         return Response(annotations_dict, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        responses={200: TableSessionSerializer(many=True)},
+    )
+    @action(detail=True, url_path='sessions')
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def sessions(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        table: Table = get_object_or_404(Table, workspace=workspace, name=name)
+
+        sessions = TableSession.objects.filter(table=table.id)
+        serializer = TableSessionSerializer(sessions, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
