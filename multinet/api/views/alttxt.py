@@ -2,12 +2,16 @@ from typing import Type, Any, Union
 from pprint import pprint
 import json
 
+from pydantic import Json
+
+from rest_framework import viewsets
 from rest_framework.views import APIView
+from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from django.core.files.uploadedfile import UploadedFile
 
-from alttxt.enums import Level, Verbosity, Listable, Explanation, AggregateBy
+from alttxt.enums import Level, Verbosity, Explanation, AggregateBy
 from alttxt.generator import AltTxtGen
 from alttxt.models import DataModel, GrammarModel
 from alttxt.parser import Parser
@@ -20,7 +24,7 @@ class AlttxtSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, default="")
     data = serializers.FileField(required=True)
 
-class AlttxtQueryViewSet(APIView):
+class AlttxtQueryViewSet(viewsets.ViewSet):
     authentication_classes = []
     permission_classes = []
 
@@ -67,8 +71,4 @@ class AlttxtQueryViewSet(APIView):
         tokenmap: TokenMap = TokenMap(data, grammar, title)
         generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
 
-        return Response({'alttxt': generator.text})
-    
-    # Not sure why, but this method appears necessary to avoid a crash
-    def get_extra_actions():
-        return []
+        return JsonResponse(generator.text)
