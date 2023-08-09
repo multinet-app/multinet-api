@@ -3,7 +3,7 @@ import json
 
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from django.http import JsonResponse
-from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError, ParseError
 from rest_framework import status, serializers
 from django.core.files.uploadedfile import UploadedFile
 
@@ -24,7 +24,7 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
     authentication_classes = []
     permission_classes = []
 
-    def post(self, request) -> Response:
+    def post(self, request) -> JsonResponse:
         """
         Process and respond to a form-multipart request
         containing the params and data needed to generate an alttxt
@@ -33,7 +33,7 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
         # Get data and serialize it
         serializer = AlttxtSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(serializer.errors)
 
         # Fields into variables
         parsed_data = serializer.validated_data
@@ -50,15 +50,15 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
             elif isinstance(datafile, str):
                 data: dict = json.loads(datafile)
             else:
-                return Response({'error': 'Invalid data file: must be a JSON file or string'}, status=status.HTTP_400_BAD_REQUEST)
+                raise ParseError('Invalid data file: must be a JSON file or string')
         except json.decoder.JSONDecodeError as e:
-            return Response({'error': f'Invalid JSON: error while parsing: {e.msg}'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError(f'Invalid JSON: error while parsing: {e.msg}')
         
         # Validate the data
         if not isinstance(data, dict) or "firstAggregateBy" not in data or \
             AggregateBy(data["firstAggregateBy"]) != AggregateBy.NONE:
 
-            return Response({'error': 'Invalid data file: JSON must not be aggregated'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError('Invalid data file: JSON must not be aggregated')
         
         # Now parse & generate the alttxt
         parser: Parser = Parser(data)
@@ -67,4 +67,4 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
         tokenmap: TokenMap = TokenMap(data, grammar, title)
         generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
 
-        return Response({'alttxt': generator.text})
+        return JsonResponse({'alttxt': generator.text})
