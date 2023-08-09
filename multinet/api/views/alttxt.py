@@ -1,11 +1,7 @@
-from typing import Type, Any, Union
-from pprint import pprint
+from typing import Union
 import json
 
-from pydantic import Json
-
 from rest_framework import viewsets
-from rest_framework.views import APIView
 from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework import status, serializers
@@ -18,9 +14,9 @@ from alttxt.parser import Parser
 from alttxt.tokenmap import TokenMap
 
 class AlttxtSerializer(serializers.Serializer):
-    verbosity = serializers.ChoiceField(choices=[e.value for e in Verbosity])
-    level = serializers.ChoiceField(choices=[e.value for e in Level])
-    explain = serializers.ChoiceField(choices=[e.value for e in Explanation])
+    verbosity = serializers.ChoiceField(choices=Verbosity.list())
+    level = serializers.ChoiceField(choices=Level.list())
+    explain = serializers.ChoiceField(choices=Explanation.list())
     title = serializers.CharField(max_length=200, default="")
     data = serializers.FileField(required=True)
 
