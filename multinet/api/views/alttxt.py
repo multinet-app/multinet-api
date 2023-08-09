@@ -55,15 +55,22 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
             raise ParseError(f'Invalid JSON: error while parsing: {e.msg}')
         
         # Validate the data
-        if not isinstance(data, dict) or "firstAggregateBy" not in data or \
-            AggregateBy(data["firstAggregateBy"]) != AggregateBy.NONE:
+        try:
+            if not isinstance(data, dict) or "firstAggregateBy" not in data or \
+                AggregateBy(data["firstAggregateBy"]) != AggregateBy.NONE:
 
-            raise ValidationError('Invalid data file: JSON must not be aggregated')
-        
+                raise ValidationError('Invalid data file: JSON must not be aggregated')
+        except ValueError:
+            raise ValidationError(f'Invalid data file: {data["firstAggregateBy"]} is not a valid aggregation type')
+
         # Now parse & generate the alttxt
         parser: Parser = Parser(data)
-        grammar: GrammarModel = parser.get_grammar()
-        data: DataModel = parser.get_data()
+        try:
+            grammar: GrammarModel = parser.get_grammar()
+            data: DataModel = parser.get_data()
+        except ValueError as e:
+            raise ValidationError("Error while parsing data: " + str(e))
+        
         tokenmap: TokenMap = TokenMap(data, grammar, title)
         generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
 
