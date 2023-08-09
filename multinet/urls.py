@@ -20,6 +20,7 @@ from multinet.api.views import (
 )
 
 router = ExtendedSimpleRouter()
+router.register('alttxt', AlttxtQueryViewSet, basename='alttxt')
 workspaces_routes = router.register('workspaces', WorkspaceViewSet)
 workspaces_routes.register(
     'tables',
@@ -76,7 +77,6 @@ urlpatterns = [
     path('api/users/search', users_search_view),
     path('api/docs/redoc/', schema_view.with_ui('redoc'), name='docs-redoc'),
     path('swagger/', schema_view.with_ui('swagger'), name='docs-swagger'),
-    path('alttxt/', AlttxtQueryViewSet.as_view()),
 ]
 
 if settings.DEBUG:

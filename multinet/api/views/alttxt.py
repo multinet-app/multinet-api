@@ -1,7 +1,7 @@
 from typing import Union
 import json
 
-from rest_framework import viewsets
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework import status, serializers
@@ -20,7 +20,7 @@ class AlttxtSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, default="")
     data = serializers.FileField(required=True)
 
-class AlttxtQueryViewSet(viewsets.ViewSet):
+class AlttxtQueryViewSet(ReadOnlyModelViewSet):
     authentication_classes = []
     permission_classes = []
 
@@ -67,4 +67,4 @@ class AlttxtQueryViewSet(viewsets.ViewSet):
         tokenmap: TokenMap = TokenMap(data, grammar, title)
         generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
 
-        return JsonResponse(generator.text)
+        return Response({'alttxt': generator.text})
