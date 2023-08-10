@@ -1,17 +1,17 @@
 from typing import Union
 import json
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from rest_framework.exceptions import ValidationError, ParseError
-from rest_framework import status, serializers
 from django.core.files.uploadedfile import UploadedFile
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
+from rest_framework import serializers
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from alttxt.enums import Level, Verbosity, Explanation, AggregateBy
 from alttxt.generator import AltTxtGen
 from alttxt.models import DataModel, GrammarModel
 from alttxt.parser import Parser
 from alttxt.tokenmap import TokenMap
+
 
 class AlttxtSerializer(serializers.Serializer):
     verbosity = serializers.ChoiceField(choices=Verbosity.list())
