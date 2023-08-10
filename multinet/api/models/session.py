@@ -7,6 +7,7 @@ from .table import Table
 
 class Session(TimeStampedModel):
     name = models.CharField(max_length=300)
+    starred = models.BooleanField(default=False)
 
     visapp = models.CharField(max_length=64)
     state = models.JSONField()
