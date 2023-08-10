@@ -17,7 +17,7 @@ class Session(TimeStampedModel):
 
     def save(self, *args, **kwargs):
         if not isinstance(self.state, dict):
-            raise ValueError("State must be a dict")
+            raise ValueError('State must be a dict')
 
         super().save(*args, **kwargs)
 
