@@ -14,6 +14,12 @@ class Session(TimeStampedModel):
     class Meta:
         abstract = True
 
+    def save(self, *args, **kwargs):
+        if not isinstance(self.state, dict):
+            raise ValueError("State must be a dict")
+
+        super().save(*args, **kwargs)
+
 
 class TableSession(Session):
     table = models.ForeignKey(Table, on_delete=models.CASCADE)

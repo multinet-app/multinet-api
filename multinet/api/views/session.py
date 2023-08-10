@@ -1,4 +1,4 @@
-from django.http.response import Http404
+from django.http.response import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
@@ -64,7 +64,11 @@ class SessionViewSet(
         data = serializer.validated_data['state']
 
         session.state = data
-        session.save()
+
+        try:
+            session.save()
+        except ValueError as e:
+            return HttpResponseBadRequest(str(e))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
