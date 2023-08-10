@@ -242,13 +242,13 @@ class NetworkTablesSerializer(serializers.Serializer):
 class NetworkSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkSession
-        fields = '__all__'
+        exclude = ['starred']
 
 
 class TableSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableSession
-        fields = '__all__'
+        exclude = ['starred']
 
 
 class UploadCreateSerializer(serializers.Serializer):

@@ -41,6 +41,7 @@ class Workspace(TimeStampedModel):
     name = models.CharField(max_length=300, unique=True)
     public = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    starred = models.BooleanField(default=False)
 
     # Max length of 34, since uuid hexes are 32, + 2 chars on the front
     arango_db_name = models.CharField(
