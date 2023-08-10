@@ -9,6 +9,7 @@ class NetworkSessionAdmin(GuardedModelAdmin):
     list_display = ['id', 'name', 'created', 'modified', 'starred', 'network']
     readonly_fields = ['id', 'created']
 
+
 @admin.register(TableSession)
 class TableSessionAdmin(GuardedModelAdmin):
     list_display = ['id', 'name', 'created', 'modified', 'starred']

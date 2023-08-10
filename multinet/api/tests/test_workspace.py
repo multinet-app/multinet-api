@@ -182,6 +182,7 @@ def test_workspace_rest_retrieve(
             'modified': TIMESTAMP_RE,
             'arango_db_name': workspace.arango_db_name,
             'public': False,
+            'starred': False,
         }
 
 
@@ -198,6 +199,7 @@ def test_workspace_rest_retrieve_public(
         'modified': TIMESTAMP_RE,
         'arango_db_name': public_workspace.arango_db_name,
         'public': True,
+        'starred': False,
     }
 
 
