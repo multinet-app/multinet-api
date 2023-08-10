@@ -252,7 +252,7 @@ class NetworkSessionCreateSerializer(serializers.ModelSerializer):
 class NetworkSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkSession
-        fields = NetworkSessionCreateSerializer.Meta.fields + ['starred']
+        fields = NetworkSessionCreateSerializer.Meta.fields + ['starred', 'id']
         read_only_fields = ['created']
 
 
@@ -270,7 +270,7 @@ class TableSessionCreateSerializer(serializers.ModelSerializer):
 class TableSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableSession
-        fields = TableSessionCreateSerializer.Meta.fields + ['starred']
+        fields = TableSessionCreateSerializer.Meta.fields + ['starred', 'id']
         read_only_fields = ['created']
 
 
