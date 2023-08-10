@@ -15,7 +15,12 @@ from rest_framework.viewsets import GenericViewSet
 from ..auth.decorators import require_workspace_permission
 from ..models import NetworkSession, TableSession, Workspace, WorkspaceRoleChoice
 from .common import NetworkWorkspaceChildMixin, TableWorkspaceChildMixin
-from .serializers import NetworkSessionSerializer, TableSessionSerializer
+from .serializers import (
+    NetworkSessionCreateSerializer,
+    NetworkSessionSerializer,
+    TableSessionCreateSerializer,
+    TableSessionSerializer,
+)
 
 
 class SessionStatePatchSerializer(serializers.Serializer):
@@ -83,7 +88,16 @@ class NetworkSessionViewSet(NetworkWorkspaceChildMixin, SessionViewSet):
     queryset = NetworkSession.objects.all().select_related('network__workspace')
     serializer_class = NetworkSessionSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return NetworkSessionCreateSerializer
+        return NetworkSessionSerializer
+
 
 class TableSessionViewSet(TableWorkspaceChildMixin, SessionViewSet):
     queryset = TableSession.objects.all().select_related('table__workspace')
-    serializer_class = TableSessionSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TableSessionCreateSerializer
+        return TableSessionSerializer

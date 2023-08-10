@@ -237,16 +237,41 @@ class NetworkTablesSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
 
 
+class NetworkSessionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NetworkSession
+        # All fields expect for starred
+        fields = [
+            'name',
+            'visapp',
+            'state',
+            'network',
+        ]
+
+
 class NetworkSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkSession
-        exclude = ['starred']
+        fields = NetworkSessionCreateSerializer.Meta.fields + ['starred']
+        read_only_fields = ['created']
+
+
+class TableSessionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TableSession
+        fields = [
+            'name',
+            'visapp',
+            'state',
+            'table',
+        ]
 
 
 class TableSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableSession
-        exclude = ['starred']
+        fields = TableSessionCreateSerializer.Meta.fields + ['starred']
+        read_only_fields = ['created']
 
 
 class UploadCreateSerializer(serializers.Serializer):
