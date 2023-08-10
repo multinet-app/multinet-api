@@ -58,9 +58,7 @@ class WorkspaceRenameSerializer(serializers.ModelSerializer):
 class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
-        fields = WorkspaceCreateSerializer.Meta.fields + [
-            'arango_db_name',
-        ]
+        fields = WorkspaceCreateSerializer.Meta.fields + ['arango_db_name', 'starred']
         read_only_fields = ['created']
 
 
