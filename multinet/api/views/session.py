@@ -97,6 +97,19 @@ class NetworkSessionViewSet(NetworkWorkspaceChildMixin, SessionViewSet):
             return NetworkSessionCreateSerializer
         return NetworkSessionSerializer
 
+    @swagger_auto_schema(
+        request_body=NetworkSessionCreateSerializer, responses={201: NetworkSessionSerializer}
+    )
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def create(self, request, parent_lookup_workspace__name: str):
+        input_serializer = NetworkSessionCreateSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        instance = NetworkSession.objects.create(**input_serializer.validated_data)
+
+        output_serializer = NetworkSessionSerializer(instance)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
 
 class TableSessionViewSet(TableWorkspaceChildMixin, SessionViewSet):
     queryset = TableSession.objects.all().select_related('table__workspace')
@@ -105,3 +118,16 @@ class TableSessionViewSet(TableWorkspaceChildMixin, SessionViewSet):
         if self.action == 'create':
             return TableSessionCreateSerializer
         return TableSessionSerializer
+
+    @swagger_auto_schema(
+        request_body=TableSessionCreateSerializer, responses={201: TableSessionSerializer}
+    )
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def create(self, request):
+        input_serializer = TableSessionCreateSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        instance = TableSession.objects.create(**input_serializer.validated_data)
+
+        output_serializer = TableSessionSerializer(instance)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
