@@ -58,9 +58,7 @@ class WorkspaceRenameSerializer(serializers.ModelSerializer):
 class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
-        fields = WorkspaceCreateSerializer.Meta.fields + [
-            'arango_db_name',
-        ]
+        fields = WorkspaceCreateSerializer.Meta.fields + ['arango_db_name', 'starred']
         read_only_fields = ['created']
 
 
@@ -239,16 +237,41 @@ class NetworkTablesSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['node', 'edge', 'all'], default='all', required=False)
 
 
+class NetworkSessionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NetworkSession
+        # All fields expect for starred
+        fields = [
+            'name',
+            'visapp',
+            'state',
+            'network',
+        ]
+
+
 class NetworkSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkSession
-        fields = '__all__'
+        fields = NetworkSessionCreateSerializer.Meta.fields + ['starred', 'id']
+        read_only_fields = ['created']
+
+
+class TableSessionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TableSession
+        fields = [
+            'name',
+            'visapp',
+            'state',
+            'table',
+        ]
 
 
 class TableSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TableSession
-        fields = '__all__'
+        fields = TableSessionCreateSerializer.Meta.fields + ['starred', 'id']
+        read_only_fields = ['created']
 
 
 class UploadCreateSerializer(serializers.Serializer):

@@ -44,6 +44,7 @@ def workspace_re(workspace: Workspace):
         'modified': TIMESTAMP_RE,
         'arango_db_name': workspace.arango_db_name,
         'public': workspace.public,
+        'starred': workspace.starred,
     }
 
 

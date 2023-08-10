@@ -1,4 +1,4 @@
-from django.http.response import Http404
+from django.http.response import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
@@ -15,22 +15,12 @@ from rest_framework.viewsets import GenericViewSet
 from ..auth.decorators import require_workspace_permission
 from ..models import NetworkSession, TableSession, Workspace, WorkspaceRoleChoice
 from .common import NetworkWorkspaceChildMixin, TableWorkspaceChildMixin
-from .serializers import NetworkSessionSerializer, TableSessionSerializer
-
-
-class SessionCreateSerializer(serializers.Serializer):
-    workspace = serializers.CharField()
-    network = serializers.CharField(required=False)
-    table = serializers.CharField(required=False)
-
-    visapp = serializers.CharField()
-    name = serializers.CharField()
-
-    def validate(self, data):
-        if not bool(data.get('network')) ^ bool(data.get('table')):
-            raise serializers.ValidationError('exactly one of `network` or `table` is required')
-
-        return data
+from .serializers import (
+    NetworkSessionCreateSerializer,
+    NetworkSessionSerializer,
+    TableSessionCreateSerializer,
+    TableSessionSerializer,
+)
 
 
 class SessionStatePatchSerializer(serializers.Serializer):
@@ -58,6 +48,9 @@ class SessionViewSet(
         )
         if workspace.id != session_ws.id:
             raise Http404
+
+        if session.starred:
+            return HttpResponseForbidden('Starred session state cannot be modified')
 
         serializer = SessionStatePatchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -95,7 +88,16 @@ class NetworkSessionViewSet(NetworkWorkspaceChildMixin, SessionViewSet):
     queryset = NetworkSession.objects.all().select_related('network__workspace')
     serializer_class = NetworkSessionSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return NetworkSessionCreateSerializer
+        return NetworkSessionSerializer
+
 
 class TableSessionViewSet(TableWorkspaceChildMixin, SessionViewSet):
     queryset = TableSession.objects.all().select_related('table__workspace')
-    serializer_class = TableSessionSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TableSessionCreateSerializer
+        return TableSessionSerializer
