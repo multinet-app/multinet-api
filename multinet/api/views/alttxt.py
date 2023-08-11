@@ -38,8 +38,8 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
         # Get data and serialize it
         serializer = AlttxtSerializer(data=request.data)
         if not serializer.is_valid():
-            return HttpResponseBadRequest('Error validating fields: ' +
-                    str(serializer.errors))
+            return HttpResponseBadRequest('Error validating fields: '
+                                          + str(serializer.errors))
 
         # Fields into variables
         parsed_data = serializer.validated_data
@@ -57,24 +57,25 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
                 data: dict = json.loads(datafile)
             else:
                 return HttpResponseBadRequest('Invalid data file: must'
-                        ' be a JSON file or string')
+                                              ' be a JSON file or string')
 
         except json.decoder.JSONDecodeError as e:
             return HttpResponseBadRequest('Invalid JSON: '
-                    f"error while parsing: {e.msg}")
+                                          f"error while parsing: {e.msg}")
 
         # Validate the data
         try:
             if not isinstance(data, dict) or \
-                    'firstAggregateBy' not in data or \
-                    AggregateBy(data['firstAggregateBy']) != AggregateBy.NONE:
+                              'firstAggregateBy' not in data or \
+                              AggregateBy(data['firstAggregateBy']) \
+                              != AggregateBy.NONE:
 
                 return HttpResponseBadRequest('Invalid data file: JSON'
-                        ' must be aggregated by NONE')
+                                              ' must be aggregated by NONE')
         except ValueError:
             return HttpResponseBadRequest('Invalid data file: '
-                    f"{data['firstAggregateBy']} is not "
-                    'a valid aggregation type')
+                                          f"{data['firstAggregateBy']} is not "
+                                          'a valid aggregation type')
 
         # Now parse & generate the alttxt
         parser: Parser = Parser(data)
@@ -83,10 +84,10 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
             data: DataModel = parser.get_data()
         except ValueError as e:
             return HttpResponseBadRequest('Error while parsing data: '
-                    + str(e))
+                                          + str(e))
 
         tokenmap: TokenMap = TokenMap(data, grammar, title)
         generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap,
-                grammar)
+                                         grammar)
 
         return JsonResponse({'alttxt': generator.text})
