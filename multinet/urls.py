@@ -7,6 +7,7 @@ from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
+    AlttxtQueryViewSet,
     AqlQueryViewSet,
     NetworkSessionViewSet,
     NetworkViewSet,
@@ -14,7 +15,6 @@ from multinet.api.views import (
     TableViewSet,
     UploadViewSet,
     WorkspaceViewSet,
-    AlttxtQueryViewSet,
     users_me_view,
     users_search_view,
 )
