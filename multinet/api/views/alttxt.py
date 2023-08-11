@@ -61,14 +61,13 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
 
         except json.decoder.JSONDecodeError as e:
             return HttpResponseBadRequest('Invalid JSON: '
-                                          f"error while parsing: {e.msg}")
+                                          f'error while parsing: {e.msg}')
 
         # Validate the data
         try:
             if not isinstance(data, dict) or \
-                              'firstAggregateBy' not in data or \
-                              AggregateBy(data['firstAggregateBy']) \
-                              != AggregateBy.NONE:
+                    'firstAggregateBy' not in data or \
+                    AggregateBy(data['firstAggregateBy']) != AggregateBy.NONE:
 
                 return HttpResponseBadRequest('Invalid data file: JSON'
                                               ' must be aggregated by NONE')
