@@ -7,20 +7,19 @@ from rest_framework import permissions
 from rest_framework_extensions.routers import ExtendedSimpleRouter
 
 from multinet.api.views import (
-    AlttxtQueryViewSet,
     AqlQueryViewSet,
     NetworkSessionViewSet,
     NetworkViewSet,
     TableSessionViewSet,
     TableViewSet,
     UploadViewSet,
+    UpsetAltTextGenerate,
     WorkspaceViewSet,
     users_me_view,
     users_search_view,
 )
 
 router = ExtendedSimpleRouter()
-router.register('alttxt', AlttxtQueryViewSet, basename='alttxt')
 workspaces_routes = router.register('workspaces', WorkspaceViewSet)
 workspaces_routes.register(
     'tables',
@@ -73,6 +72,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/s3-upload/', include('s3_file_field.urls')),
     path('api/', include(router.urls)),
+    path('api/alttxt/', UpsetAltTextGenerate.as_view()),
     path('api/users/me', users_me_view),
     path('api/users/search', users_search_view),
     path('api/docs/redoc/', schema_view.with_ui('redoc'), name='docs-redoc'),

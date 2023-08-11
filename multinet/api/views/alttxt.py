@@ -8,8 +8,10 @@ from alttxt.parser import Parser
 from alttxt.tokenmap import TokenMap
 from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.parsers import MultiPartParser
+from rest_framework.views import APIView
 
 
 class AlttxtSerializer(serializers.Serializer):
@@ -17,13 +19,15 @@ class AlttxtSerializer(serializers.Serializer):
     level = serializers.ChoiceField(choices=Level.list())
     explain = serializers.ChoiceField(choices=Explanation.list())
     title = serializers.CharField(max_length=200, default='')
-    data = serializers.FileField(required=True)
+    data = serializers.FileField(allow_empty_file=False)
 
 
-class AlttxtQueryViewSet(ReadOnlyModelViewSet):
+class UpsetAltTextGenerate(APIView):
     authentication_classes = []
     permission_classes = []
+    parser_classes = [MultiPartParser]
 
+    @swagger_auto_schema(request_body=AlttxtSerializer)
     def post(self, request) -> HttpResponse:
         """
         Take params and returns an alttxt.

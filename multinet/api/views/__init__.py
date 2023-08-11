@@ -1,4 +1,4 @@
-from .alttxt import AlttxtQueryViewSet
+from .alttxt import UpsetAltTextGenerate
 from .network import NetworkViewSet
 from .query import AqlQueryViewSet
 from .session import NetworkSessionViewSet, TableSessionViewSet
@@ -17,5 +17,5 @@ __all__ = [
     'UploadViewSet',
     'WorkspaceViewSet',
     'AqlQueryViewSet',
-    'AlttxtQueryViewSet',
+    'UpsetAltTextGenerate',
 ]
