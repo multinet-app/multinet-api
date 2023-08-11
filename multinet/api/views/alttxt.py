@@ -1,16 +1,15 @@
-from typing import Union
 import json
+from typing import Union
 
-from django.core.files.uploadedfile import UploadedFile
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from rest_framework import serializers
-from rest_framework.viewsets import ReadOnlyModelViewSet
-
-from alttxt.enums import Level, Verbosity, Explanation, AggregateBy
+from alttxt.enums import AggregateBy, Explanation, Level, Verbosity
 from alttxt.generator import AltTxtGen
 from alttxt.models import DataModel, GrammarModel
 from alttxt.parser import Parser
 from alttxt.tokenmap import TokenMap
+from django.core.files.uploadedfile import UploadedFile
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from rest_framework import serializers
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
 
 class AlttxtSerializer(serializers.Serializer):
@@ -22,7 +21,6 @@ class AlttxtSerializer(serializers.Serializer):
 
 
 class AlttxtQueryViewSet(ReadOnlyModelViewSet):
-
     authentication_classes = []
     permission_classes = []
 
@@ -38,8 +36,7 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
         # Get data and serialize it
         serializer = AlttxtSerializer(data=request.data)
         if not serializer.is_valid():
-            return HttpResponseBadRequest('Error validating fields: '
-                                          + str(serializer.errors))
+            return HttpResponseBadRequest('Error validating fields: ' + str(serializer.errors))
 
         # Fields into variables
         parsed_data = serializer.validated_data
@@ -56,25 +53,27 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
             elif isinstance(datafile, str):
                 data: dict = json.loads(datafile)
             else:
-                return HttpResponseBadRequest('Invalid data file: must'
-                                              ' be a JSON file or string')
+                return HttpResponseBadRequest('Invalid data file: must' ' be a JSON file or string')
 
         except json.decoder.JSONDecodeError as e:
-            return HttpResponseBadRequest('Invalid JSON: '
-                                          f'error while parsing: {e.msg}')
+            return HttpResponseBadRequest('Invalid JSON: ' f'error while parsing: {e.msg}')
 
         # Validate the data
         try:
-            if not isinstance(data, dict) or \
-                    'firstAggregateBy' not in data or \
-                    AggregateBy(data['firstAggregateBy']) != AggregateBy.NONE:
-
-                return HttpResponseBadRequest('Invalid data file: JSON'
-                                              ' must be aggregated by NONE')
+            if (
+                not isinstance(data, dict)
+                or 'firstAggregateBy' not in data
+                or AggregateBy(data['firstAggregateBy']) != AggregateBy.NONE
+            ):
+                return HttpResponseBadRequest(
+                    'Invalid data file: JSON' ' must be aggregated by NONE'
+                )
         except ValueError:
-            return HttpResponseBadRequest('Invalid data file: '
-                                          f"{data['firstAggregateBy']} is not "
-                                          'a valid aggregation type')
+            return HttpResponseBadRequest(
+                'Invalid data file: '
+                f"{data['firstAggregateBy']} is not "
+                'a valid aggregation type'
+            )
 
         # Now parse & generate the alttxt
         parser: Parser = Parser(data)
@@ -82,11 +81,9 @@ class AlttxtQueryViewSet(ReadOnlyModelViewSet):
             grammar: GrammarModel = parser.get_grammar()
             data: DataModel = parser.get_data()
         except ValueError as e:
-            return HttpResponseBadRequest('Error while parsing data: '
-                                          + str(e))
+            return HttpResponseBadRequest('Error while parsing data: ' + str(e))
 
         tokenmap: TokenMap = TokenMap(data, grammar, title)
-        generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap,
-                                         grammar)
+        generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
 
         return JsonResponse({'alttxt': generator.text})
