@@ -123,7 +123,7 @@ class TableSessionViewSet(TableWorkspaceChildMixin, SessionViewSet):
         request_body=TableSessionCreateSerializer, responses={201: TableSessionSerializer}
     )
     @require_workspace_permission(WorkspaceRoleChoice.WRITER)
-    def create(self, request):
+    def create(self, request, parent_lookup_workspace__name: str):
         input_serializer = TableSessionCreateSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
