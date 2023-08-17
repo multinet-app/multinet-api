@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import RedirectView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
@@ -65,6 +66,9 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Override allauth login and signup to use Google OAuth2
+    path('accounts/login/', RedirectView.as_view(url='/accounts/google/login/')),
+    path('accounts/signup/', RedirectView.as_view(url='/accounts/google/login/')),
     path('accounts/', include('allauth.urls')),
     path('oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('admin/', admin.site.urls),
