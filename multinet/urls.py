@@ -14,6 +14,7 @@ from multinet.api.views import (
     TableSessionViewSet,
     TableViewSet,
     UploadViewSet,
+    UpsetAltTextGenerate,
     WorkspaceViewSet,
     users_me_view,
     users_search_view,
@@ -45,6 +46,7 @@ workspaces_routes.register(
     basename='query',
     parents_query_lookups=[f'workspace__{WorkspaceViewSet.lookup_field}'],
 )
+
 workspaces_routes.register(
     'sessions/network',
     NetworkSessionViewSet,
@@ -74,6 +76,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/s3-upload/', include('s3_file_field.urls')),
     path('api/', include(router.urls)),
+    path('api/alttxt/', UpsetAltTextGenerate.as_view()),
     path('api/users/me', users_me_view),
     path('api/users/search', users_search_view),
     path('api/docs/redoc/', schema_view.with_ui('redoc'), name='docs-redoc'),
