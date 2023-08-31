@@ -1,3 +1,4 @@
+import time
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
@@ -219,3 +220,27 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer = NetworkSessionSerializer(sessions, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        print(f'running label propagation on {workspace.name}/{network.name}')
+        db = workspace.get_arango_db()
+        job_id = db.pregel.create_job(
+            graph=network.name,
+            algorithm='labelpropagation',
+            store=True,
+            async_mode=False,
+            result_field='_community_LP',
+        )
+        job = db.pregel.job(job_id)
+
+        while job['state'] in {'running', 'storing'}:
+            time.sleep(0.25)
+            print('[label propagation] waiting')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
