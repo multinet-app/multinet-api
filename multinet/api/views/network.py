@@ -1,3 +1,4 @@
+import time
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
@@ -163,6 +164,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         return pagination.get_paginated_response(paginated_query)
 
+
     @swagger_auto_schema(
         query_serializer=LimitOffsetSerializer(),
         responses={200: PaginatedResultSerializer()},
@@ -180,6 +182,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         paginated_query = pagination.paginate_queryset(query, request)
 
         return pagination.get_paginated_response(paginated_query)
+
 
     @swagger_auto_schema(
         query_serializer=NetworkTablesSerializer(),
@@ -206,6 +209,7 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
     @swagger_auto_schema(
         responses={200: NetworkSessionSerializer(many=True)},
     )
@@ -219,3 +223,146 @@ class NetworkViewSet(WorkspaceChildMixin, DetailSerializerMixin, ReadOnlyModelVi
         serializer = NetworkSessionSerializer(sessions, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+    # The next few routines calculate network analysis parameters. They use network connectivty and
+    # write answers back in the node records.  They run as either pregel jobs or AQL queries inside arangoDB
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def label_propagation_community_detection_algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        print(f'running label propagation on {workspace.name}/{network.name}')
+        db = workspace.get_arango_db()
+        job_id = db.pregel.create_job(
+            graph=network.name,
+            algorithm='labelpropagation',
+            store=True,
+            async_mode=False,
+            result_field='_community_LP',
+        )
+        job = db.pregel.job(job_id)
+
+        while job['state'] in {'running', 'storing'}:
+            time.sleep(0.25)
+            print('[label propagation] waiting')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def speaker_listener_community_detection_algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        print(f'running SLPA community detection on {workspace.name}/{network.name}')
+        db = workspace.get_arango_db()
+        job_id = db.pregel.create_job(
+            graph=network.name,
+            algorithm='slpa',
+            store=True,
+            async_mode=False,
+            result_field='_community_SLPA',
+        )
+        job = db.pregel.job(job_id)
+
+        while job['state'] in {'running', 'storing'}:
+            time.sleep(0.25)
+            print('[SLPA community detect] waiting')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def pagerank_algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        print(f'running pagerank on {workspace.name}/{network.name}')
+        db = workspace.get_arango_db()
+        job_id = db.pregel.create_job(
+            graph=network.name,
+            algorithm='pagerank',
+            store=True,
+            async_mode=False,
+            result_field='_pagerank',
+        )
+        job = db.pregel.job(job_id)
+
+        while job['state'] in {'running', 'storing'}:
+            time.sleep(0.25)
+            print('[pagerank] waiting')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def centrality_algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        print(f'running centrality on {workspace.name}/{network.name}')
+        db = workspace.get_arango_db()
+        job_id = db.pregel.create_job(
+            graph=network.name,
+            algorithm='linerank',
+            store=True,
+            async_mode=False,
+            result_field='_centrality',
+        )
+        job = db.pregel.job(job_id)
+
+        while job['state'] in {'running', 'storing'}:
+            time.sleep(0.25)
+            print('[pagerank] waiting')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+    @swagger_auto_schema()
+    @action(detail=True, methods=['POST'])
+    @require_workspace_permission(WorkspaceRoleChoice.WRITER)
+    def degree_algorithm(self, request, parent_lookup_workspace__name: str, name: str):
+        workspace: Workspace = get_object_or_404(Workspace, name=parent_lookup_workspace__name)
+        network: Network = get_object_or_404(Network, workspace=workspace, name=name)
+
+        # iterate through the node tables and calculate the node degree by counting the results discovered 
+        # from each 1-hop traversal.  This process has to be repeated for each node_table because of 
+        # limitations in AQL (or our understanding of AQL).  Our current understanding is that an AQL query can only work 
+        # over a single collection at a time.  So this loop below repeats the query for each node_table. An 
+        # UPDATE operation is performed to write the degree back into the node records.  To change this to in or out
+        # degree, the "ANY" keyword below would be changed to IN or OUT
+
+        print('views/network/calculate_degree not implemented yet.')
+        
+        try:
+            node_tables = network.node_tables()
+            print('node tables',node_tables)
+            for collName in node_tables:
+                print('calculating degree for nodes in',collName)
+                query_str = """FOR doc in @@COLL
+                        UPDATE {"_key": doc._key,
+                        "_degree" : LENGTH(for edge 
+                            in 1 ANY doc._id 
+                            graph @graphName
+                            return edge._id
+                            )
+                        } in @@COLL
+                    RETURN doc._id """
+                # set the node collection and graph name dynamically
+                graphname = network.get_arango_graph()
+                bind_vars = {'@COLL': collName, 'graphName': graphname}
+                cursor = arango_db.aql.execute(query=query_str, bind_vars=bind_vars)
+        except:
+                print('AQL error auto-calculating node degree on network:',network.name)
+                print('AQL attempted was:')
+                print(query_str)
+                print('bind variables were: @COLL:',collName, 'graphName:',name)
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
