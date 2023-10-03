@@ -211,3 +211,15 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         except ArangoServerError as err:
             # Arango server errors unrelated to the client's query
             return Response(err.error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['GET'])
+    @require_workspace_permission(WorkspaceRoleChoice.READER)
+    def network_build_requests(self, request, name: str):
+        # Use the workspace parameter in your code
+        workspace_obj: Workspace = Workspace.objects.get(name=name)
+
+        # Needs root access since root is making the AQL query job
+        db = workspace_obj.get_arango_db(readonly=False)
+        jobs = db.async_jobs('pending')
+
+        return Response(data=jobs, status=status.HTTP_200_OK)
