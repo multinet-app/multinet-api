@@ -79,7 +79,7 @@ def maybe_insert_join_statement(query: str, bind_vars: Dict, table_dict: Dict) -
             LET foreign_doc = (
                 FIRST(
                     FOR doc in @@JOINING_TABLE
-                        FILTER new_doc.@JOIN_COL_LOCAL == doc.@JOIN_COL_FOREIGN
+                        FILTER new_doc.@JOIN_COL_LOCAL =~ doc.@JOIN_COL_FOREIGN
                         return doc
                 ) || {}
             )
@@ -113,7 +113,7 @@ def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> s
     query_str = """
         FOR og_doc in @@ORIGINAL_TABLE
             // Copy doc, excluding specified columns
-            LET excluded = APPEND(['_id', '_key', 'rev'], @EXCLUDED_COLS)
+            LET excluded = APPEND(['_id', 'rev'], @EXCLUDED_COLS)
             LET new_doc = UNSET(og_doc, excluded)
     """
 
@@ -178,13 +178,13 @@ def create_csv_network(workspace: Workspace, serializer):
             // Find matching source doc
             LET source_doc = FIRST(
                 FOR dd in @@SOURCE_TABLE
-                    FILTER edge_doc.@SOURCE_LINK_LOCAL == dd.@SOURCE_LINK_FOREIGN
+                    FILTER edge_doc.@SOURCE_LINK_LOCAL =~ dd.@SOURCE_LINK_FOREIGN
                     return dd
             )
             // Find matching target doc
             LET target_doc = FIRST(
                 FOR dd in @@TARGET_TABLE
-                    FILTER edge_doc.@TARGET_LINK_LOCAL == dd.@TARGET_LINK_FOREIGN
+                    FILTER edge_doc.@TARGET_LINK_LOCAL =~ dd.@TARGET_LINK_FOREIGN
                     return dd
             )
 
@@ -192,7 +192,7 @@ def create_csv_network(workspace: Workspace, serializer):
             FILTER source_doc != null && target_doc != null
 
             // Add _from/_to to new doc, remove internal fields, insert into new coll
-            LET excluded = APPEND(['_id', '_key', 'rev'], @EXCLUDED_COLS)
+            LET excluded = APPEND(['_id', 'rev'], @EXCLUDED_COLS)
             LET new_edge_doc = MERGE(edge_doc, {'_from': source_doc._id, '_to': target_doc._id})
             LET new_doc = UNSET(new_edge_doc, excluded)
     """
@@ -203,17 +203,19 @@ def create_csv_network(workspace: Workspace, serializer):
             INSERT final_doc INTO @@NEW_TABLE
     """
 
-    # Execute query
-    ArangoQuery(
-        workspace.get_arango_db(readonly=False),
-        query_str=query_str,
-        bind_vars=bind_vars,
-    ).execute()
-
     # Create network
-    return Network.create_with_edge_definition(
+    network = Network.create_with_edge_definition(
         name=network_name,
         workspace=workspace,
         edge_table=new_edge_table_name,
         node_tables=[source_table, target_table],
     )
+
+    # Execute query asynchronously
+    ArangoQuery(
+        workspace.get_arango_db(readonly=False),
+        query_str=query_str,
+        bind_vars=bind_vars,
+    ).execute(aSync=True)
+
+    return network
