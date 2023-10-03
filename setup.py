@@ -39,7 +39,7 @@ setup(
         'celery',
         'django~=3.2.11',
         'django-admin-display',
-        'django-allauth',
+        'django-allauth>=0.57.0',
         'django-composed-configuration[dev,prod]>=0.10.0',
         'django-configurations[database,email]',
         'django-extensions',
