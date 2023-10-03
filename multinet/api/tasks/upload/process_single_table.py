@@ -57,6 +57,15 @@ def process_row(
         if len(new_row['_from'].split('/')) > 2 or len(new_row['_to'].split('/')) > 2:
             return None
 
+    # Check for problematic column names: _from, _to. These must be coded as source and target if they exist
+    # If they're not coded that way, we need to fix the column names or they will be skipped.
+    # Hopefully `fixed_from` and `fixed_to` will never clash 🤞🏻
+    elif new_row.get('_from') is not None or new_row.get('_to') is not None:
+        if new_row.get('_from') is not None:
+            new_row['fixed_from'] = str(new_row.pop('_from'))
+        if new_row.get('_to') is not None:
+            new_row['fixed_to'] = str(new_row.pop('_to'))
+
     for col_key, col_type in cols.items():
         # If column type is IGNORED, skip
         if col_type == TableTypeAnnotation.Type.IGNORED:
