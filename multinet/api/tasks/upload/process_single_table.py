@@ -57,7 +57,8 @@ def process_row(
         if len(new_row['_from'].split('/')) > 2 or len(new_row['_to'].split('/')) > 2:
             return None
 
-    # Check for problematic column names: _from, _to. These must be coded as source and target if they exist
+    # Check for problematic column names: _from, _to.
+    # These must be coded as source and target if they exist.
     # If they're not coded that way, we need to fix the column names or they will be skipped.
     # Hopefully `fixed_from` and `fixed_to` will never clash 🤞🏻
     elif new_row.get('_from') is not None or new_row.get('_to') is not None:

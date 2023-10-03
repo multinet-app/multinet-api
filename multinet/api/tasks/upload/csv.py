@@ -216,6 +216,6 @@ def create_csv_network(workspace: Workspace, serializer):
         workspace.get_arango_db(readonly=False),
         query_str=query_str,
         bind_vars=bind_vars,
-    ).execute(aSync=True)
+    ).execute(asynchronous=True)
 
     return network
