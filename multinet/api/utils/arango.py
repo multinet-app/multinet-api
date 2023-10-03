@@ -131,7 +131,7 @@ class ArangoQuery:
         new_query_str = f'FOR doc IN ({self.query_str}) LIMIT {offset}, {limit} RETURN doc'
         return ArangoQuery(self.db, query_str=new_query_str, bind_vars=self.bind_vars)
 
-    def execute(self, aSync=False, **kwargs) -> Cursor:
+    def execute(self, asynchronous=False, **kwargs) -> Cursor:
         """
         Execute an AQL query with the instantiated query_str and bind_vars.
 
@@ -144,7 +144,7 @@ class ArangoQuery:
         if 'memory_limit' not in kwargs:
             kwargs['memory_limit'] = self.memory_limit_bytes
 
-        if aSync:
+        if asynchronous:
             db = self.db.begin_async_execution(return_result=True)
 
         else:
