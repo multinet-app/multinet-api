@@ -16,8 +16,8 @@ from rest_framework.views import APIView
 
 class AlttxtSerializer(serializers.Serializer):
     verbosity = serializers.ChoiceField(choices=Verbosity.list())
-    level = serializers.ChoiceField(choices=Level.list())
     explain = serializers.ChoiceField(choices=Explanation.list())
+    level = serializers.ChoiceField(choices=Level.list(), default='default')
     title = serializers.CharField(max_length=200, default='')
     data = serializers.FileField(allow_empty_file=False)
 
