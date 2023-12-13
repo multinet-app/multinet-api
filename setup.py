@@ -46,7 +46,7 @@ setup(
         'django-filter',
         'django-guardian',
         'django-oauth-toolkit==1.3.2',
-        'django-s3-file-field[minio,boto3]>=0.3.0',
+        'django-s3-file-field[minio,boto3]~=0.3.0',
         'djangorestframework',
         'drf-extensions',
         'drf-yasg',
