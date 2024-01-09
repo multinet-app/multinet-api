@@ -52,7 +52,7 @@ setup(
         'drf-yasg',
         'more-itertools',
         'python-arango',
-        'upset-alttxt>=0.1.11',
+        'upset-alttxt>=0.2.1',
         # Production-only
         'gunicorn',
         # Development-only

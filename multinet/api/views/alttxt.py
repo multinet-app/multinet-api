@@ -1,7 +1,7 @@
 import json
 from typing import Union
 
-from alttxt.enums import AggregateBy, Explanation, Level, Verbosity
+from alttxt.enums import AggregateBy, Level
 from alttxt.generator import AltTxtGen
 from alttxt.models import DataModel, GrammarModel
 from alttxt.parser import Parser
@@ -15,9 +15,8 @@ from rest_framework.views import APIView
 
 
 class AlttxtSerializer(serializers.Serializer):
-    verbosity = serializers.ChoiceField(choices=Verbosity.list())
-    explain = serializers.ChoiceField(choices=Explanation.list())
     level = serializers.ChoiceField(choices=Level.list(), default='default')
+    structured = serializers.BooleanField()
     title = serializers.CharField(max_length=200, default='')
     data = serializers.FileField(allow_empty_file=False)
 
@@ -44,10 +43,9 @@ class UpsetAltTextGenerate(APIView):
 
         # Fields into variables
         parsed_data = serializer.validated_data
-        verbosity: Verbosity = Verbosity(parsed_data['verbosity'])
         level: Level = Level(parsed_data['level'])
-        explain: Explanation = Explanation(parsed_data['explain'])
         title: str = parsed_data['title']
+        structured: bool = parsed_data['structured']
         datafile: Union[UploadedFile, str] = parsed_data['data']
 
         # Load the data
@@ -88,6 +86,6 @@ class UpsetAltTextGenerate(APIView):
             return HttpResponseBadRequest('Error while parsing data: ' + str(e))
 
         tokenmap: TokenMap = TokenMap(data, grammar, title)
-        generator: AltTxtGen = AltTxtGen(level, verbosity, explain, tokenmap, grammar)
+        generator: AltTxtGen = AltTxtGen(level, structured, tokenmap, grammar)
 
         return JsonResponse({'alttxt': generator.text})
