@@ -4,7 +4,7 @@ jobs:
   test:
     docker:
       - image: cimg/python:3.12
-      - image: cimg/postgres:latest
+      - image: cimg/postgres:14.10
         environment:
           POSTGRES_DB: django
           POSTGRES_PASSWORD: postgres
