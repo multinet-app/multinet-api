@@ -3,8 +3,8 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: circleci/python:3.12
-      - image: circleci/postgres:latest-ram
+      - image: cimg/python:3.12
+      - image: cimg/postgres:latest-ram
         environment:
           POSTGRES_DB: django
           POSTGRES_PASSWORD: postgres
