@@ -96,7 +96,7 @@ def create_table(workspace: Workspace, network_name: str, table_dict: Dict) -> s
     """Create table from definition, including joins."""
     # table_dict has the shape of the FullTable serializer
     original_table_name = table_dict['name']
-    new_table_name = f'{network_name}--{table_dict["name"]}'
+    new_table_name = f'{network_name}--{table_dict["name"]}'  # noqa: Q000
     excluded_columns = table_dict['excluded']
 
     # Create table, deleting any data if it already exists

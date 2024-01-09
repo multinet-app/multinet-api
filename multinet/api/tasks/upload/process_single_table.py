@@ -41,10 +41,10 @@ def process_row(
 
         # Add node_table_name to _from and _to if not already present
         if '/' not in new_row['_from'] and node_table_name:
-            new_row['_from'] = f'{node_table_name}/{new_row["_from"]}'
+            new_row['_from'] = f'{node_table_name}/{new_row["_from"]}'  # noqa: Q000
 
         if '/' not in new_row['_to'] and node_table_name:
-            new_row['_to'] = f'{node_table_name}/{new_row["_to"]}'
+            new_row['_to'] = f'{node_table_name}/{new_row["_to"]}'  # noqa: Q000
 
         # Sanity check that the _from and _to are formatted with the node table name
         if node_table_name and (

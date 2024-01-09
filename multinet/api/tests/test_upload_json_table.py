@@ -185,7 +185,7 @@ def test_upload_valid_json_table_task_response(
 
     # Since we're running with celery_task_always_eager=True, this job is finished
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'
+        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'  # noqa: Q000
     )
 
     r_json = r.json()
