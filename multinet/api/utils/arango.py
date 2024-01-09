@@ -77,7 +77,9 @@ class ArangoQuery:
             coll_vars.append(f'@{key}')
             bind_vars[key] = coll
 
-        collections_str = f'UNION({", ".join(coll_vars)})' if len(coll_vars) > 1 else coll_vars[0]
+        collections_str = (
+            f'UNION({", ".join(coll_vars)})' if len(coll_vars) > 1 else coll_vars[0]  # noqa: Q000
+        )
         query_str = f'FOR doc in {collections_str} RETURN doc'
 
         return ArangoQuery(db, query_str=query_str, bind_vars=bind_vars)

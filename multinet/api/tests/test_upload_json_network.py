@@ -263,7 +263,7 @@ def test_valid_d3_json_task_response(
 
     # Since we're running with celery_task_always_eager=True, this job is finished
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'
+        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'  # noqa: Q000
     )
 
     r_json = r.json()
@@ -342,7 +342,7 @@ def test_valid_d3_json_task_response_key_from_to(
 
     # Since we're running with celery_task_always_eager=True, this job is finished
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'
+        f'/api/workspaces/{workspace.name}/uploads/{r.json()["id"]}/'  # noqa: Q000
     )
 
     r_json = r.json()
@@ -454,7 +454,7 @@ def test_d3_json_task_filter_missing(
 
     # Assert upload succeeds
     r: Response = authenticated_api_client.get(
-        f'/api/workspaces/{workspace.name}/uploads/{upload_resp.json()["id"]}/'
+        f'/api/workspaces/{workspace.name}/uploads/{upload_resp.json()["id"]}/'  # noqa: Q000
     )
     assert r.status_code == 200
     assert r.json()['status'] == Upload.Status.FINISHED
