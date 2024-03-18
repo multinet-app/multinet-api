@@ -165,6 +165,7 @@ def test_rest_create_csv_network(
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/networks/from_tables/',
         serializer.validated_data,
+        format='json',
     )
     assert r.status_code == 200
     assert r.json()['name'] == network_name
@@ -189,6 +190,7 @@ def test_rest_create_csv_network_already_exists(
     r = authenticated_api_client.post(
         f'/api/workspaces/{workspace.name}/networks/from_tables/',
         csv_network_def['serializer'].validated_data,
+        format='json',
     )
     assert r.status_code == 400
     assert r.json() == 'Network already exists'
