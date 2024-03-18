@@ -459,6 +459,7 @@ def test_workspace_rest_aql(
                 '@TABLE': node_table.name,
             },
         },
+        format='json',
     )
     assert r.status_code == status_code
 
@@ -486,5 +487,6 @@ def test_workspace_rest_aql_mutating_query(
                 'DOCNAME': fake.pystr(),
             },
         },
+        format='json',
     )
     assert r.status_code == 400

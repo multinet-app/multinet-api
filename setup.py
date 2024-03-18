@@ -47,12 +47,12 @@ setup(
         'django-guardian',
         'django-oauth-toolkit==1.3.2',
         'django-s3-file-field[minio,boto3]~=0.3.0',
-        'djangorestframework',
+        'djangorestframework==3.14.0',
         'drf-extensions',
         'drf-yasg',
         'more-itertools',
         'python-arango',
-        'upset-alttxt>=0.2.3',
+        'upset-alttxt>=0.2.4',
         # Production-only
         'gunicorn',
         # Development-only
