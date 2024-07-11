@@ -74,7 +74,7 @@ def process_row(
             continue
 
         # Get the value of the column
-        entry = new_row.get(col_key)
+        entry = str(new_row.get(col_key))
 
         # If null, skip
         if entry is None:
