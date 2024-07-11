@@ -10,8 +10,9 @@ from multinet.api.models import TableTypeAnnotation
 logger = get_task_logger(__name__)
 
 
-def str_to_bool(entry: str) -> bool:
+def str_to_bool(entry: any) -> bool:
     """Try to determine base format of boolean so it can be converted properly."""
+    entry = str(entry)
 
     def from_int(x: str) -> Optional[bool]:
         if x == '0' or x == '1':
@@ -43,8 +44,9 @@ def str_to_bool(entry: str) -> bool:
     return cast_col_entry(entry)
 
 
-def str_to_datestr(entry: str) -> str:
+def str_to_datestr(entry: any) -> str:
     """Try to read a date as an ISO 8601 string or unix timestamp."""
+    entry = str(entry)
     try:
         # Raises ValueError is entry is not a float/int
         # Raises ValueError if the number is out of range
@@ -54,8 +56,9 @@ def str_to_datestr(entry: str) -> str:
         return dateutilparser.parse(entry).isoformat()
 
 
-def str_to_number(entry: str) -> Union[int, float]:
+def str_to_number(entry: any) -> Union[int, float]:
     """Try to read a number from a given string."""
+    entry = str(entry)
     try:
         return int(entry)
     except ValueError:
