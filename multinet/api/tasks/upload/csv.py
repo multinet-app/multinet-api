@@ -178,13 +178,13 @@ def create_csv_network(workspace: Workspace, serializer):
             // Find matching source doc
             LET source_doc = FIRST(
                 FOR dd in @@SOURCE_TABLE
-                    FILTER edge_doc.@SOURCE_LINK_LOCAL LIKE CONCAT("%", dd.@SOURCE_LINK_FOREIGN)
+                    FILTER dd.@SOURCE_LINK_FOREIGN LIKE CONCAT("%", edge_doc.@SOURCE_LINK_LOCAL)
                     return dd
             )
             // Find matching target doc
             LET target_doc = FIRST(
                 FOR dd in @@TARGET_TABLE
-                    FILTER edge_doc.@TARGET_LINK_LOCAL LIKE CONCAT("%", dd.@TARGET_LINK_FOREIGN)
+                    FILTER dd.@TARGET_LINK_FOREIGN LIKE CONCAT("%", edge_doc.@TARGET_LINK_LOCAL)
                     return dd
             )
 
