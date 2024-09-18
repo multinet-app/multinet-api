@@ -4,7 +4,6 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.mixins import (
-    CreateModelMixin,
     DestroyModelMixin,
     ListModelMixin,
     RetrieveModelMixin,
@@ -32,7 +31,7 @@ class SessionNamePatchSerializer(serializers.Serializer):
 
 
 class SessionViewSet(
-    CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
+    RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
 ):
     swagger_tags = ['sessions']
 
@@ -86,6 +85,12 @@ class SessionViewSet(
         session.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, *args, **kwargs):
+        session = self.get_object()
+        if session.starred:
+            return HttpResponseForbidden('Starred session cannot be deleted')
+        return super().destroy(request, *args, **kwargs)
 
 
 class NetworkSessionViewSet(NetworkWorkspaceChildMixin, SessionViewSet):
