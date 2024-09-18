@@ -3,11 +3,7 @@ from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import action
-from rest_framework.mixins import (
-    DestroyModelMixin,
-    ListModelMixin,
-    RetrieveModelMixin,
-)
+from rest_framework.mixins import DestroyModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -30,9 +26,7 @@ class SessionNamePatchSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=300)
 
 
-class SessionViewSet(
-    RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet
-):
+class SessionViewSet(RetrieveModelMixin, DestroyModelMixin, ListModelMixin, GenericViewSet):
     swagger_tags = ['sessions']
 
     @swagger_auto_schema(request_body=SessionStatePatchSerializer)
