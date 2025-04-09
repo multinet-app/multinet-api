@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand
 from multinet.api.models import Network, Table, TableTypeAnnotation, Workspace
 from multinet.api.tasks.upload.process_single_table import process_row
 
+
 class Command(BaseCommand):
     help = 'Sets up a standard development environment with example workspaces and tables.'
 
