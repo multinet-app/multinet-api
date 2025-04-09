@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from multinet.api.models import Network, Table, TableTypeAnnotation, Workspace
-from multinet.api.tasks.upload.csv import process_row
+from multinet.api.tasks.upload.process_single_table import process_row
 
 
 class Command(BaseCommand):
