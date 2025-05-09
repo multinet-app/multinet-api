@@ -13,8 +13,18 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from multinet.api.auth.decorators import require_workspace_ownership, require_workspace_permission
-from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice, Table, TableTypeAnnotation, Network
+from multinet.api.auth.decorators import (
+    require_workspace_ownership,
+    require_workspace_permission,
+)
+from multinet.api.models import (
+    Network,
+    Table,
+    TableTypeAnnotation,
+    Workspace,
+    WorkspaceRole,
+    WorkspaceRoleChoice,
+)
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     AqlQuerySerializer,
@@ -120,9 +130,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             # Copy the type annotations
             for type_annotation in TableTypeAnnotation.objects.filter(table=new_table):
                 TableTypeAnnotation.objects.create(
-                    table=new_table,
-                    type=type_annotation.type,
-                    column=type_annotation.column
+                    table=new_table, type=type_annotation.type, column=type_annotation.column
                 )
             new_table.save()
 
