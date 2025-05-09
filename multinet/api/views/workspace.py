@@ -96,7 +96,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
     @swagger_auto_schema(
         responses={200: WorkspaceSerializer()},
     )
-    @action(detail=True, url_path='fork')
+    @action(detail=True, url_path='fork', methods=['POST'])
     def fork(self, request, name) -> Workspace:
         """
         Fork this workspace, creating a new workspace with the same tables and networks.
