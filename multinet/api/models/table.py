@@ -134,6 +134,29 @@ class Table(TimeStampedModel):
 
         return referenced
 
+    def copy(self, new_workspace: Workspace) -> Table:
+        """
+        Copy this table to a new workspace.
+
+        This function creates a new table in the provided workspace, with the same
+        name and schema as this table. Permissions are wiped, the requester is the owner
+        """
+        # Create a new table in the new workspace
+        new_table = Table.objects.create(
+            name=self.name,
+            edge=self.edge,
+            workspace=new_workspace,
+        )
+
+        # Copy the data over
+        rows = self.get_rows()
+        for row in rows:
+            new_table.put_rows([row])
+
+        new_table.save()
+
+        return new_table
+
     def __str__(self) -> str:
         return self.name
 

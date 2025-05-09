@@ -84,6 +84,24 @@ class Network(TimeStampedModel):
             workspace=workspace,
         )
 
+    def copy(self, new_workspace: Workspace) -> Network:
+        """
+        Copy the network to a new workspace.
+
+        This function creates a new network in the provided workspace, with the same
+        name and schema as this table. Permissions are wiped, the requester is the owner
+        """
+        # Create a new table in the new workspace
+        new_network = Network.create_with_edge_definition(
+            name=self.name,
+            workspace=new_workspace,
+            edge_table=self.edge_tables()[0],
+            node_tables=self.node_tables(),
+        )
+
+        new_network.save()
+        return new_network
+
     def __str__(self) -> str:
         return self.name
 
