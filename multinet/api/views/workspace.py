@@ -111,7 +111,8 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """
         Fork this workspace, creating a new workspace with the same tables and networks.
 
-        The new workspace will be private by default and the name will be 'Fork of {original workspace name}'.
+        The new workspace will be private by default and the name will be:
+        'Fork of {original workspace name}'
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
 
