@@ -13,8 +13,18 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from multinet.api.auth.decorators import require_workspace_ownership, require_workspace_permission
-from multinet.api.models import Workspace, WorkspaceRole, WorkspaceRoleChoice
+from multinet.api.auth.decorators import (
+    require_workspace_ownership,
+    require_workspace_permission,
+)
+from multinet.api.models import (
+    Network,
+    Table,
+    TableTypeAnnotation,
+    Workspace,
+    WorkspaceRole,
+    WorkspaceRoleChoice,
+)
 from multinet.api.utils.arango import ArangoQuery
 from multinet.api.views.serializers import (
     AqlQuerySerializer,
@@ -92,6 +102,47 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         if created:
             workspace.save()
         return Response(WorkspaceSerializer(workspace).data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        responses={200: WorkspaceSerializer()},
+    )
+    @action(detail=True, url_path='fork', methods=['POST'])
+    def fork(self, request, name) -> Workspace:
+        """
+        Fork this workspace, creating a new workspace with the same tables and networks.
+
+        The new workspace will be private by default and the name will be:
+        'Fork of {original workspace name}'
+        """
+        workspace: Workspace = get_object_or_404(Workspace, name=name)
+
+        new_name = f'Fork of {workspace.name}'
+        # if the new name is not unique, append a number to the end
+        i = 1
+        while Workspace.objects.filter(name=new_name).exists():
+            new_name = f'Fork of {workspace.name} ({i})'
+            i += 1
+
+        new_workspace = Workspace.objects.create(name=new_name, owner=request.user, public=False)
+
+        # Copy the tables and permissions from the original workspace
+        for table in Table.objects.filter(workspace=workspace):
+            new_table = table.copy(new_workspace)
+            # Copy the type annotations
+            for type_annotation in TableTypeAnnotation.objects.filter(table=new_table):
+                TableTypeAnnotation.objects.create(
+                    table=new_table, type=type_annotation.type, column=type_annotation.column
+                )
+            new_table.save()
+
+        # Copy the networks and their permissions from the original workspace
+        for network in Network.objects.filter(workspace=workspace):
+            new_network = network.copy(new_workspace)
+            new_network.save()
+
+        new_workspace.save()
+
+        return Response(WorkspaceSerializer(new_workspace).data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         request_body=WorkspaceRenameSerializer(),
