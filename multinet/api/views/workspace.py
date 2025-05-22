@@ -117,7 +117,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         These should be comma-separated lists of table and network names.
 
         Example:
-        /api/workspace/{id}/fork?tables=upsettablename,upsettablename2?networks=networkname
+        /api/workspaces/miserables/fork/?tables=characters%2Crelationships&networks=miserables
 
         The new workspace will be private by default and the name will be:
         'Fork of {original workspace name}'
