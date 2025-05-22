@@ -111,10 +111,22 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         """
         Fork this workspace, creating a new workspace with the same tables and networks.
 
+        Uses 'network' and 'table' query parameters to determine which tables and/or networks to copy.
+        if the query parameter is undefined, no tables or networks will be copied.
+
+        These should be comma-separated lists of table and network names.
+
+        Example:
+        /api/workspace/{id}/fork?tables=upsettablename,upsettablename2?networks=networkname
+
         The new workspace will be private by default and the name will be:
         'Fork of {original workspace name}'
         """
         workspace: Workspace = get_object_or_404(Workspace, name=name)
+
+        # get query params for tables and networks
+        tables = request.query_params.get('tables', None)
+        networks = request.query_params.get('networks', None)
 
         new_name = f'Fork of {workspace.name}'
         # if the new name is not unique, append a number to the end
@@ -126,7 +138,12 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
         new_workspace = Workspace.objects.create(name=new_name, owner=request.user, public=False)
 
         # Copy the tables and permissions from the original workspace
-        for table in Table.objects.filter(workspace=workspace):
+        # Parse the tables query parameter into a list, if provided
+        table_names = [t.strip() for t in tables.split(',')] if tables else []
+
+        for table in Table.objects.filter(workspace=workspace, name__in=table_names):
+            if not table_names or table.name not in table_names:
+                continue  # Skip tables not in the specified list
             new_table = table.copy(new_workspace)
             # Copy the type annotations
             for type_annotation in TableTypeAnnotation.objects.filter(table=new_table):
@@ -136,7 +153,12 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             new_table.save()
 
         # Copy the networks and their permissions from the original workspace
-        for network in Network.objects.filter(workspace=workspace):
+        # Parse the networks query parameter into a list, if provided
+        network_names = [n.strip() for n in networks.split(',')] if networks else []
+
+        for network in Network.objects.filter(workspace=workspace, name__in=network_names):
+            if not network_names or network.name not in network_names:
+                continue  # Skip networks not in the specified list
             new_network = network.copy(new_workspace)
             new_network.save()
 
