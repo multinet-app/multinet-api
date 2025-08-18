@@ -193,6 +193,7 @@ class WorkspaceViewSet(ReadOnlyModelViewSet):
             'workspace': name,
             'permission': permission,
             'permission_label': permission_label,
+            'public': workspace.public,
         }
 
         serializer = SingleUserWorkspacePermissionSerializer(data=data)
