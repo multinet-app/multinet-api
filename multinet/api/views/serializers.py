@@ -92,6 +92,7 @@ class SingleUserWorkspacePermissionSerializer(serializers.Serializer):
     workspace = serializers.CharField()
     permission = serializers.IntegerField(allow_null=True)
     permission_label = serializers.CharField(allow_null=True)
+    public = serializers.BooleanField()
 
 
 class AqlQuerySerializer(serializers.Serializer):
